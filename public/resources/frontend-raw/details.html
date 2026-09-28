@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Product Details | OriginSpaces Modular UK</title>
+  <meta name="description" content="Turnkey architectural specification: configure models, finishes, glazing and upgrades with video, gallery and 3D views." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/site.css">
+  <script src="js/icons.js"></script>
+  <script src="https://unpkg.com/three@0.147.0/build/three.min.js"></script>
+  <script src="https://unpkg.com/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body class="antialiased selection:bg-[#9a7b4f] selection:text-white">
+
+  <!-- Top Announcement Bar -->
+  <div class="bg-[#181b20] text-[#c9c4b7] text-[11px] sm:text-xs py-2 px-4 border-b border-[#2d3139]">
+    <div class="max-w-[1720px] mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="inline-block w-2 h-2 rounded-full bg-[#9a7b4f] animate-pulse"></span>
+        <span>UK Direct Warehouse Delivery</span>
+      </div>
+      <a href="collections.html" class="hidden sm:flex items-center gap-1.5 font-mono text-[11px] text-[#c9c4b7] hover:text-white transition-colors">
+        <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+        <span>Catalogue View</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="sticky top-0 z-40 bg-white border-b border-[#e5e2da] transition-all">
+    <div class="max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-10 h-20 flex items-center justify-between">
+      <a href="index.html" class="flex items-center shrink-0">
+        <img src="assets/logo.png" alt="Origin Spaces" class="h-10 w-auto object-contain" />
+      </a>
+      <nav class="hidden lg:flex items-center gap-7 text-[17px] font-semibold text-[#4b5563]">
+        <a href="index.html" class="hover:text-[#1a1d24] transition-colors">Home</a>
+        <a href="about.html" class="hover:text-[#1a1d24] transition-colors">About</a>
+        <a href="collections.html" class="text-[#1a1d24] transition-colors">Collection</a>
+        <a href="downloads.html" class="hover:text-[#1a1d24] transition-colors">Downloads</a>
+        <a href="gallery.html" class="hover:text-[#1a1d24] transition-colors">Gallery</a>
+        <a href="contact.html" class="hover:text-[#1a1d24] transition-colors">Contact</a>
+      </nav>
+      <div class="hidden sm:flex items-center gap-2.5">
+        <a href="custom-build.html" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#181b20] hover:bg-[#9a7b4f] text-white text-xs font-semibold uppercase tracking-wider transition-all shadow-xs">
+          <span>Custom Build</span>
+          <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+        </a>
+        <a href="contact.html" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#9a7b4f] hover:bg-[#866940] text-white text-xs font-semibold uppercase tracking-wider transition-all shadow-xs">
+          <span>Request Spec Pack</span>
+        </a>
+      </div>
+      <button onclick="toggleMobileMenu()" class="md:hidden p-2 rounded-lg text-[#1a1d24] hover:bg-[#e5e2da]/60">
+        <i data-lucide="menu" id="menu-icon-open" class="w-6 h-6"></i>
+        <i data-lucide="x" id="menu-icon-close" class="w-6 h-6 hidden"></i>
+      </button>
+    </div>
+    <div id="mobile-menu" class="hidden md:hidden bg-white border-b border-[#e5e2da] px-6 py-5 space-y-4">
+      <a href="index.html" class="block text-sm font-semibold text-[#1a1d24]">Home</a>
+      <a href="collections.html" class="block text-sm font-semibold text-[#1a1d24]">Collection</a>
+      <a href="contact.html" class="block text-sm font-semibold text-[#1a1d24]">Contact</a>
+    </div>
+  </header>
+
+  <!-- Breadcrumb -->
+  <div class="bg-[#FAF9F5] border-b border-[#e5e2da]">
+    <div class="max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-10 py-3.5 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-2 text-xs text-[#6b7280]">
+        <a href="collections.html" class="font-mono uppercase text-[#9a7b4f] font-semibold tracking-wider hover:underline flex items-center gap-1">
+          <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+          <span>Catalogue View</span>
+        </a>
+        <span>&bull;</span>
+        <span id="crumb-category" class="text-[#374151] font-medium">Kitchen</span>
+        <span>&bull;</span>
+        <span id="crumb-name" class="text-[#1a1d24] font-semibold">—</span>
+      </div>
+      <div class="flex items-center gap-4">
+        <span class="text-xs text-[#6b7280] font-mono">Model Ref: <strong id="crumb-model" class="text-[#1a1d24]">—</strong></span>
+        <span class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#F0EBE1] text-[#786348] text-xs font-mono font-medium border border-[#DDD5C5]">
+          <i data-lucide="shield-check" class="w-3.5 h-3.5 text-[#9a7b4f]"></i>
+          CE &amp; UK Part L Certified
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Split -->
+  <main class="max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-10 py-8">
+    <div class="flex flex-col lg:flex-row items-start gap-8">
+
+      <!-- LEFT: Configurator -->
+      <aside class="w-full lg:w-[36%] xl:w-[34%] flex flex-col gap-5 lg:sticky lg:top-24">
+        <div class="bg-white border border-[#e5e2da] rounded-2xl p-5 shadow-xs space-y-4">
+          <div>
+            <div class="flex items-center justify-between gap-2 mb-1.5">
+              <span class="text-[11px] font-mono uppercase tracking-[0.18em] text-[#9a7b4f] font-bold">Turnkey Architectural Specification</span>
+              <span id="spec-leadtime" class="text-[11px] font-mono px-2 py-0.5 bg-[#F4F1EA] text-[#6b7280] rounded whitespace-nowrap">—</span>
+            </div>
+            <h1 id="spec-title" class="font-serif text-2xl sm:text-3xl text-[#1a1d24] font-semibold tracking-tight leading-tight">—</h1>
+            <p id="spec-tagline" class="text-sm text-[#374151] mt-1.5 font-semibold leading-relaxed">—</p>
+          </div>
+
+          <!-- 1. Model -->
+          <div class="pt-3 border-t border-[#EAE7DF] space-y-2">
+            <label class="text-xs font-mono uppercase tracking-wider text-[#1a1d24] font-bold flex items-center justify-between">
+              <span>1. Current Model</span>
+            </label>
+            <div id="spec-model-list"></div>
+          </div>
+
+          <!-- 2. Configuration -->
+          <div class="pt-3 border-t border-[#EAE7DF] space-y-2">
+            <label class="text-xs font-mono uppercase tracking-wider text-[#1a1d24] font-bold">2. Configuration / Footprint</label>
+            <div class="grid grid-cols-2 gap-2" id="spec-config-list"></div>
+          </div>
+
+          <!-- 3. Finish -->
+          <div class="pt-3 border-t border-[#EAE7DF] space-y-2">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-mono uppercase tracking-wider text-[#1a1d24] font-bold">3. Exterior / Primary Finish</label>
+              <span id="spec-finish-label" class="text-[11px] font-mono font-semibold text-[#9a7b4f]">—</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2" id="spec-finish-list"></div>
+          </div>
+
+          <!-- 4. Glazing -->
+          <div class="pt-3 border-t border-[#EAE7DF] space-y-2">
+            <label class="text-xs font-mono uppercase tracking-wider text-[#1a1d24] font-bold">4. Glazing &amp; Metal Accents</label>
+            <div class="space-y-2" id="spec-glazing-list"></div>
+          </div>
+
+          <!-- 5. Upgrades -->
+          <div class="pt-3 border-t border-[#EAE7DF] space-y-2">
+            <label class="text-xs font-mono uppercase tracking-wider text-[#1a1d24] font-bold">5. Optional Technology &amp; Upgrades</label>
+            <div class="space-y-2" id="spec-upgrade-list"></div>
+          </div>
+
+          <!-- 6. Tech specs -->
+          <div class="pt-3 border-t border-[#EAE7DF]">
+            <button onclick="toggleSpecAccordion('spec-tech')" class="w-full flex items-center justify-between py-0.5 text-xs font-mono uppercase tracking-[0.15em] text-[#1a1d24] font-bold">
+              <span class="flex items-center gap-2">
+                <i data-lucide="paperclip" class="w-3.5 h-3.5 text-[#9a7b4f]"></i>
+                <span>6. Technical Specifications</span>
+              </span>
+              <i data-lucide="chevron-down" id="spec-tech-chevron" class="w-4 h-4 text-[#9a7b4f] transition-transform"></i>
+            </button>
+            <div id="spec-tech" class="hidden mt-2.5 bg-[#FAF8F5] rounded-xl border border-[#e5e2da] px-4 py-2 text-xs text-[#374151]"></div>
+          </div>
+
+          <!-- 7. Downloads -->
+          <div class="pt-3 border-t border-[#EAE7DF]">
+            <button onclick="toggleSpecAccordion('spec-docs')" class="w-full flex items-center justify-between py-0.5 text-xs font-mono uppercase tracking-[0.15em] text-[#1a1d24] font-bold">
+              <span class="flex items-center gap-2">
+                <i data-lucide="book-open" class="w-3.5 h-3.5 text-[#9a7b4f]"></i>
+                <span>7. Downloads &amp; Manuals</span>
+              </span>
+              <i data-lucide="chevron-down" id="spec-docs-chevron" class="w-4 h-4 text-[#9a7b4f] transition-transform"></i>
+            </button>
+            <div id="spec-docs" class="hidden mt-2.5 space-y-2"></div>
+          </div>
+
+          <!-- 8. Pricing -->
+          <div class="pt-5 border-t border-[#EAE7DF] space-y-4">
+            <div class="bg-[#FAF8F5] p-4 rounded-xl border border-[#DDD7C9]">
+              <div class="flex items-center justify-between">
+                <div>
+                  <span class="text-[11px] font-mono uppercase text-[#786348] font-bold block">Estimated Specifier Total</span>
+                  <span id="spec-total" class="text-2xl font-serif text-[#1a1d24] font-bold">—</span>
+                </div>
+                <span class="text-xs text-right text-[#6b7280]">Excl. VAT<br />UK Delivery</span>
+              </div>
+              <div id="spec-breakdown" class="mt-3 pt-3 border-t border-[#EAE7DF] space-y-1 text-[11px] font-mono text-[#6b7280]"></div>
+            </div>
+            <a id="spec-cta" href="contact.html" class="w-full py-3.5 px-6 bg-[#181B20] hover:bg-[#9A7B4F] text-white text-sm font-semibold tracking-wider uppercase transition-all duration-200 rounded-xl shadow-md flex items-center justify-center gap-2">
+              <span>Request Information &amp; Spec Pack</span>
+              <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </a>
+            <p class="text-[11px] text-center text-[#6b7280]">Includes personalised drawing set &amp; site feasibility review.</p>
+          </div>
+        </div>
+      </aside>
+
+      <!-- RIGHT: Viewer -->
+      <section class="w-full lg:w-[64%] xl:w-[66%] flex flex-col gap-5 min-w-0">
+        <!-- Media tabs -->
+        <div class="bg-white border border-[#e5e2da] rounded-xl p-2 shadow-xs flex items-center justify-between gap-2 overflow-x-auto">
+          <div class="flex items-center gap-1 sm:gap-2">
+            <button id="tab-btn-3d" onclick="switchMediaTab('3d')" class="px-4 py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 bg-transparent text-[#4b5563] hover:text-[#1a1d24] hover:bg-[#F4F1EA]">
+              <i data-lucide="box" class="w-4 h-4 text-gray-400"></i>
+              <span>3D Interactive</span>
+            </button>
+            <button id="tab-btn-video" onclick="switchMediaTab('video')" class="px-4 py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 bg-[#181B20] text-white shadow">
+              <i data-lucide="video" class="w-4 h-4 text-[#c5a880]"></i>
+              <span>Video</span>
+            </button>
+            <button id="tab-btn-gallery" onclick="switchMediaTab('gallery')" class="px-4 py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 bg-transparent text-[#4b5563] hover:text-[#1a1d24] hover:bg-[#F4F1EA]">
+              <i data-lucide="image" class="w-4 h-4 text-gray-400"></i>
+              <span id="gallery-tab-label">Gallery</span>
+            </button>
+            <button id="tab-btn-floor" onclick="switchMediaTab('floor')" class="px-4 py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 bg-transparent text-[#4b5563] hover:text-[#1a1d24] hover:bg-[#F4F1EA]">
+              <i data-lucide="floor-plan" class="w-4 h-4 text-gray-400"></i>
+              <span>Floor Plan</span>
+            </button>
+          </div>
+          <div class="hidden md:block text-xs text-[#786348] font-mono pr-2 shrink-0">Selected: <strong id="viewer-finish-name" class="text-[#1a1d24]">—</strong></div>
+        </div>
+
+        <!-- Video stage -->
+        <div id="media-video" class="bg-white border border-[#e5e2da] rounded-2xl overflow-hidden shadow-xs">
+          <div class="relative w-full bg-black aspect-video">
+            <video id="spec-video" class="w-full h-full object-cover" playsinline preload="metadata" controls muted loop autoplay></video>
+            <button id="spec-unmute-overlay" onclick="unmuteSpecVideo()" class="absolute top-4 left-4 z-20 flex items-center gap-2 bg-white/95 hover:bg-[#9a7b4f] text-[#1a1d24] hover:text-white border border-[#e5e2da] px-3.5 py-2 font-mono text-[11px] uppercase tracking-wider transition-all shadow-md rounded">
+              <i data-lucide="volume-2" class="w-4 h-4"></i>
+              <span>Click for sound</span>
+            </button>
+          </div>
+          <div class="p-5 sm:p-6">
+            <h2 id="video-title" class="font-serif text-xl sm:text-2xl text-[#1a1d24] font-semibold">—</h2>
+            <p id="video-desc" class="text-[13px] text-[#374151] mt-1">—</p>
+            <div class="mt-4">
+              <span class="text-[10px] font-mono uppercase tracking-[0.2em] text-[#9a7b4f] font-bold block mb-2">Key Chapters — Jump to Phase</span>
+              <div class="grid grid-cols-2 lg:grid-cols-4 gap-2" id="video-chapters"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gallery stage -->
+        <div id="media-gallery" class="hidden bg-white border border-[#e5e2da] rounded-2xl overflow-hidden shadow-xs p-4 sm:p-6">
+          <div class="relative rounded-xl overflow-hidden border border-[#e5e2da]" id="gallery-fullscreen-wrap">
+            <img id="gallery-main" src="" alt="Product gallery view" class="w-full aspect-[16/10] object-cover" />
+            <span id="gallery-cat-chip" class="absolute top-3 left-3 px-2.5 py-1 rounded bg-[#181b20]/80 backdrop-blur text-white text-[10px] font-mono uppercase tracking-widest">—</span>
+            <div class="absolute top-3 right-3 flex items-center gap-2">
+              <span id="gallery-counter" class="px-2.5 py-1 rounded bg-[#181b20]/80 backdrop-blur text-white text-[10px] font-mono">1 / 1</span>
+              <button onclick="expandGallery()" title="Fullscreen" class="w-8 h-8 rounded-lg bg-white/95 hover:bg-[#9a7b4f] hover:text-white text-[#1a1d24] flex items-center justify-center transition-all shadow">
+                <i data-lucide="maximize-2" class="w-4 h-4"></i>
+              </button>
+            </div>
+            <button onclick="toggleHotspots()" id="hotspot-toggle" class="absolute bottom-3 right-3 px-3 py-1.5 rounded-lg bg-[#181b20]/80 backdrop-blur text-white text-[11px] font-mono uppercase tracking-wider">Hotspots: On</button>
+            <div id="gallery-pins" class="absolute inset-0"></div>
+            <div id="gallery-caption" class="absolute bottom-0 left-0 right-0 px-4 pt-8 pb-3 bg-gradient-to-t from-black/70 to-transparent text-white text-xs"></div>
+          </div>
+          <div class="mt-3 flex flex-wrap items-center gap-2" id="gallery-plates"></div>
+          <div class="mt-3 grid grid-cols-4 gap-2" id="gallery-thumbs"></div>
+        </div>
+
+        <!-- Floor plan stage -->
+        <div id="media-floor" class="hidden bg-white border border-[#e5e2da] rounded-2xl overflow-hidden shadow-xs p-4 sm:p-6">
+          <div class="relative rounded-xl overflow-hidden border border-[#2d3139] bg-[#14171c]">
+            <span class="absolute top-3 left-3 px-2.5 py-1 rounded bg-white/10 backdrop-blur text-white text-[10px] font-mono uppercase tracking-widest border border-white/15">Ref: <span id="floor-ref">—</span></span>
+            <span class="absolute top-3 right-3 px-2.5 py-1 rounded bg-white/10 backdrop-blur text-white text-[10px] font-mono uppercase tracking-widest border border-white/15">Units: Metric (m²)</span>
+            <svg id="floor-svg" viewBox="0 0 640 360" class="w-full h-auto block"></svg>
+          </div>
+          <div class="mt-4">
+            <span class="text-[10px] font-mono uppercase tracking-[0.2em] text-[#9a7b4f] font-bold block mb-1">Active Zone Breakdown</span>
+            <h4 id="floor-zone-name" class="font-serif text-xl text-[#1a1d24] font-semibold">—</h4>
+            <p id="floor-zone-desc" class="text-xs text-[#374151] mt-1">—</p>
+            <div class="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2" id="floor-stats"></div>
+          </div>
+        </div>
+
+        <!-- 3D stage -->
+        <div id="media-3d" class="hidden bg-white border border-[#e5e2da] rounded-2xl overflow-hidden shadow-xs p-4 sm:p-6">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div>
+              <h3 class="font-serif text-xl text-[#1a1d24] font-semibold">Interactive Massing Model</h3>
+              <p class="text-xs text-[#6b7280]">Drag to orbit &middot; scroll to zoom &middot; explode to inspect layers</p>
+            </div>
+            <div class="flex items-center gap-3 text-xs flex-wrap">
+              <label class="flex items-center gap-1.5 text-[#374151] font-medium">
+                <input type="checkbox" id="model3d-spin" checked onchange="toggleSpin()" class="accent-[#9a7b4f]" /> Auto-rotate
+              </label>
+              <label class="flex items-center gap-1.5 text-[#374151] font-medium">
+                Unfold <input type="range" id="model3d-unfold" min="0" max="100" value="100" oninput="unfoldModel(this.value)" class="w-24 accent-[#9a7b4f]" />
+              </label>
+              <label class="flex items-center gap-1.5 text-[#374151] font-medium">
+                Explode <input type="range" id="model3d-explode" min="0" max="70" value="0" oninput="explodeModel(this.value)" class="w-24 accent-[#9a7b4f]" />
+              </label>
+            </div>
+          </div>
+          <div id="model3d-stage" class="model3d-scene relative w-full h-[380px] sm:h-[440px] rounded-xl bg-gradient-to-b from-[#FAF9F5] to-[#EDEAE2] border border-[#e5e2da] overflow-hidden">
+            <div class="absolute bottom-3 left-4 text-[10px] font-mono uppercase tracking-widest text-[#6b7280] z-10">Drag to orbit &middot; Scroll to zoom</div>
+            <div class="absolute bottom-3 right-4 text-[10px] font-mono uppercase tracking-widest text-[#9a7b4f] font-semibold z-10" id="model3d-label">—</div>
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div class="bg-white border border-[#e5e2da] rounded-2xl p-6 sm:p-8 shadow-xs">
+          <span class="text-[11px] uppercase tracking-[0.3em] text-[#9a7b4f] font-mono font-semibold block mb-3">Architectural Heritage &amp; Monocoque Engineering</span>
+          <h2 id="narrative-title" class="font-serif text-2xl sm:text-3xl text-[#1a1d24] font-semibold mb-3">—</h2>
+          <p id="narrative-body" class="text-sm text-[#374151] leading-relaxed">—</p>
+        </div>
+
+        <!-- Spec tables -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div class="bg-white border border-[#e5e2da] rounded-2xl p-6 shadow-xs">
+            <h3 class="text-xs font-mono uppercase tracking-wider text-[#1a1d24] font-bold mb-4">Envelope &amp; Dimensions</h3>
+            <div id="spec-table-envelope" class="space-y-2.5 text-xs"></div>
+          </div>
+          <div class="bg-white border border-[#e5e2da] rounded-2xl p-6 shadow-xs">
+            <h3 class="text-xs font-mono uppercase tracking-wider text-[#1a1d24] font-bold mb-4">Systems &amp; Assurance</h3>
+            <div id="spec-table-systems" class="space-y-2.5 text-xs"></div>
+          </div>
+        </div>
+
+        <!-- Logistics -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4" id="logistics-row"></div>
+
+        <!-- CTA banner -->
+        <div class="bg-[#181b20] text-white rounded-2xl p-6 sm:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
+          <div>
+            <h3 class="font-serif text-2xl font-semibold">Specify This Piece on Your Project</h3>
+            <p class="text-sm text-[#c9c4b7] mt-1">Drawings, samples and feasibility review included.</p>
+          </div>
+          <div class="flex flex-wrap gap-2.5 shrink-0">
+            <a href="contact.html" class="px-6 py-3 rounded-xl bg-[#9a7b4f] hover:bg-[#866940] text-white text-xs font-semibold uppercase tracking-wider transition-all">Request Spec Pack</a>
+            <a href="custom-build.html" class="px-6 py-3 rounded-xl border border-white/20 hover:border-[#9a7b4f] text-white text-xs font-semibold uppercase tracking-wider transition-all">Custom Build</a>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-[#181b20] text-white pt-12 pb-6 px-4 sm:px-6 lg:px-10 border-t border-[#2d3139] mt-4">
+    <div class="max-w-[1720px] mx-auto">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8 pb-12 border-b border-white/10">
+        <div class="space-y-4 sm:col-span-2 lg:col-span-1">
+          <img src="assets/logo.png" alt="Origin Spaces" class="h-11 w-auto object-contain bg-white rounded-lg px-3 py-1.5" />
+          <p class="text-xs text-[#9ca3af] leading-relaxed">Expandable modular homes manufactured build-to-order and fulfilled directly from our UK Central Distribution Warehouse.</p>
+        </div>
+        <div>
+          <span class="text-xs uppercase font-mono tracking-widest text-[#9a7b4f] font-semibold block mb-4">Architecture</span>
+          <ul class="space-y-2 text-xs text-[#c9c4b7]">
+            <li><a href="index.html" class="hover:text-white transition-colors">Home</a></li>
+            <li><a href="about.html" class="hover:text-white transition-colors">About</a></li>
+            <li><a href="downloads.html" class="hover:text-white transition-colors">Downloads</a></li>
+            <li><a href="gallery.html" class="hover:text-white transition-colors">Gallery</a></li>
+            <li><a href="contact.html" class="hover:text-white transition-colors">Contact</a></li>
+          </ul>
+        </div>
+        <div>
+          <span class="text-xs uppercase font-mono tracking-widest text-[#9a7b4f] font-semibold block mb-4">Collections</span>
+          <ul class="space-y-2 text-xs text-[#c9c4b7]">
+            <li><a href="collections.html" class="hover:text-white transition-colors">All Collections</a></li>
+            <li><a href="index.html#featured-products" class="hover:text-white transition-colors">Featured Products</a></li>
+            <li><a href="custom-build.html" class="hover:text-white transition-colors">Custom Build</a></li>
+          </ul>
+        </div>
+        <div>
+          <span class="text-xs uppercase font-mono tracking-widest text-[#9a7b4f] font-semibold block mb-4">Showrooms</span>
+          <ul class="space-y-2 text-xs text-[#c9c4b7]">
+            <li><span class="text-white">Mayfair, W1J 6BQ</span></li>
+            <li><span class="text-white">Edinburgh, EH3 6JN</span></li>
+            <li><span class="text-white">Chipping Campden, GL55 6AT</span></li>
+          </ul>
+        </div>
+        <div>
+          <span class="text-xs uppercase font-mono tracking-widest text-[#9a7b4f] font-semibold block mb-4">Studio</span>
+          <ul class="space-y-2 text-xs text-[#c9c4b7]">
+            <li><span class="text-white">+44 (0)20 7946 0880</span></li>
+            <li><span>Mon–Sat, 10:00–18:00</span></li>
+            <li class="pt-2"><a href="contact.html" class="text-[#9a7b4f] hover:underline font-semibold">Request Callback &rarr;</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="pt-6 flex flex-col sm:flex-row items-center justify-between text-[11px] text-[#6b7280] gap-4">
+        <span>&copy; 2026 OriginSpaces Modular UK Ltd. All rights reserved.</span>
+        <div class="flex items-center gap-4">
+          <a href="privacy.html" class="hover:text-[#9ca3af]">Privacy Policy</a>
+          <span>&bull;</span>
+          <a href="terms.html" class="hover:text-[#9ca3af]">Terms of Supply</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    function toggleMobileMenu() {
+      const menu = document.getElementById('mobile-menu');
+      const iconOpen = document.getElementById('menu-icon-open');
+      const iconClose = document.getElementById('menu-icon-close');
+      if (menu.classList.contains('hidden')) {
+        menu.classList.remove('hidden');
+        iconOpen.classList.add('hidden');
+        iconClose.classList.remove('hidden');
+      } else {
+        menu.classList.add('hidden');
+        iconOpen.classList.remove('hidden');
+        iconClose.classList.add('hidden');
+      }
+    }
+
+    const PRODUCTS = [
+      {
+        id: 'hs-ktc-01',
+        modelCode: 'HS-KTC-01/MON',
+        name: 'The Monolith Calacatta Viola Island Suite',
+        category: 'Kitchen',
+        discipline: 'Kitchen',
+        tagline: 'Precision-mitered Italian marble island with integrated induction, bronze fluted reveals, and concealed prep cabinetry.',
+        price: 'From £28,500',
+        leadTime: '8-10 Weeks',
+        heroImage: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=85',
+        materials: ['Honed Calacatta Viola Marble', 'Solid Smoked European Oak', 'Brushed Architectural Bronze'],
+        dimensions: '3,800mm (L) × 1,150mm (W) × 920mm (H)',
+        warranty: '15-Year Structural Stone & Joinery Guarantee',
+        specs: [
+          'CNC-mitered 45-degree waterfall edge profiles with continuous bookmatched stone veining',
+          'Integrated flush-mounted invisible 4-zone induction cooking surfaces directly beneath stone',
+          'Soft-closing solid oak drawer boxes with dovetailed joints and magnetic utensil inserts',
+          'Concealed 240V architectural power pop-ups with brushed bronze flush trim plates'
+        ]
+      },
+      {
+        id: 'hs-bth-02',
+        modelCode: 'HS-BTH-02/NER',
+        name: 'Aurelia Nero Marquina Freestanding Bath',
+        category: 'Bath & Wellness',
+        discipline: 'Bath & Wellness',
+        tagline: 'Hand-sculpted monolithic bath carved from a single continuous block of Spanish Nero Marquina marble.',
+        price: 'From £16,800',
+        leadTime: '6-8 Weeks',
+        heroImage: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=1200&q=85',
+        materials: ['Monolithic Nero Marquina Marble', 'Hand-Polished Satin Wax Finish', 'Concealed Brass Clicker Waste'],
+        dimensions: '1,820mm (L) × 880mm (W) × 580mm (H) — 480kg dry weight',
+        warranty: '25-Year Stone Integrity Warranty',
+        specs: [
+          'Carved from a singular 2.5-tonne Spanish marble quarry block with zero joint lines',
+          'Ergonomically contoured 28-degree internal recline slope tested for prolonged hydro-relaxation',
+          'Hand-finished with breathable hydrophobic microporous wax preventing mineral staining',
+          'Supplied with pre-drilled centered waste and flexible UK-compliant waste connection kit'
+        ]
+      },
+      {
+        id: 'hs-lgt-03',
+        modelCode: 'HS-LGT-03/BRZ',
+        name: 'Equinox Kinetic Brass Suspension Ring',
+        category: 'Sculptural Lighting',
+        discipline: 'Sculptural Lighting',
+        tagline: 'Precision-counterbalanced architectural mobile chandelier crafted from unlacquered solid brass and mouth-blown opaline globes.',
+        price: 'From £4,950',
+        leadTime: '3-4 Weeks',
+        heroImage: 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?auto=format&fit=crop&w=1200&q=85',
+        materials: ['Solid Architectural CZ121 Brass', 'Mouth-Blown Triplex Opal Glass', 'Braided Textile Suspension Cable'],
+        dimensions: '1,400mm (Dia) × Adjustable Drop 600mm-2,400mm',
+        warranty: '5-Year Electrical & LED Driver Guarantee',
+        specs: [
+          'Hand-turned solid brass articulation joints with 360-degree rotation axes',
+          'Fitted with 2700K warm-dim high CRI (95+) integrated architectural LED emitters',
+          'Compatible with standard UK leading/trailing edge and DALI / Lutron lighting control systems',
+          'Counterweighted brass discs hand-buffed with fine abrasive scotch-brite finish'
+        ]
+      },
+      {
+        id: 'hs-jnr-04',
+        modelCode: 'HS-JNR-04/BLG',
+        name: 'Belgravia Architectural Dressing Suite',
+        category: 'Architectural Joinery',
+        discipline: 'Architectural Joinery',
+        tagline: 'Floor-to-ceiling reeded timber wardrobe system with integrated sensor lighting and saddle leather drawer liners.',
+        price: 'From £12,200',
+        leadTime: '6-8 Weeks',
+        heroImage: 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=1200&q=85',
+        materials: ['Quarter-Sawn English Oak', 'Full Grain Saddle Leather', 'Acoustic Felt Backing', 'Fluted Glass Doors'],
+        dimensions: 'Bespoke modular lengths, standard height 2,450mm to 2,800mm',
+        warranty: '10-Year Cabinetry Guarantee',
+        specs: [
+          'Full-height acoustic felt backing panels reduce room echo and reverberation',
+          'Integrated proximity sensors illuminate soft warm 2400K internal LED strips',
+          'Hand-stitched English saddle leather jewelry and watch organizer inserts',
+          'Precision CNC-milled finger-pull shadow gaps with zero visible screw heads'
+        ]
+      },
+      {
+        id: 'hs-hrd-05',
+        modelCode: 'HS-HRD-05/STR',
+        name: 'Strata Architectural Hardware Suite',
+        category: 'Hardware & Surfaces',
+        discipline: 'Hardware & Surfaces',
+        tagline: 'Turned from single billets of solid architectural brass with signature precision guilloche diamond knurling.',
+        price: 'From £420 per set',
+        leadTime: 'In UK Warehouse Stock',
+        heroImage: 'https://images.unsplash.com/photo-1558211553-d9326f10c561?auto=format&fit=crop&w=1200&q=85',
+        materials: ['Solid Forged Single-Billet Brass', 'Guilloche Knurling', 'Unlacquered Living Patina'],
+        dimensions: 'Pull handles 280mm & 450mm; Door levers 145mm × 55mm rose',
+        warranty: 'Lifetime Mechanical Warranty',
+        specs: [
+          'Machined with aerospace precision from solid unlacquered CZ121 brass',
+          'Develops a rich, lustrous living patina unique to the environment over time',
+          'Heavy internal spring return mechanism engineered for 500,000 duty cycles',
+          'Universal mortice lock compatibility fitting standard UK door preparations'
+        ]
+      },
+      {
+        id: 'hs-ktc-06',
+        modelCode: 'HS-KTC-06/TRV',
+        name: 'The Cotswold Roman Travertine Scullery',
+        category: 'Kitchen',
+        discipline: 'Kitchen',
+        tagline: 'Monolithic honed Navona travertine scullery island with integrated fluted apron sink and concealed prep appliances.',
+        price: 'From £22,900',
+        leadTime: '7-9 Weeks',
+        heroImage: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=1200&q=85',
+        materials: ['Roman Navona Travertine', 'European Canaletto Walnut', 'Hand-Waxed Bronze Trims'],
+        dimensions: '3,600mm (L) × 1,200mm (W) × 915mm (H)',
+        warranty: '15-Year Stone & Cabinetry Warranty',
+        specs: [
+          'Carved from continuous travertine blocks sourced directly from Tivoli quarries',
+          'Triple-sealed with food-safe breathable fluoropolymer stone impregnator',
+          'Integrated carved undermount stone sink with solid brass waste disposal baffle',
+          'Built-in scullery electrical raceway with concealed soft-touch push panels'
+        ]
+      },
+      {
+        id: 'hs-bth-07',
+        modelCode: 'HS-BTH-07/SOL',
+        name: 'Solace Concealed Thermostatic Shower',
+        category: 'Bath & Wellness',
+        discipline: 'Bath & Wellness',
+        tagline: 'Triple-outlet thermostatic shower valve with 300mm ceiling deluge rose and knurled hand shower wand.',
+        price: 'From £2,850',
+        leadTime: 'In UK Warehouse Stock',
+        heroImage: 'https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?auto=format&fit=crop&w=1200&q=85',
+        materials: ['Solid Forged Brass Cartridge', 'PVD Brushed Gunmetal or Unlacquered Brass'],
+        dimensions: 'Faceplate 320mm × 120mm; Shower Rose 300mm Diameter',
+        warranty: '10-Year Valve Cartridge Warranty',
+        specs: [
+          'Vernet wax thermostatic element ensures instant 38°C anti-scald temperature lock',
+          '3-way diverter controls overhead deluge, body jets, and knurled hand shower',
+          'High-flow rate delivering up to 32 liters/minute at standard 3.0 bar pressure',
+          'Includes rough-in concealed installation box with pre-tested waterproof seals'
+        ]
+      },
+      {
+        id: 'hs-lgt-08',
+        modelCode: 'HS-LGT-08/ALB',
+        name: 'Vapour Spanish Alabaster Sconce',
+        category: 'Sculptural Lighting',
+        discipline: 'Sculptural Lighting',
+        tagline: 'Hand-carved translucent Aragon alabaster disc back-illuminated with ambient warm-dim indirect glow.',
+        price: 'From £1,250',
+        leadTime: '1-2 Weeks',
+        heroImage: 'https://images.unsplash.com/photo-1540932239986-30128078f3c5?auto=format&fit=crop&w=1200&q=85',
+        materials: ['Natural Aragon Alabaster Disc', 'Antiqued Bronze Wall Boss', 'CRI 98+ Diffused LED'],
+        dimensions: '300mm Diameter × 65mm Projection',
+        warranty: '5-Year LED & Stone Warranty',
+        specs: [
+          'Each alabaster disc is uniquely veined by nature with warm caramel mineral ribbons',
+          'Indirect perimeter wash illumination creates a floating celestial ring aesthetic',
+          'IP44 splashproof rating suitable for bathroom zones 2 and 3 as well as living rooms',
+          'Phase-cut dimmable with standard UK residential dimmer switches'
+        ]
+      },
+      {
+        id: 'hs-exp-01',
+        modelCode: 'HS-EXP-38/AST',
+        name: 'The Aster 38 Expandable Villa',
+        category: 'Expandable Homes',
+        discipline: 'Expandable Homes',
+        tagline: 'Bi-fold dual-wing expandable modular home offering 38.5m² of luxury living deployed in under 60 minutes.',
+        price: 'From £36,500',
+        leadTime: '8-10 Weeks to UK Delivery',
+        heroImage: 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?auto=format&fit=crop&w=1200&q=85',
+        materials: ['Q235B Galvanized Steel Monocoque Chassis', '100mm PIR Insulation (U ≤ 0.18)', 'Low-E Argon Double Glazing'],
+        dimensions: 'Expanded: 5.9m (L) × 6.3m (W) × 2.6m (H) — 38.5m² area',
+        warranty: '25-Year Structural Frame Warranty',
+        specs: [
+          'Pre-fitted turnkey ensuite with walk-in rainfall shower, vanity, and flush WC',
+          'Conforms to Caravan Sites Act 1968 Section 13(2) dimensions for streamlined planning',
+          'BS 7671 18th Edition certified consumer unit with RCBO protection',
+          'Fitted with climate inverter heat pump delivering year-round A+ thermal comfort'
+        ]
+      },
+      {
+        id: 'hs-exp-02',
+        modelCode: 'HS-EXP-20/HVN',
+        name: 'The Haven 20 Compact Studio',
+        category: 'Expandable Homes',
+        discipline: 'Expandable Homes',
+        tagline: 'Engineered for UK domestic gardens as an executive acoustic office, studio, or private luxury garden annex.',
+        price: 'From £24,800',
+        leadTime: '6-8 Weeks to UK Delivery',
+        heroImage: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=85',
+        materials: ['Galvanized Anti-Corrosion Steel', 'Architectural Timber Slat Facade', 'Acoustic Soundproofing 42dB'],
+        dimensions: 'Expanded: 5.9m × 3.5m × 2.6m — 20.5m² area',
+        warranty: '25-Year Structural Frame Warranty',
+        specs: [
+          'Under 2.5m eaves height permitting straightforward garden boundary placement',
+          'High-density 42dB acoustic wall insulation ideal for recording and video calls',
+          'Concealed Cat6 ethernet ports, USB-C rapid charging hubs, and climate inverter',
+          'Dispatched directly from UK Central Distribution Warehouse via Hiab crane'
+        ]
+      },
+      {
+        id: 'hs-exp-03',
+        modelCode: 'HS-EXP-40/EST',
+        name: 'The Estate 40 Triple-Wing Home',
+        category: 'Expandable Homes',
+        discipline: 'Expandable Homes',
+        tagline: 'Our flagship 74m² triple-wing expandable residence featuring 3 bedrooms, 2 bathrooms, and full architectural kitchen.',
+        price: 'From £45,900',
+        leadTime: '8-12 Weeks to UK Delivery',
+        heroImage: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=85',
+        materials: ['Heavy-Duty ISO Certified Chassis', 'Triple Glazed Argon Thermal Joinery', 'Full Turnkey Interior Fitout'],
+        dimensions: 'Expanded: 11.8m (L) × 6.3m (W) × 2.7m (H) — 74m² area',
+        warranty: '25-Year Structural Frame Warranty',
+        specs: [
+          'Master bedroom with private ensuite bathroom plus secondary family wetroom',
+          'Integrated luxury kitchen island with induction cooking and concealed dishwasher',
+          'Reinforced structural floor rated for underfloor hydronic heating coils',
+          'Fully transportable on standard UK highway low-loader trailers'
+        ]
+      }
+    ];
+
+    const CATEGORY_VIDEO = {
+      'Kitchen': 'https://assets.mixkit.co/videos/preview/mixkit-modern-kitchen-island-and-living-room-41584-large.mp4',
+      'Bath & Wellness': 'https://assets.mixkit.co/videos/preview/mixkit-luxurious-bathroom-with-a-modern-bathtub-and-large-windows-41582-large.mp4',
+      'Sculptural Lighting': 'https://assets.mixkit.co/videos/preview/mixkit-glass-chandeliers-hanging-from-the-ceiling-42037-large.mp4',
+      'Architectural Joinery': 'https://assets.mixkit.co/videos/preview/mixkit-modern-walk-in-closet-with-clothes-41580-large.mp4',
+      'Hardware & Surfaces': 'https://assets.mixkit.co/videos/preview/mixkit-modern-walk-in-closet-with-clothes-41580-large.mp4',
+      'Expandable Homes': 'https://videos.pexels.com/video-files/3773486/3773486-hd_1920_1080_30fps.mp4'
+    };
+
+    const CONFIG_OPTIONS = [
+      { id: 'standard', name: 'Standard Bay (3.6m)', sub: 'Full Height 2.8m', price: 0 },
+      { id: 'extended', name: 'Extended Suite (5.2m)', sub: 'Walk-in configuration', price: 6400 }
+    ];
+    const FINISH_OPTIONS = [
+      { id: 'oak', name: 'Smoked Muted Oak', sub: 'Dark Brushed Grain', swatch: '#5A4636', price: 0 },
+      { id: 'ash', name: 'White Ash & Bone', sub: 'Light Mineral Wash', swatch: '#D8CFBC', price: 1200 },
+      { id: 'charcoal', name: 'Charcoal Composite', sub: 'Matte Non-Reflective', swatch: '#2D2D2D', price: 900 },
+      { id: 'hinoki', name: 'Japanese Hinoki', sub: 'Pale Cedar Slats', swatch: '#CBB296', price: 2400 }
+    ];
+    const GLAZING_OPTIONS = [
+      { id: 'bronze', name: 'Bronze Anodized Flush Profiles (Included)', sub: 'Concealed soft-close pivots', price: 0, tag: 'Standard' },
+      { id: 'fluted', name: 'Smoked Fluted Acoustic Glass Bays', sub: 'Integrated 2700K perimeter LED extrusion', price: 2800, tag: '+£2,800' }
+    ];
+    const UPGRADE_OPTIONS = [
+      { id: 'led', name: 'Smart Perimeter LED System', sub: 'App-controlled 2200–4000K scenes', price: 1450 },
+      { id: 'acoustic', name: 'Acoustic Comfort Upgrade', sub: 'Enhanced Rw-rated build-ups', price: 1900 },
+      { id: 'hvac', name: 'Heat-Pump Climate System', sub: 'Whisper-quiet heating & cooling', price: 3200 },
+      { id: 'solar', name: 'Solar Array Preparation', sub: 'Roof rails, inverter housing & cabling', price: 2100 }
+    ];
+
+    let currentProduct = null;
+    let selConfig = 'standard';
+    let selFinish = 'oak';
+    let selGlazing = 'bronze';
+    let selUpgrades = [];
+    let activeMediaTab = 'video';
+    let galleryIdx = 0;
+    let hotspotsOn = true;
+
+    function parseBasePrice(p) {
+      const m = String(p.price || '').replace(/[^0-9]/g, '');
+      return m ? parseInt(m, 10) : 0;
+    }
+    function gbp(n) {
+      return '£' + n.toLocaleString('en-GB');
+    }
+
+    function initProduct() {
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get('id');
+      currentProduct = (typeof PRODUCTS !== 'undefined') ? (PRODUCTS.find(p => p.id === id) || PRODUCTS[0]) : null;
+      if (!currentProduct) return;
+      renderAll();
+    }
+
+    function pillBtn(active) {
+      return active
+        ? 'border-[#9a7b4f] bg-[#FAF8F5] ring-1 ring-[#9a7b4f]'
+        : 'border-[#e5e2da] bg-white hover:border-[#C4BEB1]';
+    }
+
+    function renderAll() {
+      renderHeader();
+      renderModels();
+      renderOptions();
+      renderTech();
+      renderDocs();
+      renderPricing();
+      renderMedia();
+      renderNarrative();
+      renderTables();
+      renderLogistics();
+      renderFloor();
+      buildCube();
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function renderHeader() {
+      const p = currentProduct;
+      document.getElementById('crumb-category').textContent = p.category;
+      document.getElementById('crumb-name').textContent = p.name;
+      document.getElementById('crumb-model').textContent = p.modelCode;
+      document.getElementById('spec-leadtime').textContent = p.leadTime || '—';
+      document.getElementById('spec-title').textContent = p.name;
+      document.getElementById('spec-tagline').textContent = p.tagline;
+      document.title = p.name + ' | OriginSpaces Modular UK';
+    }
+
+    function renderModels() {
+      const p = currentProduct;
+      document.getElementById('spec-model-list').innerHTML = `
+        <div class="p-2.5 rounded-lg border bg-[#FAF8F5] border-[#9a7b4f] ring-1 ring-[#9a7b4f] shadow-sm flex items-center gap-2.5">
+          <img src="${p.heroImage.replace('w=1200', 'w=200')}" alt="${p.name}" loading="lazy" class="w-14 h-11 object-cover rounded border border-[#e5e2da] shrink-0" />
+          <div class="min-w-0">
+            <div class="text-[13px] font-semibold text-[#1a1d24] leading-snug">${p.name}</div>
+            <div class="text-[11px] text-[#6b7280] font-mono">${p.modelCode} &middot; ${p.price || ''}</div>
+          </div>
+        </div>`;
+    }
+
+    function renderOptions() {
+      document.getElementById('spec-config-list').innerHTML = CONFIG_OPTIONS.map(o => `
+        <button onclick="setDetailOpt('config','${o.id}')" class="p-2.5 text-left rounded-lg border text-xs transition-all ${selConfig === o.id ? pillBtn(true) : pillBtn(false)}">
+          <div class="font-semibold text-[#1a1d24]">${o.name}</div>
+          <div class="text-[11px] ${o.price ? 'text-[#9a7b4f] font-bold' : 'text-[#6b7280]'}">${o.price ? '+' + gbp(o.price) : o.sub}</div>
+        </button>`).join('');
+      const f = FINISH_OPTIONS.find(x => x.id === selFinish);
+      document.getElementById('spec-finish-label').textContent = f ? f.name.toUpperCase() : '—';
+      document.getElementById('viewer-finish-name').textContent = f ? f.name : '—';
+      document.getElementById('spec-finish-list').innerHTML = FINISH_OPTIONS.map(o => `
+        <button onclick="setDetailOpt('finish','${o.id}')" class="p-2.5 rounded-lg border flex items-center gap-2 text-left transition-all ${selFinish === o.id ? pillBtn(true) : pillBtn(false)}">
+          <span class="w-5 h-5 rounded-full border border-black/20 shrink-0" style="background-color:${o.swatch};"></span>
+          <span class="min-w-0">
+            <span class="block text-xs font-semibold text-[#1a1d24] truncate">${o.name}</span>
+            <span class="block text-[10px] ${o.price ? 'text-[#9a7b4f] font-bold' : 'text-[#6b7280]'}">${o.price ? '+' + gbp(o.price) : o.sub}</span>
+          </span>
+        </button>`).join('');
+      document.getElementById('spec-glazing-list').innerHTML = GLAZING_OPTIONS.map(o => {
+        const on = selGlazing === o.id;
+        return `
+        <button onclick="setDetailOpt('glazing','${o.id}')" class="w-full p-2.5 px-3 text-left rounded-lg border flex items-center justify-between gap-2 transition-all ${on ? pillBtn(true) : pillBtn(false)}">
+          <span>
+            <span class="block text-xs font-semibold text-[#1a1d24]">${o.name}</span>
+            <span class="block text-[11px] text-[#6b7280]">${o.sub}</span>
+          </span>
+          <span class="text-xs font-mono text-[#9a7b4f] font-bold shrink-0">${o.tag}</span>
+        </button>`;
+      }).join('');
+      document.getElementById('spec-upgrade-list').innerHTML = UPGRADE_OPTIONS.map(o => {
+        const on = selUpgrades.includes(o.id);
+        return `
+        <button onclick="toggleDetailUpgrade('${o.id}')" class="w-full p-2.5 px-3 text-left rounded-lg border flex items-center justify-between gap-2 transition-all ${on ? pillBtn(true) : pillBtn(false)}">
+          <span>
+            <span class="block text-xs font-semibold text-[#1a1d24]">${o.name}</span>
+            <span class="block text-[11px] text-[#6b7280]">${o.sub}</span>
+          </span>
+          <span class="flex items-center gap-2 shrink-0">
+            <span class="text-xs font-mono text-[#9a7b4f] font-bold">+${gbp(o.price)}</span>
+            <span class="w-5 h-5 rounded-md border ${on ? 'bg-[#9a7b4f] border-[#9a7b4f] text-white' : 'border-[#C4BEB1] text-transparent'} flex items-center justify-center text-xs">✓</span>
+          </span>
+        </button>`;
+      }).join('');
+    }
+
+    function setDetailOpt(group, id) {
+      if (group === 'config') selConfig = id;
+      if (group === 'finish') selFinish = id;
+      if (group === 'glazing') selGlazing = id;
+      renderOptions();
+      renderPricing();
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function toggleDetailUpgrade(id) {
+      selUpgrades = selUpgrades.includes(id) ? selUpgrades.filter(x => x !== id) : [...selUpgrades, id];
+      renderOptions();
+      renderPricing();
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function currentTotal() {
+      const base = parseBasePrice(currentProduct);
+      const c = CONFIG_OPTIONS.find(x => x.id === selConfig);
+      const f = FINISH_OPTIONS.find(x => x.id === selFinish);
+      const g = GLAZING_OPTIONS.find(x => x.id === selGlazing);
+      const u = UPGRADE_OPTIONS.filter(x => selUpgrades.includes(x.id)).reduce((s, x) => s + x.price, 0);
+      return { base, total: base + (c ? c.price : 0) + (f ? f.price : 0) + (g ? g.price : 0) + u };
+    }
+
+    function renderPricing() {
+      const t = currentTotal();
+      document.getElementById('spec-total').textContent = gbp(t.total);
+      const rows = [];
+      const c = CONFIG_OPTIONS.find(x => x.id === selConfig);
+      const f = FINISH_OPTIONS.find(x => x.id === selFinish);
+      const g = GLAZING_OPTIONS.find(x => x.id === selGlazing);
+      rows.push(['Base — ' + currentProduct.modelCode, t.base]);
+      if (c && c.price) rows.push([c.name, c.price]);
+      if (f && f.price) rows.push([f.name, f.price]);
+      if (g && g.price) rows.push([g.name, g.price]);
+      UPGRADE_OPTIONS.filter(x => selUpgrades.includes(x.id)).forEach(x => rows.push([x.name, x.price]));
+      document.getElementById('spec-breakdown').innerHTML = rows.map(([n, v]) =>
+        `<div class="flex justify-between gap-2"><span class="truncate">${n}</span><span class="font-semibold text-[#1a1d24] shrink-0">${gbp(v)}</span></div>`
+      ).join('');
+    }
+
+    function toggleSpecAccordion(id) {
+      const el = document.getElementById(id);
+      const chev = document.getElementById(id + '-chevron');
+      if (!el) return;
+      el.classList.toggle('hidden');
+      if (chev) chev.classList.toggle('rotate-180');
+    }
+
+    function renderTech() {
+      const p = currentProduct;
+      const rows = [
+        ['Model Reference', p.modelCode, false],
+        ['Expanded Dimensions', p.dimensions || '—', false],
+        ['Primary Materials', (p.materials || []).slice(0, 2).join(', ') || '—', false],
+        ['Insulation Thermal U-Value', '0.16 W/m²K (Part L Passivhaus)', true],
+        ['Structural Chassis Steel', 'Q235B Galvanized (C4 Marine)', false],
+        ['Acoustic Isolation', '42 dB Soundstop', false],
+        ['Assembly Deployment', '15 – 30 Minutes', true],
+        ['Lead Time', p.leadTime || '—', false],
+        ['Warranty Standard', p.warranty || '10-Year UK cover', false]
+      ];
+      document.getElementById('spec-tech').innerHTML = rows.map(([k, v, gold]) =>
+        `<div class="flex justify-between gap-3 py-1.5 border-b border-[#EAE6DC] last:border-0"><span class="text-[#6b7280] shrink-0">${k}:</span><span class="font-mono font-bold text-right ${gold ? 'text-[#9a7b4f]' : 'text-[#1a1d24]'}">${v}</span></div>`
+      ).join('');
+    }
+
+    function renderDocs() {
+      const p = currentProduct;
+      const docs = [
+        { t: 'Architectural Lookbook (PDF)', s: '18.4 MB · 32 Pages', act: `downloadSpecFile('lookbook')` },
+        { t: 'Assembly & MEP Manual (PDF)', s: '9.6 MB · 48 Pages', act: `downloadSpecFile('manual')` },
+        { t: 'Technical Specification Sheet (PDF)', s: p.modelCode + ' · Rev 2025', act: `downloadSpecFile('spec')` }
+      ];
+      document.getElementById('spec-docs').innerHTML = docs.map(d => `
+        <div class="p-3 bg-[#FAF8F5] border border-[#e5e2da] rounded-lg flex items-center justify-between gap-3">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <i data-lucide="book-open" class="w-4 h-4 text-[#9a7b4f] shrink-0"></i>
+            <div class="min-w-0">
+              <div class="font-serif text-[15px] font-semibold text-[#1a1d24] truncate">${d.t}</div>
+              <div class="text-[11px] text-[#6b7280]">${d.s}</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 shrink-0">
+            <a href="downloads.html" class="text-xs text-[#374151] hover:text-[#9a7b4f] font-medium transition-colors">Read</a>
+            <button onclick="${d.act}" class="text-[#9a7b4f] hover:text-[#866940] transition-colors">
+              <i data-lucide="download" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>`).join('');
+    }
+
+    function downloadSpecFile(kind) {
+      const p = currentProduct;
+      const body = ['OriginSpaces Specification Request', '', 'Product: ' + p.name, 'Model: ' + p.modelCode, 'Document: ' + (kind === 'lookbook' ? 'Architectural Lookbook & CAD' : 'Technical Specification Sheet'), 'Configured total: ' + gbp(currentTotal().total) + ' (excl. VAT)', '', 'The studio will issue this file within one working day.'].join('\n');
+      const blob = new Blob([body], { type: 'text/plain' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = p.modelCode.replace(/[^A-Za-z0-9]+/g, '_') + '_' + kind + '.txt';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+    }
+
+    function switchMediaTab(tab) {
+      activeMediaTab = tab;
+      ['video', 'gallery', 'floor', '3d'].forEach(k => {
+        document.getElementById('media-' + k).classList.toggle('hidden', k !== tab);
+        const b = document.getElementById('tab-btn-' + k);
+        b.className = 'px-4 py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 ' +
+          (k === tab ? 'bg-[#181B20] text-white shadow' : 'bg-transparent text-[#4b5563] hover:text-[#1a1d24] hover:bg-[#F4F1EA]');
+      });
+      const v = document.getElementById('spec-video');
+      if (v) {
+        if (tab === 'video') { v.play().catch(() => {}); }
+        else v.pause();
+      }
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function unmuteSpecVideo() {
+      const v = document.getElementById('spec-video');
+      if (!v) return;
+      v.muted = false;
+      v.play().catch(() => {});
+      const o = document.getElementById('spec-unmute-overlay');
+      if (o) o.style.display = 'none';
+    }
+
+    function detailGallery() {
+      const p = currentProduct;
+      const siblings = (typeof PRODUCTS !== 'undefined' ? PRODUCTS : []).filter(x => x.category === p.category && x.id !== p.id).slice(0, 2);
+      return [{ img: p.heroImage, cap: p.name + ' — Hero View', cat: p.category }].concat(siblings.map(s => ({ img: s.heroImage, cap: s.name, cat: s.category })));
+    }
+
+    let galleryPlate = 'all';
+    let gallerySel = 0;
+
+    function galleryPlates() {
+      const g = detailGallery();
+      const cats = [...new Set(g.map(x => x.cat).filter(Boolean))];
+      return [{ id: 'all', n: 'All', c: g.length }].concat(cats.map(c => ({ id: c, n: c, c: g.filter(x => x.cat === c).length })));
+    }
+
+    function renderGalleryMain() {
+      const g = detailGallery();
+      const visible = g.filter(x => galleryPlate === 'all' || x.cat === galleryPlate);
+      let item = g[gallerySel];
+      if (!item || (galleryPlate !== 'all' && item.cat !== galleryPlate)) {
+        item = visible[0] || g[0];
+        gallerySel = g.indexOf(item);
+      }
+      const main = document.getElementById('gallery-main');
+      main.src = item.img;
+      main.alt = item.cap;
+      main.onclick = expandGallery;
+      main.classList.add('cursor-zoom-in');
+      document.getElementById('gallery-cat-chip').textContent = (item.cat || currentProduct.category).toUpperCase();
+      document.getElementById('gallery-counter').textContent = (visible.indexOf(item) + 1) + ' / ' + visible.length;
+      document.getElementById('gallery-caption').textContent = item.cap + ' — Click image to expand';
+      document.getElementById('gallery-pins').innerHTML = hotspotsOn ? `
+        <button onclick="openSpecPin('Material detail')" class="absolute z-10" style="top:34%;left:30%">
+          <span class="relative flex h-4 w-4"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#9a7b4f] opacity-75"></span><span class="relative inline-flex rounded-full h-4 w-4 bg-[#9a7b4f] border-2 border-white shadow"></span></span>
+        </button>
+        <button onclick="openSpecPin('Junction detail')" class="absolute z-10" style="top:58%;left:64%">
+          <span class="relative flex h-4 w-4"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#9a7b4f] opacity-75"></span><span class="relative inline-flex rounded-full h-4 w-4 bg-[#9a7b4f] border-2 border-white shadow"></span></span>
+        </button>` : '';
+      document.getElementById('gallery-plates').innerHTML =
+        '<span class="text-[10px] font-mono uppercase tracking-widest text-[#6b7280] font-semibold mr-1">Curated Plates:</span>' +
+        galleryPlates().map(p => `
+          <button onclick="setGalleryPlate('${p.id.replace(/'/g, "\\'")}')" class="px-3 py-1.5 rounded-lg text-[11px] font-mono uppercase tracking-wider font-semibold border transition-all ${galleryPlate === p.id ? 'bg-[#181b20] text-white border-[#181b20]' : 'bg-white text-[#6b7280] border-[#e5e2da] hover:border-[#9a7b4f] hover:text-[#1a1d24]'}">${p.n} (${p.c})</button>`
+        ).join('');
+      document.getElementById('gallery-thumbs').innerHTML = visible.map((t) => {
+        const gi = g.indexOf(t);
+        return `
+        <button onclick="setGalleryIdx(${gi})" class="rounded-lg overflow-hidden border-2 transition-all ${gi === gallerySel ? 'border-[#9a7b4f] ring-1 ring-[#9a7b4f]' : 'border-[#e5e2da] hover:border-[#C4BEB1]'}">
+          <img src="${t.img.replace('w=1200', 'w=300')}" alt="${t.cap}" loading="lazy" class="w-full aspect-[16/10] object-cover" />
+        </button>`;
+      }).join('');
+      const t = document.getElementById('hotspot-toggle');
+      if (t) t.textContent = 'Hotspots: ' + (hotspotsOn ? 'On' : 'Off');
+    }
+
+    function setGalleryPlate(id) {
+      galleryPlate = id;
+      renderGalleryMain();
+    }
+    function renderMedia() {
+      const p = currentProduct;
+      const video = document.getElementById('spec-video');
+      video.src = CATEGORY_VIDEO[p.category] || CATEGORY_VIDEO['Expandable Homes'];
+      video.poster = p.heroImage;
+      gallerySel = 0;
+      galleryPlate = 'all';
+      document.getElementById('video-title').textContent = p.name + ': Turnkey Architectural Demonstration';
+      document.getElementById('video-desc').textContent = p.tagline;
+      document.getElementById('gallery-tab-label').textContent = 'Gallery (' + detailGallery().length + ')';
+      const chapters = [
+        { t: '00:00', n: 'Overview & Siting' },
+        { t: '00:45', n: 'Stone Mitres & Alignment' },
+        { t: '01:30', n: 'Concealed Downdraft Extraction' },
+        { t: '02:10', n: 'Internal Joinery & Walnut Inserts' }
+      ];
+      document.getElementById('video-chapters').innerHTML = chapters.map((c, i) =>
+        `<button onclick="seekVideo(${i})" class="p-2.5 text-left rounded-lg border border-[#e5e2da] bg-white hover:border-[#9a7b4f] text-xs transition-all"><span class="block font-mono text-[10px] text-[#9a7b4f] font-bold">${c.t}</span><span class="font-serif font-semibold text-[#1a1d24] text-sm">${c.n}</span></button>`
+      ).join('');
+      renderGalleryMain();
+    }
+
+    function seekVideo(i) {
+      const v = document.getElementById('spec-video');
+      if (!v || !v.duration || isNaN(v.duration)) return;
+      v.currentTime = Math.min(v.duration - 0.5, (v.duration / 4) * i);
+      v.play().catch(() => {});
+    }
+
+    function expandGallery() {
+      const el = document.getElementById('media-gallery');
+      if (!el) return;
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+      else if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+    }
+
+    function setGalleryIdx(i) {
+      gallerySel = i;
+      renderGalleryMain();
+    }
+
+    function toggleHotspots() {
+      hotspotsOn = !hotspotsOn;
+      renderGalleryMain();
+    }
+
+    function openSpecPin(label) {
+      const box = document.getElementById('gallery-caption');
+      if (box) box.textContent = currentProduct.name + ' — ' + label + ' (see Technical Specifications)';
+    }
+
+    function renderNarrative() {
+      const p = currentProduct;
+      document.getElementById('narrative-title').textContent = p.name + ', Specified End to End';
+      document.getElementById('narrative-body').textContent = p.tagline + ' Supplied with ' + (p.materials || []).join(', ').toLowerCase() + '. ' + (p.specs && p.specs[0] ? p.specs[0] : '');
+    }
+
+    function specRow(k, v) {
+      return `<div class="flex justify-between gap-3 py-1.5 border-b border-[#F0EDE4] last:border-0"><span class="text-[#6b7280] shrink-0">${k}</span><span class="font-semibold text-[#1a1d24] text-right">${v}</span></div>`;
+    }
+
+    function renderTables() {
+      const p = currentProduct;
+      document.getElementById('spec-table-envelope').innerHTML =
+        specRow('Dimensions', p.dimensions || '—') +
+        specRow('Primary Materials', (p.materials || []).slice(0, 2).join(', ') || '—') +
+        specRow('Lead Time', p.leadTime || '—') +
+        specRow('Model Ref', p.modelCode);
+      document.getElementById('spec-table-systems').innerHTML =
+        specRow('Electrics', 'BS 7671 · 230V') +
+        specRow('Plumbing', 'Pre-plumbed · UK fittings') +
+        specRow('HVAC', 'Heat-pump ready') +
+        specRow('Warranty', p.warranty || '10-Year UK cover');
+    }
+
+    function renderLogistics() {
+      document.getElementById('logistics-row').innerHTML = [
+        ['factory', 'Factory Build', 'Precision build in 25–30 days with video PDI.'],
+        ['truck', 'Warehouse & Haulage', 'UK depot intake, 50-point check, Hiab to site.'],
+        ['key', 'Unfold & Handover', 'Hydraulic unfolding and levelling under 1 hour.']
+      ].map(([icon, t, d]) => `
+        <div class="bg-white border border-[#e5e2da] rounded-2xl p-5 shadow-xs">
+          <i data-lucide="${icon}" class="w-5 h-5 text-[#9a7b4f] mb-2.5"></i>
+          <h4 class="text-sm font-semibold text-[#1a1d24] mb-1">${t}</h4>
+          <p class="text-xs text-[#374151] leading-relaxed">${d}</p>
+        </div>`).join('');
+    }
+
+    /* Floor plan plates */
+    const FLOOR_ZONES = [
+      { id: 'master', name: 'Master Suite', desc: 'Private sleeping quarter with fitted wardrobes and garden aspect.', dims: '3.2 m × 3.0 m', x: 55, y: 45, w: 150, h: 140 },
+      { id: 'living', name: 'Central Living & Dining', desc: 'Open-plan day space wrapped in perimeter glazing.', dims: '4.1 m × 3.2 m', x: 215, y: 45, w: 230, h: 270 },
+      { id: 'kitchen', name: 'Kitchen & Prep Zone', desc: 'Monolithic island with dual sinks, integrated induction and stone bar.', dims: '3.8 m × 1.2 m', x: 455, y: 45, w: 130, h: 150 },
+      { id: 'bed2', name: 'King Bed Suite', desc: 'Second suite with quiet rear aspect and dressing wall.', dims: '3.0 m × 2.8 m', x: 55, y: 195, w: 150, h: 120 },
+      { id: 'ensuite', name: 'Ensuite & Utility', desc: 'Walk-in shower, WC and concealed plant wall.', dims: '2.0 m × 1.6 m', x: 455, y: 205, w: 130, h: 110 }
+    ];
+    let activeZone = 'kitchen';
+
+    function selectZone(id) {
+      activeZone = id;
+      renderFloor();
+    }
+
+    function renderFloor() {
+      const p = currentProduct;
+      document.getElementById('floor-ref').textContent = p.modelCode;
+      const svg = document.getElementById('floor-svg');
+      let s = '<defs><pattern id="fpgrid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="#262c38" stroke-width="1"/></pattern></defs>';
+      s += '<rect x="0" y="0" width="640" height="360" fill="#14171c"/>';
+      s += '<rect x="0" y="0" width="640" height="360" fill="url(#fpgrid)"/>';
+      s += '<rect x="40" y="30" width="560" height="300" fill="none" stroke="#3a4150" stroke-width="1.5"/>';
+      s += '<text x="48" y="24" fill="#8b93a1" font-size="9" font-family="monospace">EXPANDED WIDTH 6,300 · DEPTH (M)</text>';
+      FLOOR_ZONES.forEach(z => {
+        const on = z.id === activeZone;
+        s += `<g onclick="selectZone('${z.id}')" style="cursor:pointer">`;
+        s += `<rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" fill="${on ? '#2a2f3a' : '#1d2129'}" stroke="${on ? '#c5a880' : '#3a4150'}" stroke-width="${on ? 2 : 1}"/>`;
+        s += `<text x="${z.x + 10}" y="${z.y + 22}" fill="#e5e7eb" font-size="10" font-weight="bold" font-family="monospace">${z.name.toUpperCase()}</text>`;
+        s += `<text x="${z.x + 10}" y="${z.y + 38}" fill="#8b93a1" font-size="9" font-family="monospace">${z.dims}</text>`;
+        s += '</g>';
+      });
+      svg.innerHTML = s;
+      const z = FLOOR_ZONES.find(x => x.id === activeZone) || FLOOR_ZONES[2];
+      document.getElementById('floor-zone-name').textContent = z.name;
+      document.getElementById('floor-zone-desc').textContent = z.desc;
+      const stats = [
+        ['Expanded', p.dimensions || '—'],
+        ['Lead Time', p.leadTime || '—'],
+        ['Model Ref', p.modelCode],
+        ['Warranty', (p.warranty || '10-Year cover').split(',')[0]]
+      ];
+      document.getElementById('floor-stats').innerHTML = stats.map(([k, v]) =>
+        `<div class="bg-[#FAF9F5] border border-[#e5e2da] rounded-lg p-3"><span class="block text-[9px] font-mono uppercase tracking-widest text-[#6b7280] font-semibold">${k}</span><span class="block text-[13px] font-semibold text-[#1a1d24] mt-0.5 leading-snug">${v}</span></div>`
+      ).join('');
+    }
+
+    /* 3D massing viewer (Three.js) */
+    let renderer3d = null, scene3d = null, camera3d = null, controls3d = null, villa3d = null;
+    let unfoldT = 1, explodeT = 0, spinOn = true, raf3d = false;
+    function buildCube() {
+      const stage = document.getElementById('model3d-stage');
+      const label = document.getElementById('model3d-label');
+      if (!stage) return;
+      if (typeof THREE === 'undefined') {
+        if (label) label.textContent = '3D unavailable offline';
+        return;
+      }
+      stage.querySelectorAll('canvas').forEach(function (c) { c.remove(); });
+      const W = stage.clientWidth || 800, H = stage.clientHeight || 440;
+      renderer3d = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer3d.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer3d.setSize(W, H);
+      stage.insertBefore(renderer3d.domElement, stage.firstChild);
+      scene3d = new THREE.Scene();
+      camera3d = new THREE.PerspectiveCamera(42, W / H, 0.1, 200);
+      camera3d.position.set(9.5, 7, 11.5);
+      controls3d = new THREE.OrbitControls(camera3d, renderer3d.domElement);
+      controls3d.enableDamping = true;
+      controls3d.dampingFactor = 0.08;
+      controls3d.maxPolarAngle = Math.PI / 2 - 0.05;
+      controls3d.minDistance = 6;
+      controls3d.maxDistance = 32;
+      controls3d.autoRotate = spinOn;
+      controls3d.autoRotateSpeed = 0.9;
+      scene3d.add(new THREE.HemisphereLight(0xfff6e8, 0x8a8474, 0.95));
+      const sun = new THREE.DirectionalLight(0xffffff, 0.75);
+      sun.position.set(8, 14, 6);
+      scene3d.add(sun);
+      const ground = new THREE.Mesh(new THREE.PlaneGeometry(70, 70), new THREE.MeshStandardMaterial({ color: 0xe7e2d6, roughness: 1 }));
+      ground.rotation.x = -Math.PI / 2;
+      scene3d.add(ground);
+      const grid = new THREE.GridHelper(34, 34, 0xc8c3b7, 0xd8d4c7);
+      grid.position.y = 0.02;
+      scene3d.add(grid);
+      const wallMat = new THREE.MeshStandardMaterial({ color: 0xf6f3ec, roughness: 0.9 });
+      const roofMat = new THREE.MeshStandardMaterial({ color: 0xded9cb, roughness: 0.85 });
+      const darkMat = new THREE.MeshStandardMaterial({ color: 0x2b2f36, roughness: 0.7 });
+      const glassMat = new THREE.MeshStandardMaterial({ color: 0x3d5a68, emissive: 0x9fc3d4, emissiveIntensity: 0.55, roughness: 0.3 });
+      const edgeMat = new THREE.LineBasicMaterial({ color: 0x9a7b4f });
+      function edgedBox(w, h, d, mat) {
+        const g = new THREE.Group();
+        const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+        g.add(m);
+        g.add(new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), edgeMat));
+        return g;
+      }
+      const villa = new THREE.Group();
+      const base = edgedBox(7.0, 0.25, 7.0, darkMat); base.position.y = 0.125; villa.add(base);
+      const floor = edgedBox(6.4, 0.15, 6.4, roofMat); floor.position.y = 0.32; villa.add(floor);
+      const core = edgedBox(2.4, 2.8, 6.3, wallMat); core.position.y = 1.8; villa.add(core);
+      function wing(side) {
+        const g = new THREE.Group();
+        const body = edgedBox(1.95, 2.6, 6.1, wallMat); body.position.set(side * 0.975, 1.7, 0); g.add(body);
+        const win = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.9), glassMat);
+        win.position.set(side * 1.955, 1.8, 0); win.rotation.y = side * Math.PI / 2; g.add(win);
+        const win2 = win.clone(); win2.position.z = 1.8; g.add(win2);
+        const win3 = win.clone(); win3.position.z = -1.8; g.add(win3);
+        return g;
+      }
+      const wingL = wing(-1), wingR = wing(1);
+      villa.add(wingL); villa.add(wingR);
+      const roof = edgedBox(1, 0.18, 6.5, roofMat); roof.position.y = 3.3; villa.add(roof);
+      const coreGlass = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.1), glassMat);
+      coreGlass.position.set(0, 1.9, 3.16); villa.add(coreGlass);
+      scene3d.add(villa);
+      villa3d = { villa: villa, wingL: wingL, wingR: wingR, roof: roof, floor: floor, base: base, roofY: 3.3, floorY: 0.32, baseY: 0.125 };
+      unfoldT = 1; explodeT = 0;
+      const us = document.getElementById('model3d-unfold'); if (us) us.value = 100;
+      const es = document.getElementById('model3d-explode'); if (es) es.value = 0;
+      applyVilla();
+      if (!raf3d) {
+        raf3d = true;
+        (function loop() {
+          requestAnimationFrame(loop);
+          if (controls3d && activeMediaTab === '3d') controls3d.update();
+          if (renderer3d && scene3d && camera3d && activeMediaTab === '3d') renderer3d.render(scene3d, camera3d);
+        })();
+      }
+      if (!window.__fitBound) {
+        window.__fitBound = true;
+        window.addEventListener('resize', fitStage);
+      }
+    }
+    function fitStage() {
+      const stage = document.getElementById('model3d-stage');
+      if (!stage || !renderer3d || !camera3d) return;
+      const W = stage.clientWidth, H = stage.clientHeight;
+      renderer3d.setSize(W, H);
+      camera3d.aspect = W / H;
+      camera3d.updateProjectionMatrix();
+    }
+    function applyVilla() {
+      if (!villa3d) return;
+      const t = unfoldT, e = explodeT;
+      villa3d.wingL.position.x = -1.2 * t;
+      villa3d.wingR.position.x = 1.2 * t;
+      villa3d.roof.scale.x = 2.4 + (6.6 - 2.4) * t;
+      villa3d.roof.position.y = villa3d.roofY + e * 1.6;
+      villa3d.floor.position.y = villa3d.floorY - e * 0.8;
+      villa3d.base.position.y = villa3d.baseY - e * 1.4;
+      const label = document.getElementById('model3d-label');
+      const p = currentProduct ? currentProduct.modelCode : '';
+      if (label) label.textContent = (p ? p + ' · ' : '') + Math.round(t * 100) + '% unfolded';
+    }
+    function toggleSpin() {
+      const c = document.getElementById('model3d-spin');
+      spinOn = c ? c.checked : !spinOn;
+      if (controls3d) controls3d.autoRotate = spinOn;
+    }
+    function explodeModel(v) {
+      explodeT = (parseInt(v, 10) || 0) / 100;
+      applyVilla();
+    }
+    function unfoldModel(v) {
+      unfoldT = (parseInt(v, 10) || 0) / 100;
+      applyVilla();
+    }
+
+    initProduct();
+    if (window.lucide) lucide.createIcons();
+  </script>
+</body>
+</html>
