@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\GalleryCategoryController;
 use App\Http\Controllers\Admin\GalleryController;
 use App\Http\Controllers\Admin\PageSeoController;
 use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Admin\ProductExcelController;
 use App\Http\Controllers\Admin\ProductImageController;
 use App\Http\Controllers\Admin\ProductVariantController;
 use App\Http\Controllers\Admin\SliderController;
@@ -80,6 +81,10 @@ Route::group(['prefix' => 'admin/', 'middleware' => ['auth', 'is_admin']], funct
     Route::post('/products/toggle-featured', [ProductController::class, 'toggleFeatured'])->name('products.toggleFeatured');
     Route::get('/product-sort-list', [ProductController::class, 'sortList'])->name('products.sortList');
     Route::post('/product-sort-update', [ProductController::class, 'sortUpdate'])->name('products.sortUpdate');
+    Route::get('/products/export', [ProductExcelController::class, 'export'])->name('products.export');
+    Route::get('/products/image-template', [ProductExcelController::class, 'imageTemplate'])->name('products.imageTemplate');
+    Route::post('/products/import', [ProductExcelController::class, 'importPreview'])->name('products.importPreview');
+    Route::post('/products/import/confirm', [ProductExcelController::class, 'importConfirm'])->name('products.importConfirm');
 
     // Product children (per-product workspace tabs)
     Route::get('/products/{product}/images', [ProductImageController::class, 'list'])->name('product-images.list');

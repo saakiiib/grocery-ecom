@@ -13,6 +13,9 @@
             </select>
         </div>
         <div class="col text-end">
+            <a href="{{ route('products.export') }}" class="btn btn-outline-success me-2"><i class="ri-download-line align-middle me-1"></i> Export Excel</a>
+            <a href="{{ route('products.imageTemplate') }}" class="btn btn-outline-success me-2"><i class="ri-image-line align-middle me-1"></i> Image Template</a>
+            <button type="button" class="btn btn-outline-secondary me-2" data-bs-toggle="modal" data-bs-target="#importModal"><i class="ri-upload-line align-middle me-1"></i> Import Excel</button>
             <button type="button" class="btn btn-outline-primary me-2" data-bs-toggle="modal" data-bs-target="#sortModal" id="sortBtn"><i class="ri-sort-asc align-middle me-1"></i> Sort</button>
             <button type="button" class="btn btn-primary" id="newBtn">Add New Product</button>
         </div>
@@ -108,6 +111,26 @@
                 </table>
             </div>
         </div>
+    </div>
+</div>
+
+<div class="modal fade" id="importModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <form class="modal-content" method="POST" action="{{ route('products.importPreview') }}" enctype="multipart/form-data">
+            @csrf
+            <div class="modal-header">
+                <h5 class="modal-title">Import products from Excel</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small">Upload an exported file (edited or not). You'll get a preview with counts and errors before anything is saved. New categories and option values are created automatically. Optionally attach a ZIP of photos (see Image Template).</p>
+                <div class="mb-3"><label class="form-label">Excel file *</label><input type="file" class="form-control" name="file" accept=".xlsx,.xls,.csv" required></div>
+                <div><label class="form-label">Photos ZIP <small class="text-muted">optional</small></label><input type="file" class="form-control" name="images" accept=".zip"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn-primary">Upload &amp; preview</button>
+            </div>
+        </form>
     </div>
 </div>
 

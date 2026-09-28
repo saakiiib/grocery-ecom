@@ -41,5 +41,7 @@ Copied from an OriginSpaces showcase app and converted to grocery. Product price
 ## Known gaps (as of 2026-09-28 audit)
 
 - No admin CRUD for option groups/values (seed-only; admin can't add e.g. "750g").
-- Shopper variant picker (dropdowns + live price) not built; Excel import/export not built (`maatwebsite/excel` not installed — needs approval).
+- Shopper variant picker (dropdowns + live price) not built.
+- Product Excel lives in `app/Excel/` on raw PhpSpreadsheet (no maatwebsite): `ProductsExport` (Products/Reference/Image Slots/Guide sheets, one row per variant, dynamic group columns), `ProductsImport::parse($path, $imageDir)` (no writes) + `::commit($rows, $disableMissing, $imageDir)` (transaction). Keys: SKU → variant, Product ID then Name → product, category/value names auto-create (case-insensitive), unknown group headers abort, global row-0 conflicts block confirm. Uploads stage in `storage/app/imports/{token}/` (excel + extracted images/), re-parsed on confirm, dir deleted after.
+- Bulk images: slot filenames are `hero/{product-slug}.jpg` and `variants/{SKU}.jpg` (jpg/png/webp, case-insensitive stem match). `products.imageTemplate` downloads hero/+variants/ folders + README + manifest.csv. Hero/Variant Image cells override: bare filename must be in the ZIP (else row error), URL or /path stored as-is, blank uses the slot file. Converted to webp on commit (hero 1600px → `public/uploads/products/`, variants 800px → `public/uploads/products/variants/`), old files deleted.
 - `contacts.product_id` unused in admin. Old theme blades still reference null compat keys (`leadTime`, `dimensions`, `warranty`, `model3d`) — safe, remove during theme rebuild.
