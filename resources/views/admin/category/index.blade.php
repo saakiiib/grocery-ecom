@@ -25,12 +25,12 @@
                             <input type="hidden" id="codeid" name="codeid">
 
                             <div class="row g-3">
-                                <div class="col-md-12">
+                                <div class="col-md-6">
                                     <label class="form-label">{{ 'Category Name' }} <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control" id="name" name="name" placeholder="">
                                 </div>
 
-                                <div class="col-md-6 d-none">
+                                <div class="col-md-6">
                                     <label class="form-label">{{ 'Parent Category' }}</label>
                                     <select class="form-control select2" id="parent_id" name="parent_id">
                                         <option value="">{{ 'Select Category' }}</option>
@@ -40,47 +40,47 @@
                                     </select>
                                 </div>
 
-                                <div class="col-md-12 d-none">
+                                <div class="col-md-12">
                                     <label class="form-label">{{ 'Description' }}</label>
                                     <textarea class="form-control" id="description" name="description" rows="3" placeholder=""></textarea>
                                 </div>
 
-                                <div class="col-md-12">
+                                <div class="col-md-6">
                                     <label class="form-label">{{ 'Image' }}</label>
                                     <input type="file" class="form-control" id="image" accept="image/*"
                                         onchange="previewImage(event, '#preview-image')">
-                                    <div id="current_image_box" style="display:none" class="mt-1 small"><span id="current_image_name"></span> <label class="ms-2"><input type="checkbox" name="remove_image" id="remove_image" value="1"> Remove current file</label></div>
+                                    <div id="current_image_box" style="display:none" class="mt-2"><button type="button" id="removeImageBtn" class="btn btn-sm btn-outline-danger">Remove image</button></div>
                                     <img id="preview-image" src="#" alt="" class="img-thumbnail rounded mt-3"
                                         style="max-width: 300px; display: none;">
                                 </div>
 
-                                <div class="col-md-12 d-none">
+                                <div class="col-md-6">
                                     <label class="form-label">{{ 'Category Video URL' }} <small class="text-muted">(used on product details page, optional)</small></label>
                                     <input type="url" class="form-control" id="video_url" name="video_url" placeholder="https://...mp4">
                                 </div>
 
-                                <div class="col-12 d-none"><hr><h6 class="mb-0">SEO (for frontend meta tags)</h6></div>
+                                <div class="col-12"><hr><h6 class="mb-0">SEO (for frontend meta tags)</h6></div>
 
-                                <div class="col-md-12 d-none">
+                                <div class="col-md-6">
                                     <label class="form-label">{{ 'Meta Title' }}</label>
                                     <input type="text" class="form-control" id="meta_title" name="meta_title" maxlength="255">
                                 </div>
 
-                                <div class="col-md-12 d-none">
-                                    <label class="form-label">{{ 'Meta Description' }}</label>
-                                    <textarea class="form-control" id="meta_description" name="meta_description" rows="2"></textarea>
-                                </div>
-
-                                <div class="col-md-6 d-none">
+                                <div class="col-md-6">
                                     <label class="form-label">{{ 'Meta Keywords' }}</label>
                                     <input type="text" class="form-control" id="meta_keywords" name="meta_keywords" placeholder="comma, separated">
                                 </div>
 
-                                <div class="col-md-6 d-none">
+                                <div class="col-md-6">
+                                    <label class="form-label">{{ 'Meta Description' }}</label>
+                                    <textarea class="form-control" id="meta_description" name="meta_description" rows="2"></textarea>
+                                </div>
+
+                                <div class="col-md-6">
                                     <label class="form-label">{{ 'Meta Image' }} <small class="text-muted">1200x630</small></label>
                                     <input type="file" class="form-control" id="meta_image" accept="image/*"
                                         onchange="previewImage(event, '#preview-meta-image')">
-                                    <div id="current_meta_image_box" style="display:none" class="mt-1 small"><span id="current_meta_image_name"></span> <label class="ms-2"><input type="checkbox" name="remove_meta_image" id="remove_meta_image" value="1"> Remove current file</label></div>
+                                    <div id="current_meta_image_box" style="display:none" class="mt-2"><button type="button" id="removeMetaImageBtn" class="btn btn-sm btn-outline-danger">Remove image</button></div>
                                     <img id="preview-meta-image" src="#" alt="" class="img-thumbnail rounded mt-3"
                                         style="max-width: 300px; display: none;">
                                 </div>
@@ -110,7 +110,7 @@
                             {{ 'All Categories' }}
                         </button>
                     </li>
-                    <li class="nav-item d-none" role="presentation">
+                    <li class="nav-item" role="presentation">
                         <button class="nav-link" id="child-tab" data-bs-toggle="tab" data-bs-target="#child-categories"
                             type="button" role="tab">
                             {{ 'Sub-Categories' }}
@@ -416,8 +416,6 @@
                     if (metaImgInput.files && metaImgInput.files[0]) {
                         form_data.append("meta_image", metaImgInput.files[0]);
                     }
-                    form_data.append("remove_image", $("#remove_image").is(":checked") ? 1 : 0);
-                    form_data.append("remove_meta_image", $("#remove_meta_image").is(":checked") ? 1 : 0);
 
                     form_data.append("codeid", $("#codeid").val());
 
@@ -491,9 +489,8 @@
                 if (data.image) {
                     featureImagePreview.src = data.image;
                     featureImagePreview.style.display = 'block';
-                    $('#current_image_name').html('Current: <a href="' + data.image + '" target="_blank">' + data.image.split('/').pop() + '</a>');
                     $('#current_image_box').show();
-                    $('#remove_image').prop('checked', false);
+                    $('#removeImageBtn').data('id', data.id);
                 } else {
                     featureImagePreview.src = "#";
                     featureImagePreview.style.display = 'none';
@@ -503,14 +500,51 @@
                 if (data.meta_image) {
                     metaImagePreview.src = data.meta_image;
                     metaImagePreview.style.display = 'block';
-                    $('#current_meta_image_name').html('Current: <a href="' + data.meta_image + '" target="_blank">' + data.meta_image.split('/').pop() + '</a>');
                     $('#current_meta_image_box').show();
-                    $('#remove_meta_image').prop('checked', false);
+                    $('#removeMetaImageBtn').data('id', data.id);
                 } else {
                     metaImagePreview.src = "#";
                     metaImagePreview.style.display = 'none';
                 }
             }
+
+            $('#removeImageBtn').click(function () {
+                var id = $(this).data('id') || $('#codeid').val();
+                if (!id) return;
+                showLoader();
+                $.ajax({
+                    url: "{{ url('/admin/category') }}/" + id + "/image",
+                    type: 'DELETE',
+                    success: function (d) {
+                        hideLoader();
+                        showSuccess(d.message);
+                        $('#preview-image').attr('src', '#').hide();
+                        $('#current_image_box').hide();
+                        $('#image').val('');
+                        reloadTable('#parentCategoryTable');
+                        reloadTable('#childCategoryTable');
+                    },
+                    error: function () { hideLoader(); showError('Failed to remove image'); }
+                });
+            });
+
+            $('#removeMetaImageBtn').click(function () {
+                var id = $(this).data('id') || $('#codeid').val();
+                if (!id) return;
+                showLoader();
+                $.ajax({
+                    url: "{{ url('/admin/category') }}/" + id + "/meta-image",
+                    type: 'DELETE',
+                    success: function (d) {
+                        hideLoader();
+                        showSuccess(d.message);
+                        $('#preview-meta-image').attr('src', '#').hide();
+                        $('#current_meta_image_box').hide();
+                        $('#meta_image').val('');
+                    },
+                    error: function () { hideLoader(); showError('Failed to remove image'); }
+                });
+            });
 
             function clearform() {
                 $('#createThisForm')[0].reset();
@@ -521,7 +555,6 @@
                 $('#preview-meta-image').attr('src', '#');
                 $('#preview-meta-image').hide();
                 $('#current_image_box,#current_meta_image_box').hide();
-                $('#remove_image,#remove_meta_image').prop('checked', false);
                 $("#cardTitle").text("{{ 'Add New Category' }}");
 
                 $('#parent_id').val(null).trigger('change');

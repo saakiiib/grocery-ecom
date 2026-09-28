@@ -74,7 +74,7 @@ class PageSeoController extends Controller
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
             'meta_keywords' => 'nullable|string',
-            'meta_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'meta_image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
         ]);
 
         $pageSeo = PageSeo::findOrFail($request->id);
@@ -90,14 +90,15 @@ class PageSeoController extends Controller
                 unlink(public_path($pageSeo->meta_image));
             }
 
-            $name = time().'.webp';
+            // Meta images keep the original format (jpeg/png) — never webp.
+            $ext = strtolower($request->file('meta_image')->getClientOriginalExtension());
+            $name = mt_rand(10000000, 99999999).'.'.(in_array($ext, ['jpg', 'jpeg', 'png']) ? $ext : 'jpg');
             Image::make($request->file('meta_image'))
                 ->resize(1200, 630, function ($constraint) {
                     $constraint->aspectRatio();
                     $constraint->upsize();
                 })
-                ->encode('webp', 80)
-                ->save($path.$name);
+                ->save($path.$name, 85);
 
             $data['meta_image'] = 'uploads/page-seo/'.$name;
         } elseif ($request->boolean('remove_meta_image')) {

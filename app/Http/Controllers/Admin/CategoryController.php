@@ -27,6 +27,10 @@ class CategoryController extends Controller
             return DataTables::of($query)
                 ->addIndexColumn()
                 ->addColumn('image', function ($row) {
+                    if (! $row->image) {
+                        return '<span class="text-muted">-</span>';
+                    }
+
                     return '<img src="'.url($row->image).'" class="img-thumbnail" style="max-width: 80px;">';
                 })
                 ->addColumn('parent_category', function ($row) {
@@ -125,14 +129,17 @@ class CategoryController extends Controller
             if (! file_exists($destinationPath)) {
                 mkdir($destinationPath, 0755, true);
             }
-            $randomName = mt_rand(10000000, 99999999).'.webp';
+            // Meta images keep the original format (jpeg/png) — no webp,
+            // so social crawlers and link previews read them reliably.
+            $ext = strtolower($request->file('meta_image')->getClientOriginalExtension());
+            $ext = in_array($ext, ['jpg', 'jpeg', 'png']) ? $ext : 'jpg';
+            $randomName = mt_rand(10000000, 99999999).'.'.$ext;
             Image::make($request->file('meta_image'))
                 ->resize(1200, 630, function ($constraint) {
                     $constraint->aspectRatio();
                     $constraint->upsize();
                 })
-                ->encode('webp', 80)
-                ->save($destinationPath.$randomName);
+                ->save($destinationPath.$randomName, 85);
             $data->meta_image = '/uploads/category/'.$randomName;
         }
 
@@ -201,34 +208,25 @@ class CategoryController extends Controller
                 ->destroy();
 
             $data->image = '/uploads/category/'.$randomName;
-        } elseif ($request->boolean('remove_image')) {
-            // Only delete old image if it's not the placeholder
-            if ($data->image && $data->image !== 'placeholder.webp' && file_exists(public_path($data->image))) {
-                @unlink(public_path($data->image));
-            }
-            $data->image = null;
         }
 
         if ($request->hasFile('meta_image')) {
             if ($data->meta_image && file_exists(public_path($data->meta_image))) {
                 @unlink(public_path($data->meta_image));
             }
-            $randomName = mt_rand(10000000, 99999999).'.webp';
+            // Meta images keep the original format (jpeg/png) — no webp.
+            $ext = strtolower($request->file('meta_image')->getClientOriginalExtension());
+            $ext = in_array($ext, ['jpg', 'jpeg', 'png']) ? $ext : 'jpg';
+            $randomName = mt_rand(10000000, 99999999).'.'.$ext;
             $destinationPath = public_path('uploads/category/');
             if (! file_exists($destinationPath)) {
                 mkdir($destinationPath, 0755, true);
             }
             Image::make($request->file('meta_image'))
                 ->resize(1200, 630, fn ($c) => $c->aspectRatio())
-                ->encode('webp', 80)
-                ->save($destinationPath.$randomName)
+                ->save($destinationPath.$randomName, 85)
                 ->destroy();
             $data->meta_image = '/uploads/category/'.$randomName;
-        } elseif ($request->boolean('remove_meta_image')) {
-            if ($data->meta_image && file_exists(public_path($data->meta_image))) {
-                @unlink(public_path($data->meta_image));
-            }
-            $data->meta_image = null;
         }
 
         if ($data->save()) {
@@ -240,6 +238,30 @@ class CategoryController extends Controller
         return response()->json([
             'message' => 'Error updating category',
         ], 500);
+    }
+
+    public function removeImage($id)
+    {
+        $data = Category::findOrFail($id);
+        if ($data->image && $data->image !== 'placeholder.webp' && file_exists(public_path($data->image))) {
+            @unlink(public_path($data->image));
+        }
+        $data->image = null;
+        $data->save();
+
+        return response()->json(['message' => 'Category image removed successfully']);
+    }
+
+    public function removeMetaImage($id)
+    {
+        $data = Category::findOrFail($id);
+        if ($data->meta_image && file_exists(public_path($data->meta_image))) {
+            @unlink(public_path($data->meta_image));
+        }
+        $data->meta_image = null;
+        $data->save();
+
+        return response()->json(['message' => 'Meta image removed successfully']);
     }
 
     public function delete($id)

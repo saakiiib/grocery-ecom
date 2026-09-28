@@ -2,11 +2,17 @@
 @section('title', 'Manage Product — ' . $product->name)
 @section('content')
 
+@php
+    $overriding = $product->optionGroups->isNotEmpty();
+    $effectiveGroups = $product->effectiveOptionGroups();
+    $overrideIds = $product->optionGroups->pluck('id')->all();
+@endphp
+
 <div class="container-fluid">
     <div class="row mb-3 align-items-center">
         <div class="col">
             <a href="{{ route('products.index') }}" class="btn btn-light btn-sm">← Back to Products</a>
-            <h4 class="mt-2 mb-0">{{ $product->name }} <small class="text-muted">{{ $product->model_code }}</small></h4>
+            <h4 class="mt-2 mb-0">{{ $product->name }} <small class="text-muted">{{ $product->priceRange() }}</small></h4>
         </div>
     </div>
 
@@ -15,11 +21,7 @@
             <ul class="nav nav-tabs card-header-tabs" role="tablist">
                 <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-basic" type="button">1. Basic + SEO</button></li>
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-images" type="button">2. Images</button></li>
-                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-matspecs" type="button">3. Materials & Specs</button></li>
-                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-options" type="button">4. Options</button></li>
-                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-tech" type="button">5. Tech Specs</button></li>
-                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-docs" type="button">6. Documents</button></li>
-                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-zones" type="button">7. Floor Zones</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-variants" type="button">3. Variants &amp; Prices</button></li>
             </ul>
         </div>
         <div class="card-body tab-content">
@@ -29,31 +31,42 @@
                     <input type="hidden" name="codeid" value="{{ $product->id }}">
                     <div class="row g-3">
                         <div class="col-md-6"><label class="form-label">Name *</label><input type="text" class="form-control" name="name" value="{{ $product->name }}"></div>
-                        <div class="col-md-3"><label class="form-label">Model Code *</label><input type="text" class="form-control" name="model_code" value="{{ $product->model_code }}"></div>
-                        <div class="col-md-3"><label class="form-label">Category</label>
+                        <div class="col-md-6"><label class="form-label">Category</label>
                             <select class="form-control select2" name="category_id">
                                 <option value="">Select</option>
                                 @foreach ($categories as $c)<option value="{{ $c->id }}" @selected($product->category_id == $c->id)>{{ $c->name }}</option>@endforeach
                             </select>
                         </div>
-                        <div class="col-12"><label class="form-label">Tagline</label><input type="text" class="form-control" name="tagline" value="{{ $product->tagline }}"></div>
-                        <div class="col-12"><label class="form-label">Description</label><textarea class="form-control summernote" name="description" rows="4">{{ $product->description }}</textarea></div>
-                        <div class="col-md-3"><label class="form-label">Price (£) <small class="text-muted">empty = on request</small></label><input type="number" step="0.01" min="0" class="form-control" name="base_price" value="{{ $product->base_price }}"></div>
-                        <div class="col-md-3"><label class="form-label">Lead Time</label><input type="text" class="form-control" name="lead_time" value="{{ $product->lead_time }}"></div>
-                        <div class="col-md-3"><label class="form-label">Dimensions</label><input type="text" class="form-control" name="dimensions" value="{{ $product->dimensions }}"></div>
-                        <div class="col-md-3"><label class="form-label">Warranty</label><input type="text" class="form-control" name="warranty" value="{{ $product->warranty }}"></div>
-                        <div class="col-md-6"><label class="form-label">Hero Image</label><input type="file" class="form-control" name="hero_image" accept="image/*">
+                        <div class="col-md-6"><label class="form-label">Card subtitle <small class="text-muted">one line under the name on cards</small></label><input type="text" class="form-control" name="tagline" maxlength="150" value="{{ $product->tagline }}"></div>
+                        <div class="col-md-6"><div class="form-check mt-4">
+                            <input type="checkbox" class="form-check-input" name="is_featured" value="1" @checked($product->is_featured)>
+                            <label class="form-check-label">Featured product</label>
+                        </div></div>
+                        <div class="col-12"><label class="form-label">Key points <small class="text-muted">one per line → shown as ✓ bullets</small></label><textarea class="form-control" name="highlights" rows="3" placeholder="100% British halal lamb&#10;Matured 7 days for flavour&#10;Freezer-friendly">{{ $product->highlights }}</textarea></div>
+                        <div class="col-12"><label class="form-label">Full description</label><textarea class="form-control summernote" name="description" rows="4">{{ $product->description }}</textarea></div>
+                        <div class="col-12"><hr><h6>Extra details <small class="text-muted">cooking suggestion, allergy advice, storage… anything, in your order</small></h6>
+                            <div id="attrList">
+                                @foreach ($product->extraAttributes as $a)
+                                    <div class="row g-2 mb-2 attr-row">
+                                        <div class="col-md-4"><input type="text" class="form-control attr-label" placeholder="Label e.g. Cooking suggestion" value="{{ $a->label }}"></div>
+                                        <div class="col-md-7"><textarea class="form-control attr-value" rows="1" placeholder="Detail…">{{ $a->value }}</textarea></div>
+                                        <div class="col-md-1"><button type="button" class="btn btn-outline-danger btn-sm attr-del">✕</button></div>
+                                    </div>
+                                @endforeach
+                            </div>
+                            <button type="button" id="attrAdd" class="btn btn-sm btn-outline-secondary">+ Add detail</button>
+                            <button type="button" id="attrSave" class="btn btn-sm btn-outline-primary ms-2">Save details</button>
+                        </div>
+                        <div class="col-12"><label class="form-label">Hero Image</label><input type="file" class="form-control" name="hero_image" accept="image/*">
                             @if ($product->hero_image)<img src="{{ $product->hero_image }}" class="img-thumbnail mt-2" style="max-width:200px;">
-                            <div id="current_hero_image_box" class="mt-1 small"><span id="current_hero_image_name">Current: <a href="{{ $product->hero_image }}" target="_blank">{{ basename($product->hero_image) }}</a></span> <label class="ms-2"><input type="checkbox" name="remove_hero_image" id="remove_hero_image" value="1"> Remove current file</label></div>@endif</div>
-                        <div class="col-md-6"><label class="form-label">Video URL <small class="text-muted">empty = category video</small></label><input type="url" class="form-control" name="video_url" value="{{ $product->video_url }}">
-                            <div class="form-check mt-2"><input type="checkbox" class="form-check-input" name="show_3d" value="1" @checked($product->show_3d)><label class="form-check-label">Show 3D viewer tab</label></div></div>
+                            <div class="mt-2"><button type="button" class="btn btn-sm btn-outline-danger manage-remove-file" data-field="hero_image">Remove image</button></div>@endif</div>
                         <div class="col-12"><hr><h6>SEO (frontend meta tags)</h6></div>
                         <div class="col-md-6"><label class="form-label">Meta Title</label><input type="text" class="form-control" name="meta_title" value="{{ $product->meta_title }}"></div>
                         <div class="col-md-6"><label class="form-label">Meta Keywords</label><input type="text" class="form-control" name="meta_keywords" value="{{ $product->meta_keywords }}"></div>
                         <div class="col-md-8"><label class="form-label">Meta Description</label><textarea class="form-control" name="meta_description" rows="2">{{ $product->meta_description }}</textarea></div>
                         <div class="col-md-4"><label class="form-label">Meta Image</label><input type="file" class="form-control" name="meta_image" accept="image/*">
                             @if ($product->meta_image)<img src="{{ $product->meta_image }}" class="img-thumbnail mt-2" style="max-width:150px;">
-                            <div id="current_meta_image_box" class="mt-1 small"><span id="current_meta_image_name">Current: <a href="{{ $product->meta_image }}" target="_blank">{{ basename($product->meta_image) }}</a></span> <label class="ms-2"><input type="checkbox" name="remove_meta_image" id="remove_meta_image" value="1"> Remove current file</label></div>@endif</div>
+                            <div class="mt-2"><button type="button" class="btn btn-sm btn-outline-danger manage-remove-file" data-field="meta_image">Remove image</button></div>@endif</div>
                     </div>
                     <div class="text-end mt-3"><button type="button" id="saveBasic" class="btn btn-primary">Save Basic + SEO</button></div>
                 </form>
@@ -68,69 +81,73 @@
                 <div id="imgList" class="row g-2"></div>
             </div>
 
-            <div class="tab-pane fade" id="tab-matspecs">
-                <div class="row">
-                    <div class="col-md-6">
-                        <h6>Materials (tag list)</h6>
-                        <form id="matForm" class="d-flex gap-2 mb-2"><input type="text" class="form-control" id="matName" placeholder="e.g. Solid Smoked European Oak" required><button class="btn btn-primary">Add</button></form>
-                        <ul id="matList" class="list-group"></ul>
-                    </div>
-                    <div class="col-md-6">
-                        <h6>Spec bullets (4 recommended)</h6>
-                        <form id="specForm" class="d-flex gap-2 mb-2"><input type="text" class="form-control" id="specPoint" placeholder="Spec bullet..." required><button class="btn btn-primary">Add</button></form>
-                        <ul id="specList" class="list-group"></ul>
+            <div class="tab-pane fade" id="tab-variants">
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h6>Option groups for this product</h6>
+                        <p class="text-muted small mb-2">
+                            @if ($overriding)
+                                Using <strong>product overrides</strong>. Untick all + save to inherit the category template again.
+                            @else
+                                Inheriting from category <strong>{{ $product->category?->name ?? '—' }}</strong>. Tick groups + save to override for this product only.
+                            @endif
+                        </p>
+                        <div id="groupChecks" class="d-flex flex-wrap gap-3">
+                            @foreach ($allGroups as $g)
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input group-check" value="{{ $g->id }}" id="gc{{ $g->id }}"
+                                        @checked($overriding ? in_array($g->id, $overrideIds) : $effectiveGroups->contains('id', $g->id))>
+                                    <label class="form-check-label" for="gc{{ $g->id }}">{{ $g->name }}</label>
+                                </div>
+                            @endforeach
+                        </div>
+                        <button type="button" id="saveGroups" class="btn btn-sm btn-outline-primary mt-2">Save option groups</button>
                     </div>
                 </div>
-            </div>
 
-            <div class="tab-pane fade" id="tab-options">
-                <form id="optForm" class="row g-2 mb-3">
-                    <div class="col-md-2"><select class="form-control" id="optGroup"><option value="config">Configuration</option><option value="finish">Finish</option><option value="glazing">Glazing</option><option value="upgrade">Upgrade</option></select></div>
-                    <div class="col-md-3"><input type="text" class="form-control" id="optName" placeholder="Option name *" required></div>
-                    <div class="col-md-3"><input type="text" class="form-control" id="optSub" placeholder="Subtitle"></div>
-                    <div class="col-md-2"><input type="number" step="0.01" min="0" class="form-control" id="optPrice" placeholder="+£ (empty=includ.)"></div>
-                    <div class="col-md-1"><input type="color" class="form-control" id="optSwatch" value="#5A4636" title="Finish colour"></div>
-                    <div class="col-md-1"><button class="btn btn-primary w-100">Add</button></div>
-                    <div class="col-12"><div class="form-check"><input type="checkbox" class="form-check-input" id="optDefault"><label class="form-check-label" for="optDefault">Default selected</label></div></div>
-                </form>
-                <div class="mb-2">
-                    <button class="btn btn-sm btn-dark optFilter" data-g="">All</button>
-                    <button class="btn btn-sm btn-outline-dark optFilter" data-g="config">Configuration</button>
-                    <button class="btn btn-sm btn-outline-dark optFilter" data-g="finish">Finish</button>
-                    <button class="btn btn-sm btn-outline-dark optFilter" data-g="glazing">Glazing</button>
-                    <button class="btn btn-sm btn-outline-dark optFilter" data-g="upgrade">Upgrade</button>
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h6 id="variantFormTitle">Add variant</h6>
+                        <form id="variantForm" enctype="multipart/form-data">
+                            <input type="hidden" id="variant_id">
+                            <div class="row g-3">
+                                <div class="col-md-3"><label class="form-label">SKU</label><input type="text" class="form-control" id="v_sku" placeholder="EGF89913"></div>
+                                <div class="col-md-3"><label class="form-label">MRP (£) *</label><input type="number" step="0.01" min="0" class="form-control" id="v_mrp"></div>
+                                <div class="col-md-3"><label class="form-label">Offer price (£)</label><input type="number" step="0.01" min="0" class="form-control" id="v_offer"></div>
+                                <div class="col-md-3"><label class="form-label">Photo <small class="text-muted">optional</small></label><input type="file" class="form-control" id="v_image" accept="image/*"></div>
+                                <div class="col-md-3"><div class="form-check mt-4">
+                                    <input type="checkbox" class="form-check-input" id="v_stock" checked>
+                                    <label class="form-check-label" for="v_stock">In stock</label>
+                                </div></div>
+                            </div>
+                            <div class="row g-3 mt-1" id="valueChecks">
+                                @foreach ($effectiveGroups as $g)
+                                    <div class="col-md-4" data-group="{{ $g->id }}">
+                                        <label class="form-label">{{ $g->name }} <small class="text-muted">pick one</small></label>
+                                        @foreach ($g->values as $v)
+                                            <div class="form-check">
+                                                <input type="checkbox" class="form-check-input value-check" value="{{ $v->id }}" data-label="{{ $v->label }}" data-group="{{ $g->id }}" id="vv{{ $v->id }}">
+                                                <label class="form-check-label" for="vv{{ $v->id }}">{{ $v->label }}</label>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @endforeach
+                            </div>
+                            <div class="mt-3 d-flex gap-2">
+                                <button type="submit" class="btn btn-primary btn-sm" id="variantSaveBtn">Add variant</button>
+                                <button type="button" class="btn btn-light btn-sm" id="variantResetBtn">Reset</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="generateBtn">Generate missing combinations (MRP £0)</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
-                <div id="optList" class="list-group"></div>
-            </div>
 
-            <div class="tab-pane fade" id="tab-tech">
-                <form id="techForm" class="row g-2 mb-3">
-                    <div class="col-md-4"><input type="text" class="form-control" id="techLabel" placeholder="Label *" required></div>
-                    <div class="col-md-5"><input type="text" class="form-control" id="techValue" placeholder="Value *" required></div>
-                    <div class="col-md-2"><div class="form-check mt-2"><input type="checkbox" class="form-check-input" id="techHi"><label class="form-check-label" for="techHi">Highlight</label></div></div>
-                    <div class="col-md-1"><button class="btn btn-primary w-100">Add</button></div>
-                </form>
-                <div id="techList" class="list-group"></div>
-            </div>
-
-            <div class="tab-pane fade" id="tab-docs">
-                <form id="docForm" class="row g-2 mb-3">
-                    <div class="col-md-5"><input type="text" class="form-control" id="docTitle" placeholder="Title e.g. Architectural Lookbook (PDF) *" required></div>
-                    <div class="col-md-5"><input type="file" class="form-control" id="docFile" required></div>
-                    <div class="col-md-2"><button class="btn btn-primary w-100">Upload</button></div>
-                </form>
-                <div id="docList" class="list-group"></div>
-            </div>
-
-            <div class="tab-pane fade" id="tab-zones">
-                <p class="text-muted small">Zones for this product's Floor Plan tab. Empty = the global Floor Zones set is shown instead.</p>
-                <form id="zoneForm" class="row g-2 mb-3">
-                    <div class="col-md-3"><input type="text" class="form-control" id="zoneName" placeholder="Zone name * e.g. Cinema Room" required></div>
-                    <div class="col-md-3"><input type="text" class="form-control" id="zoneDims" placeholder="Dims e.g. 4.2 m × 3.6 m"></div>
-                    <div class="col-md-4"><input type="text" class="form-control" id="zoneDesc" placeholder="Short description"></div>
-                    <div class="col-md-2"><button class="btn btn-primary w-100">Add Zone</button></div>
-                </form>
-                <div id="zoneList" class="list-group"></div>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped w-100">
+                        <thead><tr><th>Combination</th><th>SKU</th><th>MRP</th><th>Offer</th><th>Selling</th><th>Stock</th><th>Default</th><th style="width:130px;">Action</th></tr></thead>
+                        <tbody id="variantRows"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -149,51 +166,164 @@ $(function () {
     $('#saveBasic').click(function () {
         const fd = new FormData(document.getElementById('basicForm'));
         fd.set('description', $('[name=description]').summernote('code'));
-        if (!$('[name=show_3d]').is(':checked')) fd.set('show_3d', 0);
+        if (!$('[name=is_featured]').is(':checked')) fd.set('is_featured', 0);
         showLoader();
         $.ajax({ url: "{{ route('products.update') }}", type: 'POST', data: fd, contentType: false, processData: false,
             success: d => { hideLoader(); showSuccess(d.message); },
             error: xhr => { hideLoader(); showError(xhr.status === 422 ? Object.values(xhr.responseJSON.errors)[0][0] : 'Error'); } });
     });
 
-    const reload = { img: loadImg, mat: loadMat, spec: loadSpec, opt: loadOpt, tech: loadTech, doc: loadDoc, zone: loadZone };
-    let optGroup = '';
-    let zoneCache = {};
-    $('.optFilter').click(function () { optGroup = $(this).data('g'); loadOpt(); });
-
     function loadImg() { $.get(`/admin/products/${PID}/images`, list => { $('#imgList').html(list.map(i => `<div class="col-md-3"><div class="card"><img src="${i.preview}" class="card-img-top"><div class="card-body p-2"><input class="form-control form-control-sm mb-1" value="${i.caption ?? ''}" onchange="updImg(${i.id},this.value)"><button class="btn btn-sm btn-danger" onclick="delImg(${i.id})">Delete</button></div></div></div>`).join('') || '<p class="text-muted">No images yet. First image acts as gallery backup to hero.</p>'); }); }
-    function loadMat() { $.get(`/admin/products/${PID}/materials`, list => { $('#matList').html(list.map(m => `<li class="list-group-item d-flex justify-content-between">${m.name}<span><button class="btn btn-sm btn-link" onclick="editMat(${m.id},'${m.name.replace(/'/g, "\\'")}')">Edit</button><button class="btn btn-sm btn-link text-danger" onclick="delMat(${m.id})">Delete</button></span></li>`).join('')); }); }
-    function loadSpec() { $.get(`/admin/products/${PID}/specs`, list => { $('#specList').html(list.map(s => `<li class="list-group-item d-flex justify-content-between"><span>${s.point}</span><span><button class="btn btn-sm btn-link" onclick="editSpec(${s.id})">Edit</button><button class="btn btn-sm btn-link text-danger" onclick="delSpec(${s.id})">Delete</button></span></li>`).join('')); }); }
-    function loadOpt() { $.get(`/admin/products/${PID}/options`, { group: optGroup }, list => { $('#optList').html(list.map(o => `<div class="list-group-item d-flex justify-content-between align-items-center"><div><strong>[${o.group}]</strong> ${o.name} <small class="text-muted">${o.subtitle ?? ''}</small> <span class="badge bg-light text-dark">${o.price_delta ? '+£' + Number(o.price_delta).toLocaleString() : 'Included'}</span> ${o.is_default ? '<span class="badge bg-success">Default</span>' : ''} ${o.swatch_color ? `<span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${o.swatch_color};border:1px solid #ccc;"></span>` : ''}</div><span><button class="btn btn-sm btn-link" onclick="editOpt(${o.id},'${o.name.replace(/'/g, "\\'")}')">Edit</button><button class="btn btn-sm btn-link text-danger" onclick="delOpt(${o.id})">Delete</button></span></div>`).join('') || '<p class="text-muted">No options in this group yet.</p>'); }); }
-    function loadTech() { $.get(`/admin/products/${PID}/tech-specs`, list => { $('#techList').html(list.map(t => `<div class="list-group-item d-flex justify-content-between"><div><strong>${t.label}:</strong> ${t.value} ${t.highlight ? '<span class="badge bg-warning">★</span>' : ''}</div><span><button class="btn btn-sm btn-link" onclick="editTech(${t.id},'${t.label.replace(/'/g, "\\'")}',\`${(t.value || '').replace(/`/g, '')}\`)">Edit</button><button class="btn btn-sm btn-link text-danger" onclick="delTech(${t.id})">Delete</button></span></div>`).join('')); }); }
-    function loadDoc() { $.get(`/admin/products/${PID}/documents`, list => { $('#docList').html(list.map(d => `<div class="list-group-item d-flex justify-content-between"><div><strong>${d.title}</strong> <a href="${d.url}" target="_blank" class="ms-2">Open</a></div><button class="btn btn-sm btn-link text-danger" onclick="delDoc(${d.id})">Delete</button></div>`).join('') || '<p class="text-muted">Max 3 recommended: Lookbook / Manual / Spec Sheet.</p>'); }); }
-    function loadZone() { $.get(`/admin/products/${PID}/floor-zones`, list => { list.forEach(z => { zoneCache[z.id] = { name: z.name, dims: z.dims, desc: z.desc }; }); $('#zoneList').html(list.map(z => `<div class="list-group-item"><div class="row g-2 align-items-center"><div class="col-md-3"><input class="form-control form-control-sm" value="${escAttr(z.name)}" onchange="updZone(${z.id},'name',this.value)"></div><div class="col-md-2"><input class="form-control form-control-sm" value="${escAttr(z.dims)}" placeholder="Dims" onchange="updZone(${z.id},'dims',this.value)"></div><div class="col-md-5"><input class="form-control form-control-sm" value="${escAttr(z.desc)}" placeholder="Description" onchange="updZone(${z.id},'desc',this.value)"></div><div class="col-md-2 text-end"><div class="form-check form-switch d-inline-block me-2"><input type="checkbox" class="form-check-input" ${z.status ? 'checked' : ''} onchange="toggleZone(${z.id})"></div><button class="btn btn-sm btn-link text-danger" onclick="delZone(${z.id})">Delete</button></div></div></div>`).join('') || '<p class="text-muted">No zones for this product yet — the global Floor Zones set is shown on its details page.</p>'); }); }
-    function escAttr(v) { return String(v ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
 
-    Object.values(reload).forEach(fn => fn());
+    loadImg();
 
     $('#imgForm').submit(e => { e.preventDefault(); const fd = new FormData(); fd.append('image', $('#imgFile')[0].files[0]); fd.append('caption', $('#imgCaption').val()); $.ajax({ url: `/admin/products/${PID}/images`, type: 'POST', data: fd, contentType: false, processData: false, success: d => { showSuccess(d.message); $('#imgForm')[0].reset(); loadImg(); }, error: xhr => showError(xhr.responseJSON?.message ?? 'Error') }); });
-    $('#matForm').submit(e => { e.preventDefault(); $.post(`/admin/products/${PID}/materials`, { name: $('#matName').val() }, d => { showSuccess(d.message); $('#matName').val(''); loadMat(); }).fail(xhr => showError('Error')); });
-    $('#specForm').submit(e => { e.preventDefault(); $.post(`/admin/products/${PID}/specs`, { point: $('#specPoint').val() }, d => { showSuccess(d.message); $('#specPoint').val(''); loadSpec(); }).fail(() => showError('Error')); });
-    $('#optForm').submit(e => { e.preventDefault(); $.post(`/admin/products/${PID}/options`, { group: $('#optGroup').val(), name: $('#optName').val(), subtitle: $('#optSub').val(), price_delta: $('#optPrice').val(), swatch_color: $('#optSwatch').val(), is_default: $('#optDefault').is(':checked') ? 1 : 0 }, d => { showSuccess(d.message); $('#optForm')[0].reset(); loadOpt(); }).fail(xhr => showError(xhr.status === 422 ? Object.values(xhr.responseJSON.errors)[0][0] : 'Error')); });
-    $('#techForm').submit(e => { e.preventDefault(); $.post(`/admin/products/${PID}/tech-specs`, { label: $('#techLabel').val(), value: $('#techValue').val(), highlight: $('#techHi').is(':checked') ? 1 : 0 }, d => { showSuccess(d.message); $('#techForm')[0].reset(); loadTech(); }).fail(() => showError('Error')); });
-    $('#docForm').submit(e => { e.preventDefault(); const fd = new FormData(); fd.append('title', $('#docTitle').val()); fd.append('file', $('#docFile')[0].files[0]); $.ajax({ url: `/admin/products/${PID}/documents`, type: 'POST', data: fd, contentType: false, processData: false, success: d => { showSuccess(d.message); $('#docForm')[0].reset(); loadDoc(); }, error: () => showError('Error') }); });
-    $('#zoneForm').submit(e => { e.preventDefault(); $.post(`/admin/products/${PID}/floor-zones`, { name: $('#zoneName').val(), dims: $('#zoneDims').val(), desc: $('#zoneDesc').val() }, d => { showSuccess(d.message); $('#zoneForm')[0].reset(); loadZone(); }).fail(xhr => showError(xhr.status === 422 ? Object.values(xhr.responseJSON.errors)[0][0] : 'Error')); });
 
     window.delImg = id => $.ajax({ url: `/admin/product-images/${id}`, type: 'DELETE', success: d => { showSuccess(d.message); loadImg(); } });
     window.updImg = (id, caption) => $.post(`/admin/product-images/${id}`, { caption }, () => loadImg());
-    window.delMat = id => $.ajax({ url: `/admin/product-materials/${id}`, type: 'DELETE', success: () => loadMat() });
-    window.editMat = (id, old) => { const v = prompt('Material name:', old); if (v) $.post(`/admin/product-materials/${id}`, { name: v }, () => loadMat()); };
-    window.delSpec = id => $.ajax({ url: `/admin/product-specs/${id}`, type: 'DELETE', success: () => loadSpec() });
-    window.editSpec = id => { const v = prompt('Spec point:'); if (v) $.post(`/admin/product-specs/${id}`, { point: v }, () => loadSpec()); };
-    window.delOpt = id => $.ajax({ url: `/admin/product-options/${id}`, type: 'DELETE', success: () => loadOpt() });
-    window.editOpt = (id, old) => { const v = prompt('Option name:', old); if (v) $.post(`/admin/product-options/${id}`, { name: v }, () => loadOpt()); };
-    window.delTech = id => $.ajax({ url: `/admin/product-tech-specs/${id}`, type: 'DELETE', success: () => loadTech() });
-    window.editTech = (id, l, v) => { const nl = prompt('Label:', l); if (!nl) return; const nv = prompt('Value:', v); if (nv !== null) $.post(`/admin/product-tech-specs/${id}`, { label: nl, value: nv }, () => loadTech()); };
-    window.delDoc = id => $.ajax({ url: `/admin/product-documents/${id}`, type: 'DELETE', success: () => loadDoc() });
-    window.delZone = id => $.ajax({ url: `/admin/product-floor-zones/${id}`, type: 'DELETE', success: d => { showSuccess(d.message); loadZone(); } });
-    window.updZone = (id, field, value) => { const z = Object.assign({}, zoneCache[id], { [field]: value }); $.post(`/admin/product-floor-zones/${id}`, { name: z.name, dims: z.dims, desc: z.desc }, () => loadZone()).fail(() => { showError('Error'); loadZone(); }); };
-    window.toggleZone = id => $.post(`/admin/product-floor-zones/${id}/toggle-status`, {}, () => loadZone());
+
+    $('.manage-remove-file').click(function () {
+        const field = $(this).data('field');
+        showLoader();
+        $.ajax({
+            url: `/admin/products/${PID}/file`,
+            type: 'DELETE',
+            data: { field: field },
+            success: d => { hideLoader(); showSuccess(d.message); location.reload(); },
+            error: () => { hideLoader(); showError('Failed to remove file'); }
+        });
+    });
+
+    // ---- Extra details ----
+    $('#attrAdd').click(() => {
+        $('#attrList').append(`<div class="row g-2 mb-2 attr-row">
+            <div class="col-md-4"><input type="text" class="form-control attr-label" placeholder="Label e.g. Cooking suggestion"></div>
+            <div class="col-md-7"><textarea class="form-control attr-value" rows="1" placeholder="Detail…"></textarea></div>
+            <div class="col-md-1"><button type="button" class="btn btn-outline-danger btn-sm attr-del">✕</button></div>
+        </div>`);
+    });
+
+    $(document).on('click', '.attr-del', function () { $(this).closest('.attr-row').remove(); });
+
+    $('#attrSave').click(() => {
+        const attributes = $('.attr-row').map((_, row) => ({
+            label: $(row).find('.attr-label').val().trim(),
+            value: $(row).find('.attr-value').val().trim(),
+        })).get().filter(a => a.label && a.value);
+        showLoader();
+        $.post(`/admin/products/${PID}/attributes`, { attributes }, d => { hideLoader(); showSuccess(d.message); })
+            .fail(xhr => { hideLoader(); showError(xhr.status === 422 ? Object.values(xhr.responseJSON.errors)[0][0] : 'Failed to save'); });
+    });
+
+    // ---- Variants ----
+    let variantCache = [];
+
+    function loadVariants() {
+        $.get(`/admin/products/${PID}/variants`, list => {
+            variantCache = list;
+            $('#variantRows').html(list.map(v => `<tr>
+                <td>${v.combination || '<span class="text-muted">Simple (no options)</span>'}</td>
+                <td>${v.sku ?? '<span class="text-muted">—</span>'}</td>
+                <td>£${Number(v.mrp).toFixed(2)}</td>
+                <td>${v.offer_price ? '£' + Number(v.offer_price).toFixed(2) : '<span class="text-muted">—</span>'}</td>
+                <td><strong>£${sellingOf(v).toFixed(2)}</strong></td>
+                <td><div class="form-check form-switch" dir="ltr"><input type="checkbox" class="form-check-input toggle-stock" data-id="${v.id}" ${v.in_stock ? 'checked' : ''}></div></td>
+                <td>${v.is_default ? '<span class="badge bg-success">Default</span>' : `<button class="btn btn-sm btn-outline-secondary" onclick="setDefault(${v.id})">Set</button>`}</td>
+                <td><button class="btn btn-sm btn-outline-primary" onclick="editVariant(${v.id})">Edit</button>
+                <button class="btn btn-sm btn-outline-danger" onclick="delVariant(${v.id})">Delete</button></td>
+            </tr>`).join('') || '<tr><td colspan="8" class="text-muted">No variants yet.</td></tr>');
+        });
+    }
+
+    function sellingOf(v) {
+        const mrp = Number(v.mrp), offer = v.offer_price === null ? null : Number(v.offer_price);
+        return (offer !== null && offer < mrp) ? offer : mrp;
+    }
+
+    loadVariants();
+
+    $('#saveGroups').click(() => {
+        const group_ids = $('.group-check:checked').map((_, el) => el.value).get();
+        showLoader();
+        $.post(`/admin/products/${PID}/variant-groups`, { group_ids }, d => { hideLoader(); showSuccess(d.message); location.reload(); })
+            .fail(() => { hideLoader(); showError('Failed to save groups'); });
+    });
+
+    function selectedValueIds() {
+        return $('.value-check:checked').map((_, el) => el.value).get();
+    }
+
+    $('#variantForm').submit(e => {
+        e.preventDefault();
+        const id = $('#variant_id').val();
+        const fd = new FormData();
+        fd.append('sku', $('#v_sku').val());
+        fd.append('mrp', $('#v_mrp').val());
+        fd.append('offer_price', $('#v_offer').val());
+        fd.append('in_stock', $('#v_stock').is(':checked') ? 1 : 0);
+        selectedValueIds().forEach(v => fd.append('value_ids[]', v));
+        const img = $('#v_image')[0].files[0];
+        if (img) fd.append('image', img);
+        const url = id ? `/admin/product-variants/${id}` : `/admin/products/${PID}/variants`;
+        showLoader();
+        $.ajax({ url, type: 'POST', data: fd, contentType: false, processData: false,
+            success: d => { hideLoader(); showSuccess(d.message); resetVariantForm(); loadVariants(); },
+            error: xhr => { hideLoader(); showError(xhr.status === 422 ? (xhr.responseJSON?.message ?? Object.values(xhr.responseJSON.errors)[0][0]) : 'Error'); } });
+    });
+
+    function resetVariantForm() {
+        $('#variant_id').val('');
+        $('#variantForm')[0].reset();
+        $('#v_stock').prop('checked', true);
+        $('#variantFormTitle').text('Add variant');
+        $('#variantSaveBtn').text('Add variant');
+    }
+    $('#variantResetBtn').click(resetVariantForm);
+
+    window.editVariant = id => {
+        const v = variantCache.find(x => x.id === id);
+        if (!v) return;
+        $('#variant_id').val(v.id);
+        $('#v_sku').val(v.sku ?? '');
+        $('#v_mrp').val(v.mrp);
+        $('#v_offer').val(v.offer_price ?? '');
+        $('#v_stock').prop('checked', !!v.in_stock);
+        $('.value-check').prop('checked', false);
+        (v.values || []).forEach(val => $(`.value-check[value="${val.id}"]`).prop('checked', true));
+        $('#variantFormTitle').text('Edit variant' + (v.combination ? ' — ' + v.combination : ''));
+        $('#variantSaveBtn').text('Update variant');
+        pagetop();
+    };
+
+    window.delVariant = id => {
+        if (!confirm('Delete this variant?')) return;
+        $.ajax({ url: `/admin/product-variants/${id}`, type: 'DELETE', success: d => { showSuccess(d.message); loadVariants(); } });
+    };
+
+    window.setDefault = id => $.post(`/admin/product-variants/${id}/default`, d => { showSuccess(d.message); loadVariants(); });
+
+    $(document).on('change', '.toggle-stock', function () {
+        $.post("{{ route('product-variants.toggleStock') }}", { id: $(this).data('id') }, d => { showSuccess(d.message); loadVariants(); });
+    });
+
+    // Generate one £0 row per missing combination of the ticked values.
+    $('#generateBtn').click(() => {
+        const groups = [];
+        $('#valueChecks [data-group]').each(function () {
+            const ids = $(this).find('.value-check:checked').map((_, el) => el.value).get();
+            if (ids.length) groups.push(ids);
+        });
+        if (!groups.length) { showError('Tick at least one option value first'); return; }
+        const combos = groups.reduce((acc, ids) => acc.flatMap(a => ids.map(i => [...a, i])), [[]]);
+        const existing = new Set(variantCache.map(v => (v.values || []).map(x => String(x.id)).sort().join(',')));
+        const missing = combos.filter(c => !existing.has(c.map(String).sort().join(',')));
+        if (!missing.length) { showSuccess('All combinations already exist'); return; }
+        showLoader();
+        const chain = missing.reduce((p, combo) => p.then(() => $.post(`/admin/products/${PID}/variants`,
+            { mrp: 0, in_stock: 1, value_ids: combo })), Promise.resolve());
+        chain.then(() => { hideLoader(); showSuccess(missing.length + ' variant(s) generated — set their prices'); loadVariants(); })
+            .catch(() => { hideLoader(); showError('Generation stopped on an error'); loadVariants(); });
+    });
 });
 </script>
 @endsection

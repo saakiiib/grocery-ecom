@@ -13,17 +13,10 @@ return new class extends Migration
             $table->foreignId('category_id')->nullable()->constrained('categories')->nullOnDelete();
             $table->string('name');
             $table->string('slug')->unique();
-            $table->string('model_code')->unique();
             $table->string('tagline')->nullable();
+            $table->text('highlights')->nullable();
             $table->longText('description')->nullable();
-            $table->string('dimensions')->nullable();
-            $table->string('lead_time')->nullable();
-            $table->string('warranty')->nullable();
-            $table->decimal('base_price', 12, 2)->nullable();
             $table->string('hero_image')->nullable();
-            $table->string('video_url')->nullable();
-            $table->string('model_3d')->nullable();
-            $table->boolean('show_3d')->default(true);
             $table->boolean('is_featured')->default(false);
             $table->boolean('status')->default(true);
             $table->integer('sort_order')->default(0);

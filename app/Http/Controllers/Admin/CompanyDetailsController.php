@@ -57,7 +57,7 @@ class CompanyDetailsController extends Controller
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
             'meta_keywords' => 'nullable|string',
-            'meta_image' => 'nullable|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
+            'meta_image' => 'nullable|mimes:jpeg,png,jpg|max:2048',
             'google_site_verification' => 'nullable|string|max:255',
             'google_analytics_id' => 'nullable|string|max:255',
             'google_tag_manager_id' => 'nullable|string|max:255',
@@ -173,14 +173,14 @@ class CompanyDetailsController extends Controller
                 unlink($path.$data->meta_image);
             }
 
-            $metaImageName = 'meta_'.time().'.webp';
+            $metaExt = strtolower($request->file('meta_image')->getClientOriginalExtension());
+            $metaImageName = 'meta_'.time().'.'.(in_array($metaExt, ['jpg', 'jpeg', 'png']) ? $metaExt : 'jpg');
             Image::make($request->file('meta_image'))
                 ->resize(1200, 630, function ($constraint) {
                     $constraint->aspectRatio();
                     $constraint->upsize();
                 })
-                ->encode('webp', 80)
-                ->save($path.$metaImageName);
+                ->save($path.$metaImageName, 85);
 
             $data->meta_image = $metaImageName;
         } elseif ($request->boolean('remove_meta_image')) {
@@ -334,7 +334,7 @@ class CompanyDetailsController extends Controller
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
             'meta_keywords' => 'nullable|string',
-            'meta_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'meta_image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
         ]);
 
         $companyDetails = CompanyDetails::first();
@@ -347,10 +347,11 @@ class CompanyDetailsController extends Controller
         $companyDetails->meta_description = $request->meta_description;
         $companyDetails->meta_keywords = $request->meta_keywords;
 
-        // Handle meta image upload
+        // Handle meta image upload (original format only — never webp)
         if ($request->hasFile('meta_image')) {
             $metaImage = $request->file('meta_image');
-            $metaImageName = 'meta_'.time().'.webp';
+            $metaExt = strtolower($metaImage->getClientOriginalExtension());
+            $metaImageName = 'meta_'.time().'.'.(in_array($metaExt, ['jpg', 'jpeg', 'png']) ? $metaExt : 'jpg');
             $path = public_path('uploads/company/meta/');
 
             // Ensure directory exists
@@ -369,8 +370,7 @@ class CompanyDetailsController extends Controller
                     $constraint->aspectRatio();
                     $constraint->upsize();
                 })
-                ->encode('webp', 80)
-                ->save($path.$metaImageName);
+                ->save($path.$metaImageName, 85);
 
             $companyDetails->meta_image = $metaImageName;
         }

@@ -1,5 +1,5 @@
 @php
-  $navProducts = App\Models\Product::where('status', 1)->orderByDesc('is_featured')->orderBy('sort_order')->take(5)->get(['id', 'name', 'slug', 'model_code', 'base_price', 'hero_image']);
+  $navProducts = App\Models\Product::with('variants')->where('status', 1)->orderByDesc('is_featured')->orderBy('sort_order')->take(5)->get(['id', 'name', 'slug', 'hero_image']);
   $logo = $company->company_logo ? asset('uploads/company/' . $company->company_logo) : asset('resources/frontend-raw/assets/logo.png');
 @endphp
 <header class="sticky top-0 z-40 bg-white border-b border-[#e5e2da] transition-all">
@@ -32,7 +32,7 @@
               <a @spa href="{{ route('product.show', $navProduct->slug) }}" class="text-left group/card block">
                 <img src="{{ $navProduct->hero_image && str_starts_with($navProduct->hero_image, 'http') ? $navProduct->hero_image : ($navProduct->hero_image ? url($navProduct->hero_image) : 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=400&q=80') }}" alt="{{ $navProduct->name }}" loading="lazy" class="w-full aspect-[4/5] object-cover rounded-lg mb-2.5" />
                 <span class="text-[13px] font-semibold text-[#1a1d24] block leading-snug">{{ $navProduct->name }}</span>
-                <span class="text-[11px] font-mono text-[#6b7280]">{{ $navProduct->base_price ? 'From £'.number_format($navProduct->base_price, 0) : $navProduct->model_code }}</span>
+                <span class="text-[11px] font-mono text-[#6b7280]">{{ $navProduct->priceRange() ?? $navProduct->defaultVariant()?->sku ?? '' }}</span>
               </a>
             @empty
               <a @spa href="{{ route('collections') }}" class="text-left group/card block">

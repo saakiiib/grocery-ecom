@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Models\OptionGroup;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Intervention\Image\Facades\Image;
@@ -14,8 +15,8 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $query = Product::with('category:id,name')
-                ->select(['id', 'category_id', 'name', 'slug', 'model_code', 'hero_image', 'base_price', 'is_featured', 'status', 'sort_order'])
+            $query = Product::with(['category:id,name', 'variants'])
+                ->select(['id', 'category_id', 'name', 'slug', 'hero_image', 'is_featured', 'status', 'sort_order'])
                 ->orderBy('sort_order')
                 ->orderByDesc('id');
 
@@ -29,7 +30,8 @@ class ProductController extends Controller
                     ? '<img src="'.url($row->hero_image).'" class="img-thumbnail" style="max-width:80px;">'
                     : '<span class="text-muted">-</span>')
                 ->addColumn('category', fn ($row) => $row->category?->name ?? '<span class="text-muted">-</span>')
-                ->addColumn('price', fn ($row) => $row->base_price ? '£'.number_format((float) $row->base_price) : '<span class="text-muted">On request</span>')
+                ->addColumn('sku', fn ($row) => $row->defaultVariant()?->sku ?? '<span class="text-muted">-</span>')
+                ->addColumn('price', fn ($row) => $row->priceRange() ?? '<span class="text-muted">No variants</span>')
                 ->addColumn('featured', function ($row) {
                     $checked = $row->is_featured ? 'checked' : '';
 
@@ -52,7 +54,7 @@ class ProductController extends Controller
                             </ul>
                         </div>';
                 })
-                ->rawColumns(['image', 'category', 'price', 'featured', 'status', 'action'])
+                ->rawColumns(['image', 'category', 'sku', 'price', 'featured', 'status', 'action'])
                 ->make(true);
         }
 
@@ -65,22 +67,16 @@ class ProductController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'model_code' => 'required|string|max:100|unique:products,model_code',
             'category_id' => 'nullable|exists:categories,id',
-            'base_price' => 'nullable|numeric|min:0',
             'hero_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
-            'meta_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
-            'model_3d' => 'nullable|file|max:51200',
+            'meta_image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
         ]);
 
         $product = new Product($request->only([
-            'category_id', 'name', 'tagline', 'description', 'dimensions',
-            'lead_time', 'warranty', 'base_price', 'video_url',
+            'category_id', 'name', 'tagline', 'highlights', 'description',
             'meta_title', 'meta_description', 'meta_keywords',
         ]));
-        $product->slug = $this->uniqueSlug($request->name.'-'.$request->model_code, Product::class);
-        $product->model_code = $request->model_code;
-        $product->show_3d = $request->boolean('show_3d', true);
+        $product->slug = $this->uniqueSlug($request->name, Product::class);
         $product->is_featured = $request->boolean('is_featured');
         $product->status = true;
         $product->sort_order = (int) (Product::max('sort_order') ?? 0) + 1;
@@ -89,15 +85,21 @@ class ProductController extends Controller
             $product->hero_image = $this->storeWebp($request->file('hero_image'), 'uploads/products/', 1600, 75);
         }
         if ($request->hasFile('meta_image')) {
-            $product->meta_image = $this->storeWebp($request->file('meta_image'), 'uploads/products/', 1200, 80);
-        }
-        if ($request->hasFile('model_3d')) {
-            $product->model_3d = $this->storeModel3d($request->file('model_3d'));
+            $product->meta_image = $this->storeOriginal($request->file('meta_image'), 'uploads/products/', 1200);
         }
 
         $product->save();
 
-        return response()->json(['message' => 'Product created successfully', 'id' => $product->id]);
+        // Invariant: every product has at least one (default) variant.
+        $product->variants()->create([
+            'mrp' => 0,
+            'is_default' => true,
+            'in_stock' => true,
+            'status' => true,
+            'sort_order' => 0,
+        ]);
+
+        return response()->json(['message' => 'Product created successfully. Set its prices in the Variants tab.', 'id' => $product->id]);
     }
 
     public function edit($id)
@@ -110,25 +112,17 @@ class ProductController extends Controller
         $product = Product::findOrFail($request->codeid);
         $request->validate([
             'name' => 'required|string|max:255',
-            'model_code' => 'required|string|max:100|unique:products,model_code,'.$product->id,
             'category_id' => 'nullable|exists:categories,id',
-            'base_price' => 'nullable|numeric|min:0',
             'hero_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
-            'meta_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
-            'model_3d' => 'nullable|file|max:51200',
+            'meta_image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
         ]);
 
         $product->fill($request->only([
-            'category_id', 'name', 'tagline', 'description', 'dimensions',
-            'lead_time', 'warranty', 'base_price', 'video_url',
+            'category_id', 'name', 'tagline', 'highlights', 'description',
             'meta_title', 'meta_description', 'meta_keywords',
         ]));
-        $product->model_code = $request->model_code;
-        // Slug follows the latest name + code.
-        $product->slug = $this->uniqueSlug($request->name.'-'.$request->model_code, Product::class, $product->id);
-        if ($request->has('show_3d')) {
-            $product->show_3d = $request->boolean('show_3d');
-        }
+        // Slug follows the latest name.
+        $product->slug = $this->uniqueSlug($request->name, Product::class, $product->id);
         if ($request->has('is_featured')) {
             $product->is_featured = $request->boolean('is_featured');
         }
@@ -136,23 +130,10 @@ class ProductController extends Controller
         if ($request->hasFile('hero_image')) {
             $this->deleteFile($product->hero_image);
             $product->hero_image = $this->storeWebp($request->file('hero_image'), 'uploads/products/', 1600, 75);
-        } elseif ($request->boolean('remove_hero_image')) {
-            $this->deleteFile($product->hero_image);
-            $product->hero_image = null;
         }
         if ($request->hasFile('meta_image')) {
             $this->deleteFile($product->meta_image);
-            $product->meta_image = $this->storeWebp($request->file('meta_image'), 'uploads/products/', 1200, 80);
-        } elseif ($request->boolean('remove_meta_image')) {
-            $this->deleteFile($product->meta_image);
-            $product->meta_image = null;
-        }
-        if ($request->hasFile('model_3d')) {
-            $this->deleteFile($product->model_3d);
-            $product->model_3d = $this->storeModel3d($request->file('model_3d'));
-        } elseif ($request->boolean('remove_model_3d')) {
-            $this->deleteFile($product->model_3d);
-            $product->model_3d = null;
+            $product->meta_image = $this->storeOriginal($request->file('meta_image'), 'uploads/products/', 1200);
         }
 
         $product->save();
@@ -160,14 +141,53 @@ class ProductController extends Controller
         return response()->json(['message' => 'Product updated successfully']);
     }
 
-    /** Full workspace with tabs (Basic | Images | SEO). */
+    /** Full workspace with tabs (Basic | Images | Variants | SEO is inside Basic). */
     public function manage($id)
     {
-        $product = Product::with(['category', 'images'])
+        $product = Product::with(['category', 'images', 'extraAttributes', 'variants.values.group', 'optionGroups.values', 'category.optionGroups.values'])
             ->findOrFail($id);
         $categories = Category::where('status', 1)->orderBy('sort_order')->get(['id', 'name']);
+        $allGroups = OptionGroup::with('values')->where('status', true)->orderBy('sort_order')->get();
 
-        return view('admin.products.manage', compact('product', 'categories'));
+        return view('admin.products.manage', compact('product', 'categories', 'allGroups'));
+    }
+
+    /** Replace-all sync of the free-form extra details rows. */
+    public function attributesSync(Request $request, $id)
+    {
+        $product = Product::findOrFail($id);
+        $request->validate([
+            'attributes' => 'nullable|array',
+            'attributes.*.label' => 'required|string|max:100',
+            'attributes.*.value' => 'required|string',
+        ]);
+
+        $product->extraAttributes()->delete();
+        foreach (array_values($request->attributes ?? []) as $i => $row) {
+            $product->extraAttributes()->create([
+                'label' => $row['label'],
+                'value' => $row['value'],
+                'sort_order' => $i,
+            ]);
+        }
+
+        return response()->json(['message' => 'Extra details saved']);
+    }
+
+    /** Remove a single file (hero_image | meta_image) via dedicated route. */
+    public function removeFile(Request $request, $id)
+    {
+        $request->validate([
+            'field' => 'required|in:hero_image,meta_image',
+        ]);
+
+        $product = Product::findOrFail($id);
+        $field = $request->field;
+        $this->deleteFile($product->{$field});
+        $product->{$field} = null;
+        $product->save();
+
+        return response()->json(['message' => 'File removed successfully']);
     }
 
     public function destroy($id)
@@ -175,9 +195,11 @@ class ProductController extends Controller
         $product = Product::findOrFail($id);
         $this->deleteFile($product->hero_image);
         $this->deleteFile($product->meta_image);
-        $this->deleteFile($product->model_3d);
         foreach ($product->images as $img) {
             $this->deleteFile($img->image);
+        }
+        foreach ($product->variants as $variant) {
+            $this->deleteFile($variant->image);
         }
         $product->delete();
 
@@ -203,9 +225,10 @@ class ProductController extends Controller
     public function sortList()
     {
         return response()->json(
-            Product::select(['id', 'name', 'model_code', 'hero_image', 'sort_order'])
+            Product::with('variants')
+                ->select(['id', 'name', 'hero_image', 'sort_order'])
                 ->orderBy('sort_order')->orderByDesc('id')->get()
-                ->map(fn ($p) => [...$p->toArray(), 'image' => $p->hero_image ? url($p->hero_image) : null])
+                ->map(fn ($p) => [...$p->toArray(), 'image' => $p->hero_image ? url($p->hero_image) : null, 'sku' => $p->defaultVariant()?->sku])
         );
     }
 
@@ -219,23 +242,6 @@ class ProductController extends Controller
         return response()->json(['message' => 'Sort order updated successfully']);
     }
 
-    /** Store an uploaded .glb/.gltf model as-is (no image conversion). */
-    private function storeModel3d($file): string
-    {
-        $ext = strtolower($file->getClientOriginalExtension());
-        if (! in_array($ext, ['glb', 'gltf'])) {
-            abort(422, '3D model must be a .glb or .gltf file.');
-        }
-        $dir = public_path('uploads/products/3d/');
-        if (! file_exists($dir)) {
-            mkdir($dir, 0755, true);
-        }
-        $name = mt_rand(10000000, 99999999).'.'.$ext;
-        $file->move($dir, $name);
-
-        return '/uploads/products/3d/'.$name;
-    }
-
     private function storeWebp($file, string $dir, int $width, int $quality): string
     {
         $path = public_path($dir);
@@ -247,6 +253,24 @@ class ProductController extends Controller
             $c->aspectRatio();
             $c->upsize();
         })->encode('webp', $quality)->save($path.$name);
+
+        return '/'.$dir.$name;
+    }
+
+    /** Store a meta/OG image in its original format (jpeg/png) — never webp. */
+    private function storeOriginal($file, string $dir, int $width): string
+    {
+        $path = public_path($dir);
+        if (! file_exists($path)) {
+            mkdir($path, 0755, true);
+        }
+        $ext = strtolower($file->getClientOriginalExtension());
+        $ext = in_array($ext, ['jpg', 'jpeg', 'png']) ? $ext : 'jpg';
+        $name = mt_rand(10000000, 99999999).'.'.$ext;
+        Image::make($file)->resize($width, null, function ($c) {
+            $c->aspectRatio();
+            $c->upsize();
+        })->save($path.$name, 85);
 
         return '/'.$dir.$name;
     }

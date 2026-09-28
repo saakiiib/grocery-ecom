@@ -5,11 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\CompanyDetails;
 use App\Models\Contact;
-use App\Models\Download;
-use App\Models\Enquiry;
 use App\Models\Faq;
 use App\Models\FaqCategory;
-use App\Models\FloorZone;
 use App\Models\Gallery;
 use App\Models\GalleryCategory;
 use App\Models\PageSeo;
@@ -37,7 +34,7 @@ class FrontendController extends Controller
     {
         $this->seo('home');
 
-        $products = Product::with(['category', 'options'])
+        $products = Product::with(['category', 'images', 'variants'])
             ->where('status', true)
             ->orderBy('sort_order')
             ->orderByDesc('id')
@@ -56,8 +53,8 @@ class FrontendController extends Controller
         $faqCatsJson = $this->faqCatsJson();
         $galleryJson = $this->galleryJson(8);
         $galleryCatsJson = $this->galleryCatsJson();
-        $filesJson = $this->filesJson(6);
-        $zonesJson = $this->zonesJson();
+        $filesJson = collect();
+        $zonesJson = collect();
 
         return spa('frontend.index', compact('productsJson', 'featuredJson', 'featuredCards', 'categoriesJson', 'faqsJson', 'faqCatsJson', 'galleryJson', 'galleryCatsJson', 'filesJson', 'zonesJson'));
     }
@@ -67,7 +64,7 @@ class FrontendController extends Controller
         $this->seo('collections');
 
         $categories = Category::where('status', true)->orderBy('sort_order')->get();
-        $products = Product::with(['category', 'options'])
+        $products = Product::with(['category', 'images', 'variants'])
             ->where('status', true)
             ->orderBy('sort_order')
             ->orderByDesc('id')
@@ -89,7 +86,7 @@ class FrontendController extends Controller
 
     public function productShow($slug)
     {
-        $product = Product::with(['category', 'images', 'materials', 'specs', 'options', 'techSpecs', 'documents'])
+        $product = Product::with(['category', 'images', 'extraAttributes', 'variants.values.group', 'optionGroups.values', 'category.optionGroups.values'])
             ->where('slug', $slug)
             ->where('status', true)
             ->firstOrFail();
@@ -115,21 +112,19 @@ class FrontendController extends Controller
             $related = $related->concat($filler)->values();
         }
 
-        $options = $product->options->where('status', true)->groupBy('group');
-
         $productJson = $this->productDetail($product);
         $optionsJson = [
-            'config' => $this->optsJson($options->get('config', collect())),
-            'finish' => $this->optsJson($options->get('finish', collect())),
-            'glazing' => $this->optsJson($options->get('glazing', collect())),
-            'upgrade' => $this->optsJson($options->get('upgrade', collect())),
+            'config' => [],
+            'finish' => [],
+            'glazing' => [],
+            'upgrade' => [],
         ];
-        $zonesJson = $this->zonesJson($product->id);
+        $zonesJson = collect();
         $relatedJson = $related->map(fn ($p) => $this->productCard($p))->values();
         $faqsJson = $this->faqsJson(4);
-        $docsJson = $product->documents->map(fn ($d) => ['title' => $d->title, 'url' => url($d->file)])->values();
-        $videoUrl = $product->effectiveVideoUrl();
-        $videoEmbed = $this->videoEmbedUrl($product->effectiveVideoUrl());
+        $docsJson = collect();
+        $videoUrl = null;
+        $videoEmbed = null;
 
         return spa('frontend.details', compact('product', 'productJson', 'optionsJson', 'zonesJson', 'relatedJson', 'faqsJson', 'docsJson', 'videoUrl', 'videoEmbed'));
     }
@@ -173,26 +168,6 @@ class FrontendController extends Controller
         return spa('frontend.custom-build');
     }
 
-    public function enquiriesStore(Request $request)
-    {
-        $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'nullable|email|max:255',
-            'phone' => 'nullable|string|max:50',
-            'postcode' => 'nullable|string|max:50',
-            'topic' => 'nullable|string|max:255',
-            'message' => 'nullable|string',
-            'product_id' => 'nullable|exists:products,id',
-            'config_summary' => 'nullable|string',
-            'guide_price' => 'nullable|numeric|min:0',
-            'source_page' => 'nullable|string|max:50',
-        ]);
-
-        Enquiry::create($data);
-
-        return response()->json(['success' => true, 'message' => 'Enquiry received. The studio will reply within one working day.']);
-    }
-
     public function gallery()
     {
         $this->seo('gallery');
@@ -201,26 +176,6 @@ class FrontendController extends Controller
         $galleryCatsJson = $this->galleryCatsJson();
 
         return spa('frontend.gallery', compact('galleryJson', 'galleryCatsJson'));
-    }
-
-    public function downloads()
-    {
-        $this->seo('downloads');
-
-        $filesJson = $this->filesJson();
-
-        return spa('frontend.downloads', compact('filesJson'));
-    }
-
-    public function downloadFile($id)
-    {
-        $dl = Download::where('id', $id)->where('status', true)->firstOrFail();
-        if (! $dl->file || ! file_exists(public_path($dl->file))) {
-            abort(404);
-        }
-        $dl->increment('downloads_count');
-
-        return response()->download(public_path($dl->file));
     }
 
     public function privacy()
@@ -258,28 +213,32 @@ class FrontendController extends Controller
 
     private function priceFor(Product $p): string
     {
-        return $p->base_price ? 'From £'.number_format((float) $p->base_price) : 'On request';
+        return $p->priceRange() ?? 'On request';
     }
 
     /** Card shape used by collections grid, featured rail, configurator, related. */
     private function productCard(Product $p): array
     {
+        $gallery = $p->relationLoaded('images')
+            ? $p->images->map(fn ($i) => $this->imgUrl($i->image))->values()->all()
+            : [];
+
         return [
             'id' => $p->id,
             'slug' => $p->slug,
-            'modelCode' => $p->model_code,
+            'modelCode' => $p->defaultVariant()?->sku,
             'name' => $p->name,
             'category' => $p->category?->name ?? 'Collection',
             'categorySlug' => $p->category?->slug,
             'discipline' => $p->category?->name ?? 'Collection',
             'tagline' => $p->tagline,
+            'subtitle' => $p->tagline,
             'price' => $this->priceFor($p),
-            'leadTime' => $p->lead_time,
+            'leadTime' => null,
             'heroImage' => $this->heroFor($p),
-            'materials' => $p->relationLoaded('materials') ? $p->materials->pluck('name')->all() : [],
-            'dimensions' => $p->dimensions,
-            'warranty' => $p->warranty,
-            'specs' => $p->relationLoaded('specs') ? $p->specs->pluck('point')->all() : [],
+            'images' => $gallery,
+            'dimensions' => null,
+            'warranty' => null,
         ];
     }
 
@@ -289,17 +248,39 @@ class FrontendController extends Controller
         return [
             ...$this->productCard($p),
             'description' => $p->description,
-            'video' => $p->effectiveVideoUrl(),
-            'videoEmbed' => $this->videoEmbedUrl($p->effectiveVideoUrl()),
-            'model3d' => $p->model_3d ? url($p->model_3d) : null,
-            'show3d' => (bool) $p->show_3d,
+            'highlights' => $p->highlightList(),
+            'extraAttributes' => $p->extraAttributes->map(fn ($a) => [
+                'label' => $a->label, 'value' => $a->value,
+            ])->values()->all(),
+            'video' => null,
+            'videoEmbed' => null,
+            'model3d' => null,
+            'show3d' => false,
             'gallery' => $p->images->map(fn ($i) => [
                 'src' => $this->imgUrl($i->image), 'caption' => $i->caption,
             ])->values()->all(),
-            'tech' => $p->techSpecs->map(fn ($t) => [
-                'label' => $t->label, 'value' => $t->value, 'highlight' => (bool) $t->highlight,
+            'optionGroups' => $p->effectiveOptionGroups()->map(fn ($g) => [
+                'id' => $g->id,
+                'name' => $g->name,
+                'slug' => $g->slug,
+                'type' => $g->type,
+                'values' => $g->values->where('status', true)->values()->map(fn ($v) => [
+                    'id' => $v->id, 'label' => $v->label, 'slug' => $v->slug,
+                ])->all(),
             ])->values()->all(),
-            'docs' => $p->documents->map(fn ($d) => ['title' => $d->title, 'url' => url($d->file)])->values()->all(),
+            'variants' => $p->activeVariants->map(fn ($v) => [
+                'id' => $v->id,
+                'sku' => $v->sku,
+                'mrp' => (float) $v->mrp,
+                'offer_price' => $v->offer_price === null ? null : (float) $v->offer_price,
+                'selling' => $v->sellingPrice(),
+                'in_stock' => (bool) $v->in_stock,
+                'is_default' => (bool) $v->is_default,
+                'image' => $this->imgUrl($v->image),
+                'values' => $v->values->map(fn ($val) => [
+                    'group' => $val->group->slug, 'value' => $val->slug, 'label' => $val->label,
+                ])->values()->all(),
+            ])->values()->all(),
         ];
     }
 
@@ -317,18 +298,6 @@ class FrontendController extends Controller
         }
 
         return null;
-    }
-
-    private function optsJson($opts): array
-    {
-        return collect($opts)->map(fn ($o) => [
-            'id' => 'opt-'.$o->id,
-            'name' => $o->name,
-            'sub' => $o->subtitle,
-            'price' => $o->price_delta ? (float) $o->price_delta : 0,
-            'swatch' => $o->swatch_color,
-            'default' => (bool) $o->is_default,
-        ])->values()->all();
     }
 
     private function faqsJson(?int $limit = null)
@@ -380,43 +349,6 @@ class FrontendController extends Controller
     {
         return GalleryCategory::where('status', true)->orderBy('sort_order')
             ->pluck('name', 'slug')->all();
-    }
-
-    private function filesJson(?int $limit = null)
-    {
-        $q = Download::with('product:id,name,model_code')->where('status', true)->orderBy('sort_order');
-        if ($limit) {
-            $q->limit($limit);
-        }
-
-        return $q->get()->map(fn ($f) => [
-            'id' => $f->id,
-            'ref' => $f->ref,
-            'suite' => $f->product?->name ? strtoupper($f->product->name) : 'ORIGINSPACES STUDIO',
-            'title' => $f->title,
-            'format' => $f->format,
-            'size' => $f->size ?? '—',
-            'rev' => $f->rev ?? '—',
-            'url' => $f->file ? route('downloads.file', $f->id) : null,
-        ])->values();
-    }
-
-    private function zonesJson(?int $productId = null)
-    {
-        // Product-specific zones replace the global set when they exist;
-        // products without their own zones keep showing the global set.
-        $specific = FloorZone::where('status', true)->where('product_id', $productId)
-            ->orderBy('sort_order')->get();
-        $zones = $specific->isNotEmpty() ? $specific : FloorZone::where('status', true)->whereNull('product_id')
-            ->orderBy('sort_order')->get();
-
-        return $zones->map(fn ($z, $i) => [
-            'id' => 'zone-'.$z->id,
-            'name' => $z->name,
-            'desc' => $z->desc,
-            'dims' => $z->dims,
-            'sort' => $i,
-        ])->values();
     }
 
     private function seo($pageKey = null, $title = null, $description = null, $keywords = null, $image = null)

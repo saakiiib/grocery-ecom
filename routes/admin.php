@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\GalleryController;
 use App\Http\Controllers\Admin\PageSeoController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ProductImageController;
+use App\Http\Controllers\Admin\ProductVariantController;
 use App\Http\Controllers\Admin\SliderController;
 use App\Http\Controllers\Admin\TestimonialController;
 use App\Http\Controllers\HomeController;
@@ -30,6 +31,8 @@ Route::group(['prefix' => 'admin/', 'middleware' => ['auth', 'is_admin']], funct
     Route::get('/category/{id}/edit', [CategoryController::class, 'edit'])->name('category.edit');
     Route::post('/category-update', [CategoryController::class, 'update'])->name('category.update');
     Route::delete('/category/{id}', [CategoryController::class, 'delete'])->name('category.delete');
+    Route::delete('/category/{id}/image', [CategoryController::class, 'removeImage'])->name('category.removeImage');
+    Route::delete('/category/{id}/meta-image', [CategoryController::class, 'removeMetaImage'])->name('category.removeMetaImage');
     Route::post('/category-status', [CategoryController::class, 'toggleStatus'])->name('category.toggleStatus');
     Route::get('/category-sort-list', [CategoryController::class, 'sortList'])->name('category.sortList');
     Route::post('/category-sort-update', [CategoryController::class, 'sortUpdate'])->name('category.sortUpdate');
@@ -48,6 +51,7 @@ Route::group(['prefix' => 'admin/', 'middleware' => ['auth', 'is_admin']], funct
     Route::get('/sliders/{id}/edit', [SliderController::class, 'edit'])->name('slider.edit');
     Route::post('/sliders/update', [SliderController::class, 'update'])->name('slider.update');
     Route::delete('/sliders/{id}', [SliderController::class, 'destroy'])->name('slider.delete');
+    Route::delete('/sliders/{id}/image', [SliderController::class, 'removeImage'])->name('slider.removeImage');
     Route::post('/sliders/toggle-status', [SliderController::class, 'toggleStatus'])->name('slider.toggleStatus');
 
     // Testimonials
@@ -71,6 +75,7 @@ Route::group(['prefix' => 'admin/', 'middleware' => ['auth', 'is_admin']], funct
     Route::post('/products/update', [ProductController::class, 'update'])->name('products.update');
     Route::get('/products/{id}/manage', [ProductController::class, 'manage'])->name('products.manage');
     Route::delete('/products/{id}', [ProductController::class, 'destroy'])->name('products.delete');
+    Route::delete('/products/{id}/file', [ProductController::class, 'removeFile'])->name('products.removeFile');
     Route::post('/products/toggle-status', [ProductController::class, 'toggleStatus'])->name('products.toggleStatus');
     Route::post('/products/toggle-featured', [ProductController::class, 'toggleFeatured'])->name('products.toggleFeatured');
     Route::get('/product-sort-list', [ProductController::class, 'sortList'])->name('products.sortList');
@@ -81,6 +86,17 @@ Route::group(['prefix' => 'admin/', 'middleware' => ['auth', 'is_admin']], funct
     Route::post('/products/{product}/images', [ProductImageController::class, 'store'])->name('product-images.store');
     Route::post('/product-images/{id}', [ProductImageController::class, 'update'])->name('product-images.update');
     Route::delete('/product-images/{id}', [ProductImageController::class, 'destroy'])->name('product-images.delete');
+
+    // Product variants (per-product workspace tab)
+    Route::get('/products/{product}/variants', [ProductVariantController::class, 'list'])->name('product-variants.list');
+    Route::post('/products/{product}/variants', [ProductVariantController::class, 'store'])->name('product-variants.store');
+    Route::post('/product-variants/{id}', [ProductVariantController::class, 'update'])->name('product-variants.update');
+    Route::delete('/product-variants/{id}', [ProductVariantController::class, 'destroy'])->name('product-variants.delete');
+    Route::post('/product-variants/{id}/default', [ProductVariantController::class, 'setDefault'])->name('product-variants.default');
+    Route::post('/product-variants/toggle-stock', [ProductVariantController::class, 'toggleStock'])->name('product-variants.toggleStock');
+    Route::delete('/product-variants/{id}/image', [ProductVariantController::class, 'removeImage'])->name('product-variants.removeImage');
+    Route::post('/products/{product}/variant-groups', [ProductVariantController::class, 'syncGroups'])->name('product-variants.syncGroups');
+    Route::post('/products/{id}/attributes', [ProductController::class, 'attributesSync'])->name('products.attributesSync');
 
     // FAQ
     Route::get('/faq-categories', [FaqCategoryController::class, 'index'])->name('faq-categories.index');

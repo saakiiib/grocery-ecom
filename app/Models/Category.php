@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Category extends Model
 {
@@ -36,5 +37,13 @@ class Category extends Model
     public function products()
     {
         return $this->hasMany(Product::class);
+    }
+
+    /** Option-group template inherited by products in this category. */
+    public function optionGroups(): BelongsToMany
+    {
+        return $this->belongsToMany(OptionGroup::class, 'category_option_group')
+            ->withPivot('sort_order')
+            ->orderByPivot('sort_order');
     }
 }

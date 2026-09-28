@@ -41,7 +41,7 @@ Route::get('/about', [FrontendController::class, 'about'])->name('about');
 Route::get('/collections', [FrontendController::class, 'collections'])->name('collections');
 Route::get('/product/{slug}', [FrontendController::class, 'productShow'])->name('product.show');
 Route::get('/custom-build', [FrontendController::class, 'customBuild'])->name('custom-build');
-Route::post('/enquiries', [FrontendController::class, 'enquiriesStore'])->name('enquiries.store');
+Route::post('/enquiries', [FrontendController::class, 'contactStore'])->name('enquiries.store');
 Route::get('/gallery', [FrontendController::class, 'gallery'])->name('gallery');
 Route::get('/downloads', [FrontendController::class, 'downloads'])->name('downloads');
 Route::get('/downloads/{id}/file', [FrontendController::class, 'downloadFile'])->name('downloads.file');

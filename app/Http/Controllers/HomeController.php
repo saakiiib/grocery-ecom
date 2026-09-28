@@ -2,10 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Category;
-use App\Models\Contact;
-use App\Models\Gallery;
-use App\Models\Product;
 use Illuminate\Support\Facades\Auth;
 
 class HomeController extends Controller
@@ -27,15 +23,7 @@ class HomeController extends Controller
 
     public function adminHome()
     {
-        $productCount = Product::count();
-        $categoryCount = Category::count();
-        $contactCount = Contact::count();
-        $galleryCount = Gallery::count();
-        $contactsThisWeek = Contact::where('created_at', '>=', now()->subDays(7))->count();
-        $recentContacts = Contact::latest()->limit(5)->get();
-        $productsByCategory = Category::withCount('products')->orderByDesc('products_count')->limit(6)->get();
-
-        return view('admin.pages.dashboard', compact('productCount', 'categoryCount', 'contactCount', 'galleryCount', 'contactsThisWeek', 'recentContacts', 'productsByCategory'));
+        return view('admin.pages.dashboard');
     }
 
     public function managerHome()

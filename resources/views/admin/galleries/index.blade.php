@@ -9,7 +9,7 @@
 <div class="row g-2">
 <div class="col-md-6"><label class="form-label">Category</label><select class="form-control select2" id="gallery_category_id" name="gallery_category_id"><option value="">Select</option>@foreach ($categories as $c)<option value="{{ $c->id }}">{{ $c->name }}</option>@endforeach</select></div>
 <div class="col-md-6"><label class="form-label">Caption</label><input class="form-control" id="caption" name="caption"></div>
-<div class="col-12"><label class="form-label">Image *</label><input type="file" class="form-control" id="image" name="image" accept="image/*" onchange="previewImage(event, '#preview-img')"><div id="current_image_box" style="display:none" class="mt-1 small"><span id="current_image_name"></span> <label class="ms-2"><input type="checkbox" name="remove_image" id="remove_image" value="1"> Remove current file</label></div><img id="preview-img" src="#" class="img-thumbnail mt-2" style="display:none;max-width:250px;"></div>
+<div class="col-12"><label class="form-label">Image *</label><input type="file" class="form-control" id="image" name="image" accept="image/*" onchange="previewImage(event, '#preview-img')"><div id="current_image_box" style="display:none" class="mt-1 small"><label><input type="checkbox" name="remove_image" id="remove_image" value="1"> Remove current file</label></div><img id="preview-img" src="#" class="img-thumbnail mt-2" style="display:none;max-width:250px;"></div>
 </div></form></div>
 <div class="card-footer text-end"><button id="saveBtn" class="btn btn-primary" value="Create">Create</button> <button id="cancelBtn" class="btn btn-light">Cancel</button></div>
 </div></div></div></div>
@@ -35,7 +35,7 @@ $(function () {
             success: d => { showSuccess(d.message); $('#formBox').hide(); $('#newBtn').show(); t.ajax.reload(null, false); },
             error: xhr => showError(xhr.status === 422 ? Object.values(xhr.responseJSON.errors)[0][0] : 'Error') });
     });
-    $(document).on('click', '.editBtn', function () { $.get("{{ url('/admin/galleries') }}/" + $(this).data('id') + '/edit', d => { $('#codeid').val(d.id); $('#gallery_category_id').val(d.gallery_category_id).trigger('change'); $('#caption').val(d.caption); if (d.preview) $('#preview-img').attr('src', d.preview).show(); if (d.image) { const src = d.preview || d.image; $('#current_image_name').html('Current: <a href="' + src + '" target="_blank">' + String(d.image).split('/').pop() + '</a>'); $('#current_image_box').show(); $('#remove_image').prop('checked', false); } else { $('#current_image_box').hide(); } $('#saveBtn').val('Update').html('Update'); $('#formBox').show(300); $('#newBtn').hide(); pagetop(); }); });
+    $(document).on('click', '.editBtn', function () { $.get("{{ url('/admin/galleries') }}/" + $(this).data('id') + '/edit', d => { $('#codeid').val(d.id); $('#gallery_category_id').val(d.gallery_category_id).trigger('change'); $('#caption').val(d.caption); if (d.preview) $('#preview-img').attr('src', d.preview).show(); if (d.image) { const src = d.preview || d.image; $('#current_image_box').show(); $('#remove_image').prop('checked', false); } else { $('#current_image_box').hide(); } $('#saveBtn').val('Update').html('Update'); $('#formBox').show(300); $('#newBtn').hide(); pagetop(); }); });
     $(document).on('change', '.toggle-status', function () { $.post("{{ route('galleries.toggleStatus') }}", { id: $(this).data('id') }, d => { showSuccess(d.message); t.ajax.reload(null, false); }); });
 });
 </script>

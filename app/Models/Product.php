@@ -4,22 +4,21 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 
 class Product extends Model
 {
     protected $fillable = [
-        'category_id', 'name', 'slug', 'model_code', 'tagline', 'description',
-        'dimensions', 'lead_time', 'warranty', 'base_price', 'hero_image', 'video_url', 'model_3d',
-        'show_3d', 'is_featured', 'status', 'sort_order',
+        'category_id', 'name', 'slug', 'tagline', 'highlights', 'description',
+        'hero_image', 'is_featured', 'status', 'sort_order',
         'meta_title', 'meta_description', 'meta_keywords', 'meta_image',
     ];
 
     protected function casts(): array
     {
         return [
-            'base_price' => 'decimal:2',
-            'show_3d' => 'boolean',
             'is_featured' => 'boolean',
             'status' => 'boolean',
             'sort_order' => 'integer',
@@ -36,10 +35,91 @@ class Product extends Model
         return $this->hasMany(ProductImage::class)->orderBy('sort_order');
     }
 
-    /** Effective video: product override else category video. */
-    public function effectiveVideoUrl(): ?string
+    public function variants(): HasMany
     {
-        return $this->video_url ?: $this->category?->video_url;
+        return $this->hasMany(ProductVariant::class)->orderBy('sort_order');
+    }
+
+    public function activeVariants(): HasMany
+    {
+        return $this->variants()->where('status', true);
+    }
+
+    /** Free-form per-product details (cooking suggestion, allergy advice, storage…). */
+    public function extraAttributes(): HasMany
+    {
+        return $this->hasMany(ProductAttribute::class)->orderBy('sort_order');
+    }
+
+    /** Key points as a trimmed non-empty list (one per line in admin). */
+    public function highlightList(): array
+    {
+        return collect(preg_split('/\r\n|\r|\n/', $this->highlights ?? ''))
+            ->map(fn ($l) => trim($l))
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    /** Per-product option-group overrides; when present they replace the category template. */
+    public function optionGroups(): BelongsToMany
+    {
+        return $this->belongsToMany(OptionGroup::class, 'product_option_group')
+            ->withPivot('sort_order')
+            ->orderByPivot('sort_order');
+    }
+
+    /**
+     * Effective option groups: product overrides win, else the category template.
+     *
+     * @return Collection<int, OptionGroup>
+     */
+    public function effectiveOptionGroups()
+    {
+        if (! $this->relationLoaded('optionGroups')) {
+            $this->load('optionGroups.values');
+        }
+        if ($this->optionGroups->isNotEmpty()) {
+            return $this->optionGroups;
+        }
+        if (! $this->relationLoaded('category')) {
+            $this->load('category.optionGroups.values');
+        }
+
+        return $this->category?->optionGroups ?? collect();
+    }
+
+    public function defaultVariant(): ?ProductVariant
+    {
+        if (! $this->relationLoaded('variants')) {
+            $this->load('variants');
+        }
+
+        return $this->variants->firstWhere('is_default', true)
+            ?? $this->variants->firstWhere('status', true)
+            ?? $this->variants->first();
+    }
+
+    /** Single price (default variant) or min–max range across active in-stock variants. */
+    public function priceRange(): ?string
+    {
+        if (! $this->relationLoaded('variants')) {
+            $this->load('variants');
+        }
+        $prices = $this->variants
+            ->where('status', true)
+            ->map(fn ($v) => $v->sellingPrice())
+            ->values();
+        if ($prices->isEmpty()) {
+            return null;
+        }
+        $min = $prices->min();
+        $max = $prices->max();
+        if ($min === $max) {
+            return '£'.number_format($min, 2);
+        }
+
+        return '£'.number_format($min, 2).' – £'.number_format($max, 2);
     }
 
     /** Frontend SEO array shape for SEOMeta/OpenGraph. */

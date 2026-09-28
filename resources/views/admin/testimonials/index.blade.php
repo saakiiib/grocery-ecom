@@ -38,7 +38,7 @@
                             <div class="col-md-12">
                                 <label class="form-label">Image</label>
                                 <input type="file" class="form-control" id="image" accept="image/*" onchange="previewImage(event, '#imagePreview')">
-                                <div id="current_image_box" style="display:none" class="mt-1 small"><span id="current_image_name"></span> <label class="ms-2"><input type="checkbox" name="remove_image" id="remove_image" value="1"> Remove current file</label></div>
+                                <div id="current_image_box" style="display:none" class="mt-1 small"><label><input type="checkbox" name="remove_image" id="remove_image" value="1"> Remove current file</label></div>
                                 <img id="imagePreview" src="{{ asset('placeholder.webp') }}" class="img-thumbnail mt-2" style="width:100px;height:100px;object-fit:cover;border-radius:50%; display:block;">
                             </div>
 
@@ -172,7 +172,6 @@
 
                         $('#imagePreview').attr('src', d.image ? d.image : '/placeholder.webp');
                         if (d.image && d.image !== 'placeholder.webp') {
-                            $('#current_image_name').html('Current: <a href="' + d.image + '" target="_blank">' + String(d.image).split('/').pop() + '</a>');
                             $('#current_image_box').show();
                             $('#remove_image').prop('checked', false);
                         } else {

@@ -31,7 +31,7 @@
                         <div class="mb-3">
                             <label>Meta Image <small class="text-muted">1200x630</small></label>
                             <input type="file" class="form-control" id="meta_image" name="meta_image" accept="image/*">
-                            <div id="current_meta_image_box" style="display:none" class="mt-1 small"><span id="current_meta_image_name"></span> <label class="ms-2"><input type="checkbox" name="remove_meta_image" id="remove_meta_image" value="1"> Remove current file</label></div>
+                            <div id="current_meta_image_box" style="display:none" class="mt-1 small"><label><input type="checkbox" name="remove_meta_image" id="remove_meta_image" value="1"> Remove current file</label></div>
                             <img id="image_preview" src="#" class="img-thumbnail mt-2" style="display:none;max-height:120px;">
                         </div>
                         <div class="text-end">
@@ -132,7 +132,6 @@ $(function () {
             $('#meta_keywords').val(res.meta_keywords);
             $('#image_preview').attr('src', res.meta_image ? '{{ asset("/") }}' + res.meta_image : '#').toggle(!!res.meta_image);
             if (res.meta_image) {
-                $('#current_meta_image_name').html('Current: <a href="{{ asset("/") }}' + res.meta_image + '" target="_blank">' + String(res.meta_image).split('/').pop() + '</a>');
                 $('#current_meta_image_box').show();
                 $('#remove_meta_image').prop('checked', false);
             }
