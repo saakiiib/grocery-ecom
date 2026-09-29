@@ -67,9 +67,11 @@ class ProductController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'category_id' => 'nullable|exists:categories,id',
+            'category_id' => 'required|exists:categories,id',
             'hero_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
             'meta_image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+        ], [
+            'category_id.required' => 'Category is required — every product must belong to a category',
         ]);
 
         $product = new Product($request->only([
@@ -112,9 +114,11 @@ class ProductController extends Controller
         $product = Product::findOrFail($request->codeid);
         $request->validate([
             'name' => 'required|string|max:255',
-            'category_id' => 'nullable|exists:categories,id',
+            'category_id' => 'required|exists:categories,id',
             'hero_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
             'meta_image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+        ], [
+            'category_id.required' => 'Category is required — every product must belong to a category',
         ]);
 
         $product->fill($request->only([

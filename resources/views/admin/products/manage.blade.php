@@ -31,7 +31,7 @@
                     <input type="hidden" name="codeid" value="{{ $product->id }}">
                     <div class="row g-3">
                         <div class="col-md-6"><label class="form-label">Name *</label><input type="text" class="form-control" name="name" value="{{ $product->name }}"></div>
-                        <div class="col-md-6"><label class="form-label">Category</label>
+                        <div class="col-md-6"><label class="form-label">Category <span class="text-danger">*</span></label>
                             <select class="form-control select2" name="category_id">
                                 <option value="">Select</option>
                                 @foreach ($categories as $c)<option value="{{ $c->id }}" @selected($product->category_id == $c->id)>{{ $c->name }}</option>@endforeach

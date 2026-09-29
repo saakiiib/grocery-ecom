@@ -39,7 +39,7 @@
                                 <input type="text" class="form-control" id="name" name="name">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Category</label>
+                                <label class="form-label">Category <span class="text-danger">*</span></label>
                                 <select class="form-control select2" id="category_id" name="category_id">
                                     <option value="">Select</option>
                                     @foreach ($categories as $cat)

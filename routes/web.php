@@ -1,5 +1,9 @@
 <?php
 
+use App\Http\Controllers\AccountController;
+use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\BagController;
+use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\FrontendController;
 use App\Http\Controllers\HomeController;
 use Illuminate\Support\Facades\Artisan;
@@ -32,19 +36,37 @@ Auth::routes([
     'verify' => false,
 ]);
 
+// Shopper registration (same users table, user_type 0 — same auth as admins)
+Route::get('/register', [RegisterController::class, 'showRegistrationForm'])->name('register');
+Route::post('/register', [RegisterController::class, 'register'])->name('register.store');
+
 // Dashboard (must keep)
 Route::get('/dashboard', [HomeController::class, 'dashboard'])->name('dashboard');
 
-// Frontend Routes (OriginSpaces showcase theme)
+// Frontend Routes (Evergreen grocery theme)
 Route::get('/', [FrontendController::class, 'index'])->name('home');
 Route::get('/about', [FrontendController::class, 'about'])->name('about');
 Route::get('/collections', [FrontendController::class, 'collections'])->name('collections');
+Route::get('/offers', [FrontendController::class, 'offers'])->name('offers');
 Route::get('/product/{slug}', [FrontendController::class, 'productShow'])->name('product.show');
-Route::get('/custom-build', [FrontendController::class, 'customBuild'])->name('custom-build');
-Route::post('/enquiries', [FrontendController::class, 'contactStore'])->name('enquiries.store');
 Route::get('/gallery', [FrontendController::class, 'gallery'])->name('gallery');
-Route::get('/downloads', [FrontendController::class, 'downloads'])->name('downloads');
-Route::get('/downloads/{id}/file', [FrontendController::class, 'downloadFile'])->name('downloads.file');
+Route::get('/bag', [FrontendController::class, 'bag'])->name('bag');
+Route::post('/bag/add', [BagController::class, 'add'])->name('bag.add');
+Route::post('/bag/update', [BagController::class, 'update'])->name('bag.update');
+Route::post('/bag/remove', [BagController::class, 'remove'])->name('bag.remove');
+Route::get('/bag/data', [BagController::class, 'show'])->name('bag.data');
+Route::post('/checkout/place', [CheckoutController::class, 'place'])->name('checkout.place');
+Route::post('/checkout/payment-confirm', [CheckoutController::class, 'paymentConfirm'])->name('checkout.payment-confirm');
+Route::post('/checkout/cancel', [CheckoutController::class, 'cancel'])->name('checkout.cancel');
+Route::get('/order/success/{number}', [CheckoutController::class, 'success'])->name('order.success');
+Route::get('/checkout', [FrontendController::class, 'checkout'])->name('checkout');
+Route::get('/account', [AccountController::class, 'index'])->name('account');
+Route::get('/account/orders/{number}', [AccountController::class, 'show'])->name('account.order');
+Route::post('/account/orders/{number}/reorder', [AccountController::class, 'reorder'])->name('account.reorder');
+Route::post('/account/orders/{number}/pay', [AccountController::class, 'pay'])->name('account.pay');
+Route::post('/account/orders/{number}/cancel', [AccountController::class, 'cancel'])->name('account.cancel');
+Route::post('/account/profile', [AccountController::class, 'profile'])->name('account.profile');
+Route::get('/faq', [FrontendController::class, 'faq'])->name('faq');
 Route::get('/contact', [FrontendController::class, 'contact'])->name('contact');
 Route::post('/contact', [FrontendController::class, 'contactStore'])->name('contact.store');
 

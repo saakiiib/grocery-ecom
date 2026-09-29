@@ -53,6 +53,20 @@ class SidebarController
             ],
             [
                 'type' => 'item',
+                'icon' => 'ri-shopping-bag-line',
+                'label' => 'Orders',
+                'route' => 'orders.*',
+                'href' => route('orders.index'),
+            ],
+            [
+                'type' => 'item',
+                'icon' => 'ri-time-line',
+                'label' => 'Delivery Slots',
+                'route' => 'delivery-slots.*',
+                'href' => route('delivery-slots.index'),
+            ],
+            [
+                'type' => 'item',
                 'icon' => 'ri-mail-line',
                 'label' => 'Contacts',
                 'route' => 'admin.contacts.*',
@@ -65,6 +79,8 @@ class SidebarController
                 'id' => 'sidebarSettings',
                 'children' => [
                     ['label' => 'Company Details', 'route' => 'admin.companyDetails', 'href' => route('admin.companyDetails')],
+                    ['label' => 'Shop Settings', 'route' => 'shop-settings.*', 'href' => route('shop-settings.edit')],
+                    ['label' => 'Order Statuses', 'route' => 'order-statuses.*', 'href' => route('order-statuses.index')],
                     ['label' => 'Page SEO', 'route' => 'page-seo.*', 'href' => route('page-seo.index')],
                 ],
             ],

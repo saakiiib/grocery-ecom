@@ -35,9 +35,9 @@ test('all public pages render with layout shell', function () {
     seedGrocery();
 
     foreach ([
-        '/', '/about', '/collections', '/product/lamb-leg', '/custom-build',
-        '/gallery', '/contact', '/privacy-policy', '/terms-of-service',
-        '/login',
+        '/', '/about', '/collections', '/product/lamb-leg', '/offers',
+        '/gallery', '/bag', '/checkout', '/faq',
+        '/contact', '/privacy-policy', '/terms-of-service', '/login',
     ] as $uri) {
         $this->get($uri)->assertOk($uri);
     }
@@ -68,6 +68,56 @@ test('details page carries grocery data and variant matrix', function () {
 
 test('unknown product slug 404s', function () {
     $this->get('/product/nope')->assertNotFound();
+});
+
+test('shop search, category filter and sorting work server-side', function () {
+    seedGrocery();
+
+    $this->get('/collections?category=fresh-meat')->assertOk()->assertSee('Lamb Leg', false);
+    $this->get('/collections?q=lamb')->assertOk()->assertSee('Lamb Leg', false);
+    $this->get('/collections?q=zzz-no-match')->assertOk()->assertSee('Nothing found', false);
+    $this->get('/collections?sort=price_asc')->assertOk()->assertSee('Lamb Leg', false);
+    $this->get('/collections?sort=bogus')->assertOk()->assertSee('Lamb Leg', false);
+});
+
+test('offers page lists only discounted variants with save badges', function () {
+    seedGrocery();
+
+    $html = $this->get('/offers')->assertOk()->getContent();
+    expect($html)->toContain('LAMB-500')
+        ->toContain('Save 15%');
+});
+
+test('details page exposes variant picker data for live pricing', function () {
+    seedGrocery();
+
+    $html = $this->get('/product/lamb-leg')->assertOk()->getContent();
+    expect($html)->toContain('data-variant-picker')
+        ->toContain('data-current-price')
+        ->toContain('500g')
+        ->toContain('Storage')
+        ->toContain('Keep chilled');
+});
+
+test('frontend scripts stay spa-safe and icons render server-side', function () {
+    seedGrocery();
+
+    foreach (glob(resource_path('views/frontend/*.blade.php')) as $file) {
+        $html = file_get_contents($file);
+        expect($html)->not->toContain('DOMContentLoaded', basename($file).' must init directly, DOMContentLoaded never fires after SPA navigation');
+        expect(preg_match('/^    (const|let) (?=[A-Za-z_$])/m', $html))->toBe(0, basename($file).' must not use top-level const/let, the engine re-executes scripts on every navigation');
+    }
+
+    $js = file_get_contents(public_path('resources/frontend/js/egf.js'));
+    expect($js)->not->toContain("addEventListener('DOMContentLoaded'")
+        ->not->toContain('addEventListener("DOMContentLoaded"')
+        ->not->toContain('const CART_KEY');
+
+    foreach (['/', '/collections', '/product/lamb-leg', '/contact'] as $uri) {
+        $this->get($uri)->assertOk()
+            ->assertSee('lucide lucide-search', false)
+            ->assertDontSee('<i data-lucide="search">', false);
+    }
 });
 
 test('contact form validates and stores into contacts inbox', function () {

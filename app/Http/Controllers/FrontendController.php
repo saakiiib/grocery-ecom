@@ -5,12 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\CompanyDetails;
 use App\Models\Contact;
+use App\Models\DeliverySlot;
 use App\Models\Faq;
 use App\Models\FaqCategory;
 use App\Models\Gallery;
 use App\Models\GalleryCategory;
 use App\Models\PageSeo;
 use App\Models\Product;
+use App\Models\Setting;
 use App\Models\Slider;
 use Illuminate\Http\Request;
 use OpenGraph;
@@ -35,7 +37,7 @@ class FrontendController extends Controller
     {
         $this->seo('home');
 
-        $products = Product::with(['category', 'images', 'variants'])
+        $products = Product::with(['category', 'images', 'variants.values.group'])
             ->where('status', true)
             ->orderBy('sort_order')
             ->orderByDesc('id')
@@ -49,7 +51,15 @@ class FrontendController extends Controller
         $productsJson = $products->map(fn ($p) => $this->productCard($p))->values();
         $featuredJson = $featured->map(fn ($p) => $this->productCard($p))->values();
         $featuredCards = $products->where('is_featured', true)->values()->map(fn ($p) => $this->productCard($p))->values();
-        $categoriesJson = $categories->map(fn ($c) => ['name' => $c->name, 'slug' => $c->slug])->values();
+        $tileFallbacks = ['cat-veg', 'cat-fruit', 'cat-bakery', 'cat-dairy', 'cat-seafood', 'cat-pantry'];
+        $categoriesJson = $categories->values()->map(fn ($c, $i) => [
+            'name' => $c->name,
+            'slug' => $c->slug,
+            'image' => $c->image ? url($c->image) : asset('frontend-raw/assets/images/'.$tileFallbacks[$i % count($tileFallbacks)].'.jpg'),
+            'count' => $products->where('category_id', $c->id)->count(),
+        ])->values();
+        $offerCards = $products->filter(fn ($p) => collect($p->variants)->contains(fn ($v) => $v->status && $v->offer_price !== null && (float) $v->offer_price < (float) $v->mrp))
+            ->take(4)->values()->map(fn ($p) => $this->productCard($p))->values();
         $faqsJson = $this->faqsJson();
         $faqCatsJson = $this->faqCatsJson();
         $galleryJson = $this->galleryJson(8);
@@ -61,7 +71,7 @@ class FrontendController extends Controller
             ->map(fn ($s) => [...$s->toArray(), 'image' => $s->image ? url($s->image) : url('placeholder.webp')])
             ->values();
 
-        return spa('frontend.index', compact('productsJson', 'featuredJson', 'featuredCards', 'categoriesJson', 'faqsJson', 'faqCatsJson', 'galleryJson', 'galleryCatsJson', 'filesJson', 'zonesJson', 'slidersJson'));
+        return spa('frontend.index', compact('productsJson', 'featuredJson', 'featuredCards', 'categoriesJson', 'offerCards', 'faqsJson', 'faqCatsJson', 'galleryJson', 'galleryCatsJson', 'filesJson', 'zonesJson', 'slidersJson'));
     }
 
     public function collections(Request $request)
@@ -69,24 +79,50 @@ class FrontendController extends Controller
         $this->seo('collections');
 
         $categories = Category::where('status', true)->orderBy('sort_order')->get();
-        $products = Product::with(['category', 'images', 'variants'])
+        $products = Product::with(['category', 'images', 'variants.values.group'])
             ->where('status', true)
             ->orderBy('sort_order')
             ->orderByDesc('id')
             ->get();
 
-        // Header/footer link with ?category=slug — JS filters by category name.
+        // Header/footer link with ?category=slug — resolved to the category name.
         $activeCategory = $request->get('category', 'All');
+        $activeCategorySlug = null;
         if ($activeCategory !== 'All') {
             $match = $categories->firstWhere('slug', $activeCategory)
                 ?? $categories->first(fn ($c) => strcasecmp($c->name, $activeCategory) === 0);
             $activeCategory = $match?->name ?? 'All';
+            $activeCategorySlug = $match?->slug;
         }
 
-        $productsJson = $products->map(fn ($p) => $this->productCard($p))->values();
+        $search = trim((string) $request->get('q', ''));
+        $sort = $request->get('sort', 'featured');
+        if (! in_array($sort, ['featured', 'price_asc', 'price_desc', 'offers', 'name'], true)) {
+            $sort = 'featured';
+        }
+
+        $cards = $products
+            ->when($activeCategorySlug, fn ($c) => $c->filter(fn ($p) => $p->category?->slug === $activeCategorySlug)->values())
+            ->when($search !== '', function ($c) use ($search) {
+                $term = mb_strtolower($search);
+
+                return $c->filter(fn ($p) => str_contains(mb_strtolower($p->name.' '.($p->category?->name ?? '').' '.($p->defaultVariant()?->sku ?? '')), $term));
+            })
+            ->map(fn ($p) => $this->productCard($p))
+            ->values();
+
+        $cards = match ($sort) {
+            'price_asc' => $cards->sortBy(fn ($p) => $p['priceNum'] ?? PHP_FLOAT_MAX)->values(),
+            'price_desc' => $cards->sortByDesc(fn ($p) => $p['priceNum'] ?? 0)->values(),
+            'offers' => $cards->sortByDesc(fn ($p) => $p['savePct'] ?? 0)->values(),
+            'name' => $cards->sortBy(fn ($p) => mb_strtolower($p['name']))->values(),
+            default => $cards->sortByDesc(fn ($p) => $p['isFeatured'])->values(),
+        };
+
+        $productsJson = $cards;
         $categoriesJson = $categories->map(fn ($c) => $c->name)->values();
 
-        return spa('frontend.collections', compact('categories', 'productsJson', 'activeCategory', 'categoriesJson'));
+        return spa('frontend.collections', compact('categories', 'productsJson', 'activeCategory', 'activeCategorySlug', 'categoriesJson', 'search', 'sort'));
     }
 
     public function productShow($slug)
@@ -166,11 +202,59 @@ class FrontendController extends Controller
         return response()->json(['success' => true, 'message' => 'Enquiry received. The studio will reply within one working day.']);
     }
 
-    public function customBuild()
+    public function offers()
     {
-        $this->seo('custom-build');
+        $this->seo('offers');
 
-        return spa('frontend.custom-build');
+        $products = Product::with(['category', 'images', 'variants.values.group'])
+            ->where('status', true)
+            ->whereHas('variants', fn ($q) => $q->where('status', true)
+                ->whereNotNull('offer_price')
+                ->whereColumn('offer_price', '<', 'mrp'))
+            ->orderBy('sort_order')
+            ->orderByDesc('id')
+            ->get();
+
+        $offerCards = $products->map(fn ($p) => $this->productCard($p))
+            ->sortByDesc(fn ($p) => $p['savePct'] ?? 0)->values();
+
+        return spa('frontend.offers', compact('offerCards'));
+    }
+
+    public function bag()
+    {
+        $this->seo('cart');
+
+        $bag = BagController::detailed();
+
+        return spa('frontend.bag', compact('bag'));
+    }
+
+    public function checkout()
+    {
+        $this->seo('checkout');
+
+        BagController::reconcile();
+        $bag = BagController::detailed();
+        $slots = DeliverySlot::ordered();
+        $dates = DeliverySlot::bookableDates();
+        $minOrder = Setting::money('delivery_min_order', 15.00);
+        $freeOver = Setting::money('delivery_free_over', 50.00);
+        $stripeOn = CheckoutController::stripeConfigured();
+        $paypalOn = CheckoutController::paypalConfigured();
+        $paypalClient = CheckoutController::paypalClientId();
+        $shopper = auth()->user();
+
+        return spa('frontend.checkout', compact('bag', 'slots', 'dates', 'minOrder', 'freeOver', 'stripeOn', 'paypalOn', 'paypalClient', 'shopper'));
+    }
+
+    public function faq()
+    {
+        $this->seo('faq');
+        $faqsJson = $this->faqsJson();
+        $faqCatsJson = $this->faqCatsJson();
+
+        return spa('frontend.faq', compact('faqsJson', 'faqCatsJson'));
     }
 
     public function gallery()
@@ -228,10 +312,17 @@ class FrontendController extends Controller
             ? $p->images->map(fn ($i) => $this->imgUrl($i->image))->values()->all()
             : [];
 
+        $default = $p->defaultVariant();
+        $selling = $default?->sellingPrice();
+        $mrp = $default !== null ? (float) $default->mrp : null;
+        $savePct = ($default && $selling !== null && $mrp && $selling < $mrp)
+            ? (int) round((($mrp - $selling) / $mrp) * 100)
+            : null;
+
         return [
             'id' => $p->id,
             'slug' => $p->slug,
-            'modelCode' => $p->defaultVariant()?->sku,
+            'modelCode' => $default?->sku,
             'name' => $p->name,
             'category' => $p->category?->name ?? 'Collection',
             'categorySlug' => $p->category?->slug,
@@ -244,6 +335,26 @@ class FrontendController extends Controller
             'images' => $gallery,
             'dimensions' => null,
             'warranty' => null,
+            // Storefront card data (additive; existing keys untouched).
+            'variantId' => $default?->id,
+            'packLabel' => $default?->combinationLabel() ?? '',
+            'priceNum' => $selling,
+            'oldNum' => ($savePct ? $mrp : null),
+            'savePct' => $savePct,
+            'inStock' => $default ? (bool) $default->in_stock : false,
+            'isFeatured' => (bool) $p->is_featured,
+            'url' => route('product.show', $p->slug),
+            'imgAbs' => $this->imgUrl($this->heroFor($p)),
+            'cardVariants' => $p->relationLoaded('variants')
+                ? $p->variants->where('status', true)->sortBy('sort_order')->values()->map(fn ($v) => [
+                    'id' => $v->id,
+                    'label' => $v->combinationLabel() ?: ($v->sku ?? 'Standard'),
+                    'selling' => $v->sellingPrice(),
+                    'mrp' => (float) $v->mrp,
+                    'in_stock' => (bool) $v->in_stock,
+                    'image' => $this->imgUrl($v->image),
+                ])->all()
+                : [],
         ];
     }
 

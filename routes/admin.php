@@ -4,16 +4,20 @@ use App\Http\Controllers\Admin\AdminProfileController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\CompanyDetailsController;
 use App\Http\Controllers\Admin\ContactController;
+use App\Http\Controllers\Admin\DeliverySlotController;
 use App\Http\Controllers\Admin\FaqCategoryController;
 use App\Http\Controllers\Admin\FaqController;
 use App\Http\Controllers\Admin\GalleryCategoryController;
 use App\Http\Controllers\Admin\GalleryController;
 use App\Http\Controllers\Admin\OptionGroupController;
+use App\Http\Controllers\Admin\OrderController;
+use App\Http\Controllers\Admin\OrderStatusController;
 use App\Http\Controllers\Admin\PageSeoController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ProductExcelController;
 use App\Http\Controllers\Admin\ProductImageController;
 use App\Http\Controllers\Admin\ProductVariantController;
+use App\Http\Controllers\Admin\ShopSettingsController;
 use App\Http\Controllers\Admin\SliderController;
 use App\Http\Controllers\Admin\TestimonialController;
 use App\Http\Controllers\HomeController;
@@ -87,6 +91,30 @@ Route::group(['prefix' => 'admin/', 'middleware' => ['auth', 'is_admin']], funct
     Route::get('/contacts/{id}', [ContactController::class, 'show'])->name('admin.contacts.show');
     Route::post('/contacts/toggle-status', [ContactController::class, 'toggleStatus'])->name('admin.contacts.toggleStatus');
     Route::delete('/contacts/{id}', [ContactController::class, 'destroy'])->name('admin.contacts.delete');
+
+    // Orders (bag → checkout → here; statuses are dynamic via order_statuses)
+    Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');
+    Route::post('/orders/{id}/status', [OrderController::class, 'updateStatus'])->name('orders.updateStatus');
+
+    // Delivery slots (checkout time windows + fees)
+    Route::get('/delivery-slots', [DeliverySlotController::class, 'index'])->name('delivery-slots.index');
+    Route::get('/delivery-slots/create', [DeliverySlotController::class, 'create'])->name('delivery-slots.create');
+    Route::post('/delivery-slots', [DeliverySlotController::class, 'store'])->name('delivery-slots.store');
+    Route::get('/delivery-slots/{id}/edit', [DeliverySlotController::class, 'edit'])->name('delivery-slots.edit');
+    Route::post('/delivery-slots/update', [DeliverySlotController::class, 'update'])->name('delivery-slots.update');
+    Route::delete('/delivery-slots/{id}', [DeliverySlotController::class, 'destroy'])->name('delivery-slots.delete');
+    Route::post('/delivery-slots/toggle-status', [DeliverySlotController::class, 'toggleStatus'])->name('delivery-slots.toggleStatus');
+
+    // Order statuses (dynamic lifecycle — every change writes history)
+    Route::get('/order-statuses', [OrderStatusController::class, 'index'])->name('order-statuses.index');
+    Route::get('/order-statuses/{id}/edit', [OrderStatusController::class, 'edit'])->name('order-statuses.edit');
+    Route::post('/order-statuses/update', [OrderStatusController::class, 'update'])->name('order-statuses.update');
+    Route::post('/order-statuses/toggle-status', [OrderStatusController::class, 'toggleStatus'])->name('order-statuses.toggleStatus');
+
+    // Shop settings (delivery rules + Stripe/PayPal keys)
+    Route::get('/shop-settings', [ShopSettingsController::class, 'edit'])->name('shop-settings.edit');
+    Route::post('/shop-settings', [ShopSettingsController::class, 'update'])->name('shop-settings.update');
 
     // Products (core showcase)
     Route::get('/products', [ProductController::class, 'index'])->name('products.index');

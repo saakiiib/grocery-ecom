@@ -3,14 +3,17 @@
 namespace Database\Seeders;
 
 use App\Models\Category;
+use App\Models\DeliverySlot;
 use App\Models\Faq;
 use App\Models\FaqCategory;
 use App\Models\Gallery;
 use App\Models\GalleryCategory;
 use App\Models\OptionGroup;
 use App\Models\OptionValue;
+use App\Models\OrderStatus;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\Setting;
 use App\Models\Slider;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
@@ -21,6 +24,9 @@ class OriginSpacesDemoSeeder extends Seeder
     {
         $this->seedGroceryCatalog();
         $this->seedGrocerySliders();
+        $this->seedOrderStatuses();
+        $this->seedDeliverySlots();
+        $this->seedShopSettings();
 
         $data = [
             'faqs' => [
@@ -227,6 +233,57 @@ class OriginSpacesDemoSeeder extends Seeder
                 ['title' => $s['title']],
                 [...$s, 'image' => null, 'sort_order' => $sort++, 'is_active' => true]
             );
+        }
+    }
+
+    /** Order lifecycle: every status change writes a row in order_status_histories. */
+    private function seedOrderStatuses(): void
+    {
+        $sort = 0;
+        foreach ([
+            ['slug' => 'new', 'name' => 'New', 'color' => '#B45309', 'is_final' => false],
+            ['slug' => 'confirmed', 'name' => 'Confirmed', 'color' => '#1D4ED8', 'is_final' => false],
+            ['slug' => 'packed', 'name' => 'Packed', 'color' => '#6D28D9', 'is_final' => false],
+            ['slug' => 'out_for_delivery', 'name' => 'Out for Delivery', 'color' => '#0E7490', 'is_final' => false],
+            ['slug' => 'delivered', 'name' => 'Delivered', 'color' => '#1A2E22', 'is_final' => true],
+            ['slug' => 'cancelled', 'name' => 'Cancelled', 'color' => '#B91C1C', 'is_final' => true],
+        ] as $s) {
+            OrderStatus::firstOrCreate(
+                ['slug' => $s['slug']],
+                [...$s, 'sort_order' => $sort++, 'is_active' => true]
+            );
+        }
+    }
+
+    /** Delivery windows shoppers pick at checkout, each with its own fee. */
+    private function seedDeliverySlots(): void
+    {
+        $sort = 0;
+        foreach ([
+            ['name' => 'Morning', 'starts_at' => '08:00', 'ends_at' => '12:00', 'fee' => 2.99, 'cutoff_hour' => 20],
+            ['name' => 'Afternoon', 'starts_at' => '12:00', 'ends_at' => '17:00', 'fee' => 2.99, 'cutoff_hour' => 20],
+            ['name' => 'Evening', 'starts_at' => '17:00', 'ends_at' => '21:00', 'fee' => 3.99, 'cutoff_hour' => 20],
+        ] as $s) {
+            DeliverySlot::firstOrCreate(
+                ['name' => $s['name']],
+                [...$s, 'sort_order' => $sort++, 'is_active' => true]
+            );
+        }
+    }
+
+    /** Shop money rules + payment credentials (keys stay empty until the owner adds them). */
+    private function seedShopSettings(): void
+    {
+        foreach ([
+            'delivery_min_order' => '15.00',
+            'delivery_free_over' => '50.00',
+            'stripe_publishable' => '',
+            'stripe_secret' => '',
+            'paypal_client_id' => '',
+            'paypal_secret' => '',
+            'paypal_mode' => 'sandbox',
+        ] as $key => $value) {
+            Setting::firstOrCreate(['key' => $key], ['value' => $value]);
         }
     }
 
