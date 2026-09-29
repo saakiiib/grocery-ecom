@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\ProductVariant;
+use App\Models\UserPoint;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 
 class AccountController extends Controller
 {
@@ -22,8 +24,14 @@ class AccountController extends Controller
             ->where('user_id', $user->id)
             ->orderByDesc('id')
             ->paginate(10);
+        $pointsBalance = UserPoint::balance($user->id);
+        $pointsHistory = UserPoint::with('order')
+            ->where('user_id', $user->id)
+            ->orderByDesc('id')
+            ->take(10)
+            ->get();
 
-        return spa('frontend.account', compact('user', 'orders'));
+        return spa('frontend.account', compact('user', 'orders', 'pointsBalance', 'pointsHistory'));
     }
 
     public function show(string $number)
@@ -87,6 +95,21 @@ class AccountController extends Controller
         $user->update($data);
 
         return redirect()->route('account')->with('status', 'Your details were saved.');
+    }
+
+    public function password(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'current_password' => 'required|current_password',
+            'password' => 'required|string|min:8|confirmed',
+        ], [
+            'current_password.current_password' => 'Your current password is not correct',
+            'password.confirmed' => 'The new passwords do not match',
+        ]);
+
+        auth()->user()->update(['password' => Hash::make($data['password'])]);
+
+        return redirect()->route('account')->with('status', 'Your password was changed.');
     }
 
     /** Start (or retry) online payment for an unpaid order. Returns SDK credentials. */

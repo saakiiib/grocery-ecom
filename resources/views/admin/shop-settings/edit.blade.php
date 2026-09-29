@@ -25,6 +25,24 @@
                                 </div>
                             </div>
 
+                            <h6 class="mb-3">Loyalty points</h6>
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-4">
+                                    <label class="form-label">Points earned per £1 of goods</label>
+                                    <input type="number" name="points_per_pound" class="form-control" required step="0.1" min="0" max="100" value="{{ old('points_per_pound', $settings['points_per_pound']) }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">£ value of one point</label>
+                                    <input type="number" name="points_value" class="form-control" required step="0.001" min="0" max="1" value="{{ old('points_value', $settings['points_value']) }}">
+                                    <small class="text-muted">0.01 means 100 points = £1 off.</small>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Minimum points per redemption</label>
+                                    <input type="number" name="points_min_redeem" class="form-control" required step="1" min="1" value="{{ old('points_min_redeem', $settings['points_min_redeem']) }}">
+                                </div>
+                            </div>
+                            <p class="text-muted mb-4"><small>Points are awarded when an order is Delivered (registered shoppers only) and refunded automatically if the order is Cancelled.</small></p>
+
                             <h6 class="mb-3">Stripe (card payments)
                                 @if ($sources['stripe'])
                                     <span class="badge bg-success">Live via {{ $sources['stripe'] === '.env' ? '.env' : 'shop settings' }}</span>

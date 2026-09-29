@@ -97,6 +97,20 @@
                     <p class="text-muted" style="font-size:13px;">Order before 8pm for next-day slots. Free delivery over £{{ number_format($freeOver, 2) }} · minimum order £{{ number_format($minOrder, 2) }}.</p>
 
                     <h2 style="font-size:1.25rem;margin:1.5rem 0 1rem;">How would you like to pay?</h2>
+                    @auth
+                        @if ($pointsBalance >= $pointsMin)
+                            <div class="pay-card" style="margin-bottom:0.7rem;cursor:default;" id="co-points-card">
+                                <span class="pay-card-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.5 13 17 22l-5-3-5 3 1.5-9"/></svg>
+                                </span>
+                                <span class="pay-card-text">
+                                    <strong>Use loyalty points <span class="text-muted">({{ $pointsBalance }} available)</span></strong>
+                                    <span class="text-muted">100 points = £{{ number_format(100 * $pointsValue, 2) }} off</span>
+                                </span>
+                                <input type="number" id="co-points" min="0" max="{{ $pointsBalance }}" step="{{ $pointsMin }}" value="0" style="width:110px;border:1px solid var(--border);border-radius:8px;padding:0.5rem;" aria-label="Points to spend">
+                            </div>
+                        @endif
+                    @endauth
                     <div class="form-group pay-grid" id="co-methods">
                         <label class="pay-card">
                             <input type="radio" name="payment_method" value="cod" checked>
@@ -158,6 +172,7 @@
                         </div>
                     @endforeach
                     <div class="summary-row"><span>Subtotal</span><span data-co-subtotal>£{{ number_format($bag['subtotal'], 2) }}</span></div>
+                    <div class="summary-row" data-co-points style="display:none;"><span>Loyalty points</span><span>−£0.00</span></div>
                     <div class="summary-row"><span>Delivery</span><span data-co-fee>Calculated…</span></div>
                     <div class="summary-row total"><span>Total</span><span data-co-total>£{{ number_format($bag['subtotal'], 2) }}</span></div>
                     <a @spa href="{{ route('bag') }}" class="btn btn-ghost btn-block" style="margin-top:1rem;">Back to bag</a>
@@ -185,7 +200,10 @@
         var csrf = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
         var subtotal = parseFloat(form.dataset.subtotal || '{{ $bag['subtotal'] ?? 0 }}') || 0;
         var freeOver = parseFloat('{{ $freeOver }}') || 0;
+        var pointsValue = parseFloat('{{ $pointsValue }}') || 0;
+        var pointsBalance = parseInt('{{ $pointsBalance }}', 10) || 0;
         var slotSel = document.getElementById('co-slot');
+        var pointsInput = document.getElementById('co-points');
         var errBox = document.getElementById('co-error');
         var submitBtn = document.getElementById('co-submit');
         var stripe = null;
@@ -201,12 +219,24 @@
             var opt = slotSel.options[slotSel.selectedIndex];
             return parseFloat(opt.dataset.fee || 0) || 0;
         }
+        function pointsDiscount() {
+            if (!pointsInput) return 0;
+            var pts = Math.max(0, Math.min(parseInt(pointsInput.value, 10) || 0, pointsBalance));
+            return Math.min(pts * pointsValue, subtotal);
+        }
         function paintTotals() {
             var fee = subtotal >= freeOver ? 0 : slotFee();
+            var disc = pointsDiscount();
             document.querySelectorAll('[data-co-fee]').forEach(function (el) { el.textContent = fee === 0 ? 'Free' : money(fee); });
-            document.querySelectorAll('[data-co-total]').forEach(function (el) { el.textContent = money(subtotal + fee); });
+            document.querySelectorAll('[data-co-total]').forEach(function (el) { el.textContent = money(subtotal + fee - disc); });
+            var ptsRow = document.querySelector('[data-co-points]');
+            if (ptsRow) {
+                ptsRow.style.display = disc > 0 ? '' : 'none';
+                ptsRow.querySelector('span:last-child').textContent = '−' + money(disc);
+            }
         }
         slotSel.addEventListener('change', paintTotals);
+        if (pointsInput) pointsInput.addEventListener('input', paintTotals);
         paintTotals();
 
         function method() {
@@ -252,7 +282,8 @@
                 notes: document.getElementById('co-notes').value,
                 delivery_date: document.getElementById('co-date').value,
                 delivery_slot_id: slotSel.value,
-                payment_method: method()
+                payment_method: method(),
+                points_redeem: pointsInput ? (parseInt(pointsInput.value, 10) || 0) : 0
             };
         }
         function confirmAndGo(orderNumber, pm) {

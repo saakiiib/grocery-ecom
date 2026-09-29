@@ -26,6 +26,7 @@
                 </div>
             @endforeach
             <div class="summary-row"><span>Subtotal</span><span>£{{ number_format($order->subtotal, 2) }}</span></div>
+            @if ($order->points_discount > 0)<div class="summary-row"><span>Loyalty points ({{ $order->points_redeemed }})</span><span>−£{{ number_format($order->points_discount, 2) }}</span></div>@endif
             <div class="summary-row"><span>Delivery</span><span>{{ $order->delivery_fee > 0 ? '£'.number_format($order->delivery_fee, 2) : 'Free' }}</span></div>
             <div class="summary-row total"><span>Total</span><span>£{{ number_format($order->total, 2) }}</span></div>
             <div class="summary-row"><span>Payment</span><span>{{ $order->paymentLabel() }} · {{ ucfirst($order->payment_status) }}</span></div>

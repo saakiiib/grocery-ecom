@@ -35,6 +35,8 @@
                                 </tbody>
                                 <tfoot>
                                     <tr><th colspan="4">Subtotal</th><th class="text-end">£{{ number_format($order->subtotal, 2) }}</th></tr>
+                                    @if ($order->points_discount > 0)<tr><th colspan="4">Loyalty points ({{ $order->points_redeemed }})</th><th class="text-end">−£{{ number_format($order->points_discount, 2) }}</th></tr>@endif
+                                    @if ($order->points_earned > 0)<tr><th colspan="4">Points earned</th><th class="text-end">+{{ $order->points_earned }}</th></tr>@endif
                                     <tr><th colspan="4">Delivery</th><th class="text-end">{{ $order->delivery_fee > 0 ? '£'.number_format($order->delivery_fee, 2) : 'Free' }}</th></tr>
                                     <tr><th colspan="4">Total</th><th class="text-end">£{{ number_format($order->total, 2) }}</th></tr>
                                 </tfoot>

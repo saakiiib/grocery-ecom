@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\OrderStatus;
 use App\Models\ProductVariant;
 use App\Models\Setting;
+use App\Models\UserPoint;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -132,6 +133,7 @@ class CheckoutController extends Controller
             'delivery_date' => 'required|date_format:Y-m-d',
             'delivery_slot_id' => 'required|integer',
             'payment_method' => 'required|in:cod,stripe,paypal',
+            'points_redeem' => 'nullable|integer|min:0|max:1000000',
         ]);
 
         if (! array_key_exists($data['delivery_date'], DeliverySlot::bookableDates())) {
@@ -150,8 +152,28 @@ class CheckoutController extends Controller
             return response()->json(['message' => $priced['message']], 422);
         }
 
+        // Loyalty redemption (registered shoppers only, validated against the ledger).
+        $pointsRedeem = 0;
+        $pointsDiscount = 0.0;
+        if (! empty($data['points_redeem'])) {
+            if (! auth()->check()) {
+                return response()->json(['message' => 'Sign in to spend loyalty points.'], 422);
+            }
+            $balance = UserPoint::balance(auth()->id());
+            $minRedeem = UserPoint::minRedeem();
+            $maxPoints = (int) min($balance, floor($priced['subtotal'] / UserPoint::value()));
+            if ($data['points_redeem'] < $minRedeem) {
+                return response()->json(['message' => 'You can spend points in blocks of '.$minRedeem.' or more.'], 422);
+            }
+            if ($data['points_redeem'] > $maxPoints) {
+                return response()->json(['message' => 'You only have '.$balance.' points to spend on this order.'], 422);
+            }
+            $pointsRedeem = (int) $data['points_redeem'];
+            $pointsDiscount = round($pointsRedeem * UserPoint::value(), 2);
+        }
+
         try {
-            $order = DB::transaction(function () use ($data, $priced) {
+            $order = DB::transaction(function () use ($data, $priced, $pointsRedeem, $pointsDiscount) {
                 $status = OrderStatus::where('slug', 'new')->where('is_active', true)->firstOrFail();
 
                 /** @var Order $order */
@@ -169,7 +191,9 @@ class CheckoutController extends Controller
                     'delivery_slot_label' => $priced['slot']->label(),
                     'subtotal' => $priced['subtotal'],
                     'delivery_fee' => $priced['fee'],
-                    'total' => $priced['total'],
+                    'total' => round($priced['subtotal'] + $priced['fee'] - $pointsDiscount, 2),
+                    'points_redeemed' => $pointsRedeem,
+                    'points_discount' => $pointsDiscount,
                     'payment_method' => $data['payment_method'],
                     'payment_status' => 'unpaid',
                     'status_id' => $status->id,
@@ -177,6 +201,15 @@ class CheckoutController extends Controller
                 ]);
                 $order->number = 'EGF-'.(10000 + $order->id);
                 $order->save();
+
+                if ($pointsRedeem > 0) {
+                    $order->points()->create([
+                        'user_id' => $order->user_id,
+                        'points' => -$pointsRedeem,
+                        'type' => UserPoint::REDEEM,
+                        'description' => 'Spent on '.$order->number,
+                    ]);
+                }
 
                 foreach ($priced['lines'] as $line) {
                     $order->items()->create([

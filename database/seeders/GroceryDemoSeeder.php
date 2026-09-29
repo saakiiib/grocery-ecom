@@ -235,6 +235,9 @@ class GroceryDemoSeeder extends Seeder
         foreach ([
             'delivery_min_order' => '15.00',
             'delivery_free_over' => '50.00',
+            'points_per_pound' => '1',
+            'points_value' => '0.01',
+            'points_min_redeem' => '100',
             'stripe_publishable' => '',
             'stripe_secret' => '',
             'paypal_client_id' => '',

@@ -41,6 +41,22 @@
             @endif
         </div>
 
+        <div class="auth-card" style="margin-bottom:1.5rem;">
+            <h2 style="font-size:1.25rem;">Loyalty points</h2>
+            <p style="font-size:2rem;font-weight:700;margin:0.5rem 0;">{{ $pointsBalance }} <span class="text-muted" style="font-size:0.9rem;font-weight:400;">points · worth £{{ number_format($pointsBalance * \App\Models\UserPoint::value(), 2) }}</span></p>
+            <p class="text-muted" style="font-size:14px;">Earn {{ \App\Models\UserPoint::perPound() }} point per £1 when an order is delivered. Spend {{ \App\Models\UserPoint::minRedeem() }}+ points at checkout.</p>
+            @if ($pointsHistory->isNotEmpty())
+                @foreach ($pointsHistory as $entry)
+                    <div class="summary-row" style="align-items:center;">
+                        <span>{{ $entry->description }}<br><span class="text-muted">{{ $entry->created_at->format('j M Y, H:i') }} · {{ ucfirst($entry->type) }}</span></span>
+                        <span style="font-weight:700;color:{{ $entry->points >= 0 ? '#1A2E22' : '#B91C1C' }};">{{ $entry->points >= 0 ? '+' : '' }}{{ $entry->points }}</span>
+                    </div>
+                @endforeach
+            @else
+                <p class="text-muted" style="font-size:14px;">No points yet — they land here after your first delivered order.</p>
+            @endif
+        </div>
+
         <div class="auth-card">
             <h2 style="font-size:1.25rem;margin-bottom:1.25rem;">Your details</h2>
             <form method="POST" action="{{ route('account.profile') }}">
@@ -77,6 +93,30 @@
                     <p class="text-muted" style="font-size:13px;margin-top:0.35rem;">Email is your login — contact us to change it.</p>
                 </div>
                 <button type="submit" class="btn btn-dark">Save details</button>
+            </form>
+        </div>
+
+        <div class="auth-card" style="margin-top:1.5rem;">
+            <h2 style="font-size:1.25rem;margin-bottom:1.25rem;">Change password</h2>
+            <form method="POST" action="{{ route('account.password') }}">
+                @csrf
+                <div class="form-group">
+                    <label for="pw-current">Current password</label>
+                    <input id="pw-current" type="password" name="current_password" required autocomplete="current-password">
+                    @error('current_password')<p style="color:#B91C1C;font-size:13px;margin-top:0.35rem;">{{ $message }}</p>@enderror
+                </div>
+                <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                    <div class="form-group">
+                        <label for="pw-new">New password <span class="text-muted">(8+ characters)</span></label>
+                        <input id="pw-new" type="password" name="password" required autocomplete="new-password">
+                        @error('password')<p style="color:#B91C1C;font-size:13px;margin-top:0.35rem;">{{ $message }}</p>@enderror
+                    </div>
+                    <div class="form-group">
+                        <label for="pw-confirm">Confirm new password</label>
+                        <input id="pw-confirm" type="password" name="password_confirmation" required autocomplete="new-password">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-dark">Change password</button>
             </form>
         </div>
     </div>

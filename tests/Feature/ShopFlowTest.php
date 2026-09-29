@@ -11,6 +11,7 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Setting;
 use App\Models\User;
+use App\Models\UserPoint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 
@@ -385,6 +386,7 @@ test('admin manages orders, statuses write history, settings and slots save', fu
 
     $this->actingAs($admin)->post(route('shop-settings.update'), [
         'delivery_min_order' => '20.00', 'delivery_free_over' => '60.00',
+        'points_per_pound' => '1', 'points_value' => '0.01', 'points_min_redeem' => '100',
         'paypal_mode' => 'sandbox',
     ])->assertRedirect(route('shop-settings.edit'));
     expect(Setting::get('delivery_min_order'))->toBe('20.00');
@@ -502,4 +504,127 @@ test('admin dashboard shows live order stats', function () {
         ->assertSee('Orders today', false)
         ->assertSee('£'.number_format($order->total, 2), false)
         ->assertSee($order->number, false);
+});
+
+test('shoppers can change their password', function () {
+    $user = shopperUser();
+
+    $this->actingAs($user)->post(route('account.password'), [
+        'current_password' => 'wrong',
+        'password' => 'newpassword123',
+        'password_confirmation' => 'newpassword123',
+    ])->assertSessionHasErrors('current_password');
+
+    $this->actingAs($user)->post(route('account.password'), [
+        'current_password' => 'password',
+        'password' => 'newpassword123',
+        'password_confirmation' => 'newpassword123',
+    ])->assertRedirect(route('account'))->assertSessionHas('status');
+
+    auth()->logout();
+    $this->post(route('login'), ['login' => 'shopper@example.com', 'password' => 'newpassword123'])
+        ->assertRedirect(route('home'));
+});
+
+test('anyone can track an order with number plus checkout phone', function () {
+    $f = shopFixtures();
+    $slot = shopSetup()['slot'];
+
+    $this->get(route('track'))->assertOk()->assertSee('Track your order', false);
+
+    $this->postJson(route('bag.add'), ['variant_id' => $f['b']->id])->assertOk();
+    $payload = checkoutPayload($slot->id);
+    $payload['phone'] = '07123 456789';
+    $this->postJson(route('checkout.place'), $payload)->assertOk();
+    $order = Order::firstOrFail();
+
+    // Phone matches even with different spacing.
+    $this->post(route('track.lookup'), ['number' => strtolower($order->number), 'phone' => '07123456789'])
+        ->assertOk()->assertSee($order->number, false)->assertSee('Confirmed', false);
+
+    // Wrong phone or number reveals nothing.
+    $this->post(route('track.lookup'), ['number' => $order->number, 'phone' => '07000000000'])
+        ->assertOk()->assertSee('could not find that order', false);
+    $this->post(route('track.lookup'), ['number' => 'EGF-99999', 'phone' => '07123456789'])
+        ->assertOk()->assertSee('could not find that order', false);
+});
+
+test('loyalty points are earned on delivery and refunded on cancel', function () {
+    $f = shopFixtures();
+    $slot = shopSetup()['slot'];
+    $user = shopperUser();
+    $admin = shopAdmin();
+
+    expect(UserPoint::balance($user->id))->toBe(0);
+
+    $this->actingAs($user)->postJson(route('bag.add'), ['variant_id' => $f['b']->id])->assertOk(); // £22.99
+    $this->actingAs($user)->postJson(route('checkout.place'), checkoutPayload($slot->id))->assertOk();
+    $order = Order::firstOrFail();
+
+    foreach (['confirmed', 'packed', 'out_for_delivery'] as $slug) {
+        $this->actingAs($admin)->post(route('orders.updateStatus', $order->id), ['status' => $slug])->assertRedirect();
+    }
+    expect(UserPoint::balance($user->id))->toBe(0);
+
+    $this->actingAs($admin)->post(route('orders.updateStatus', $order->id), ['status' => 'delivered'])->assertRedirect();
+    expect($order->refresh()->points_earned)->toBe(22)
+        ->and(UserPoint::balance($user->id))->toBe(22);
+
+    $this->actingAs($user)->get(route('account'))->assertOk()->assertSee('22', false);
+
+    // Guest orders never earn.
+    auth()->logout();
+    $this->postJson(route('bag.add'), ['variant_id' => $f['b']->id])->assertOk();
+    $this->postJson(route('checkout.place'), checkoutPayload($slot->id))->assertOk();
+    $guest = Order::orderByDesc('id')->first();
+    expect($guest->user_id)->toBeNull();
+    $this->actingAs($admin)->post(route('orders.updateStatus', $guest->id), ['status' => 'delivered']);
+    expect($guest->refresh()->points_earned)->toBe(0);
+});
+
+test('shoppers redeem points at checkout within balance and limits', function () {
+    $f = shopFixtures();
+    $slot = shopSetup()['slot'];
+    $user = shopperUser();
+
+    UserPoint::create(['user_id' => $user->id, 'points' => 500, 'type' => UserPoint::EARN, 'description' => 'Test grant']);
+    expect(UserPoint::balance($user->id))->toBe(500);
+
+    $payload = function ($pts) use ($slot) {
+        $p = checkoutPayload($slot->id);
+        $p['points_redeem'] = $pts;
+
+        return $p;
+    };
+
+    // Below the 100-point minimum.
+    $this->actingAs($user)->postJson(route('bag.add'), ['variant_id' => $f['b']->id])->assertOk();
+    $this->actingAs($user)->postJson(route('checkout.place'), $payload(50))->assertStatus(422);
+
+    // More than the balance.
+    $this->actingAs($user)->postJson(route('checkout.place'), $payload(600))->assertStatus(422);
+
+    // Guests cannot spend points.
+    auth()->logout();
+    $this->postJson(route('checkout.place'), $payload(100))->assertStatus(422);
+
+    // 300 points = £3 off £22.99 + £2.99 delivery.
+    $this->actingAs($user)->postJson(route('checkout.place'), $payload(300))->assertOk();
+    $order = Order::firstOrFail();
+    expect($order->points_redeemed)->toBe(300)
+        ->and((float) $order->points_discount)->toBe(3.00)
+        ->and((float) $order->total)->toBe(22.98)
+        ->and(UserPoint::balance($user->id))->toBe(200);
+
+    // Cancelling gives the points back.
+    $this->actingAs($user)->post(route('account.cancel', $order->number))->assertRedirect(route('account'));
+    expect(UserPoint::balance($user->id))->toBe(500);
+});
+
+test('order statuses cover the full grocery lifecycle', function () {
+    shopSetup();
+
+    expect(OrderStatus::ordered()->pluck('slug')->all())->toBe([
+        'new', 'confirmed', 'packed', 'out_for_delivery', 'delivered', 'cancelled',
+    ]);
 });

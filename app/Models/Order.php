@@ -81,11 +81,52 @@ class Order extends Model
         $this->status_slug = $to->slug;
         $this->save();
 
-        return $this->histories()->create([
+        $history = $this->histories()->create([
             'from_slug' => $from,
             'to_slug' => $to->slug,
             'changed_by' => $changedBy,
             'note' => $note,
         ]);
+
+        $this->settlePoints($to->slug);
+
+        return $history;
+    }
+
+    /**
+     * Points settle on lifecycle moves, idempotently:
+     * delivered → award earn points (registered shoppers only);
+     * cancelled → give back anything redeemed on this order.
+     */
+    public function settlePoints(string $toSlug): void
+    {
+        if ($toSlug === 'delivered' && $this->user_id && $this->points_earned === 0) {
+            $earned = (int) floor(max(0, (float) $this->subtotal - (float) $this->points_discount) * UserPoint::perPound());
+            if ($earned > 0) {
+                $this->points()->create([
+                    'user_id' => $this->user_id,
+                    'points' => $earned,
+                    'type' => UserPoint::EARN,
+                    'description' => 'Earned on '.$this->number,
+                ]);
+                $this->points_earned = $earned;
+                $this->save();
+            }
+        }
+
+        if ($toSlug === 'cancelled' && $this->user_id && $this->points_redeemed > 0
+            && ! $this->points()->where('type', UserPoint::REVERSAL)->exists()) {
+            $this->points()->create([
+                'user_id' => $this->user_id,
+                'points' => $this->points_redeemed,
+                'type' => UserPoint::REVERSAL,
+                'description' => 'Refunded from cancelled '.$this->number,
+            ]);
+        }
+    }
+
+    public function points(): HasMany
+    {
+        return $this->hasMany(UserPoint::class);
     }
 }

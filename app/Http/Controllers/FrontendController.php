@@ -10,10 +10,12 @@ use App\Models\Faq;
 use App\Models\FaqCategory;
 use App\Models\Gallery;
 use App\Models\GalleryCategory;
+use App\Models\Order;
 use App\Models\PageSeo;
 use App\Models\Product;
 use App\Models\Setting;
 use App\Models\Slider;
+use App\Models\UserPoint;
 use Illuminate\Http\Request;
 use OpenGraph;
 use SEOMeta;
@@ -234,8 +236,45 @@ class FrontendController extends Controller
         $paypalOn = CheckoutController::paypalConfigured();
         $paypalClient = CheckoutController::paypalClientId();
         $shopper = auth()->user();
+        $pointsBalance = $shopper ? UserPoint::balance($shopper->id) : 0;
+        $pointsValue = UserPoint::value();
+        $pointsMin = UserPoint::minRedeem();
 
-        return spa('frontend.checkout', compact('bag', 'slots', 'dates', 'minOrder', 'freeOver', 'stripeOn', 'paypalOn', 'paypalClient', 'shopper'));
+        return spa('frontend.checkout', compact('bag', 'slots', 'dates', 'minOrder', 'freeOver', 'stripeOn', 'paypalOn', 'paypalClient', 'shopper', 'pointsBalance', 'pointsValue', 'pointsMin'));
+    }
+
+    /** Guest order tracking: order number + the phone given at checkout. */
+    public function track()
+    {
+        $this->seo('track');
+
+        return spa('frontend.track', ['order' => null]);
+    }
+
+    public function trackLookup(Request $request)
+    {
+        $this->seo('track');
+
+        $data = $request->validate([
+            'number' => 'required|string|max:30',
+            'phone' => 'required|string|max:30',
+        ]);
+
+        $number = strtoupper(trim($data['number']));
+        $phone = preg_replace('/[\s\-()]/', '', $data['phone']);
+
+        $order = Order::with(['items', 'histories', 'status'])
+            ->where('number', $number)
+            ->get()
+            ->first(fn ($o) => preg_replace('/[\s\-()]/', '', (string) $o->phone) === $phone);
+
+        if (! $order) {
+            return spa('frontend.track', ['order' => null])->withErrors([
+                'number' => 'We could not find that order — check the number and the phone used at checkout.',
+            ])->withInput($request->only('number'));
+        }
+
+        return spa('frontend.track', compact('order'));
     }
 
     public function faq()

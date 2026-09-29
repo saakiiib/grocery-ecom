@@ -66,7 +66,10 @@ Route::post('/account/orders/{number}/reorder', [AccountController::class, 'reor
 Route::post('/account/orders/{number}/pay', [AccountController::class, 'pay'])->name('account.pay');
 Route::post('/account/orders/{number}/cancel', [AccountController::class, 'cancel'])->name('account.cancel');
 Route::post('/account/profile', [AccountController::class, 'profile'])->name('account.profile');
+Route::post('/account/password', [AccountController::class, 'password'])->name('account.password');
 Route::get('/faq', [FrontendController::class, 'faq'])->name('faq');
+Route::get('/track', [FrontendController::class, 'track'])->name('track');
+Route::post('/track', [FrontendController::class, 'trackLookup'])->middleware('throttle:20,1')->name('track.lookup');
 Route::get('/contact', [FrontendController::class, 'contact'])->name('contact');
 Route::post('/contact', [FrontendController::class, 'contactStore'])->name('contact.store');
 

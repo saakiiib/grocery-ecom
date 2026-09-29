@@ -14,6 +14,9 @@ class ShopSettingsController extends Controller
     public const FIELDS = [
         'delivery_min_order' => 'Minimum order for delivery (£)',
         'delivery_free_over' => 'Free delivery over (£)',
+        'points_per_pound' => 'Loyalty points earned per £1',
+        'points_value' => '£ value of one point (0.01 = 100 pts £1)',
+        'points_min_redeem' => 'Minimum points per redemption',
         'stripe_publishable' => 'Stripe publishable key',
         'stripe_secret' => 'Stripe secret key',
         'paypal_client_id' => 'PayPal client ID',
@@ -40,6 +43,9 @@ class ShopSettingsController extends Controller
         $data = $request->validate([
             'delivery_min_order' => 'required|numeric|min:0|max:9999',
             'delivery_free_over' => 'required|numeric|min:0|max:9999',
+            'points_per_pound' => 'required|numeric|min:0|max:100',
+            'points_value' => 'required|numeric|min:0|max:1',
+            'points_min_redeem' => 'required|integer|min:1|max:100000',
             'stripe_publishable' => 'nullable|string|max:255',
             'stripe_secret' => 'nullable|string|max:255',
             'paypal_client_id' => 'nullable|string|max:255',

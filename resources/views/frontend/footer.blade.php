@@ -35,6 +35,7 @@
             <div class="footer-col">
                 <h4>Account</h4>
                 <a @spa href="{{ route('account') }}">My account</a>
+                <a @spa href="{{ route('track') }}">Track order</a>
                 <a @spa href="{{ route('bag') }}">Your bag</a>
                 <a @spa href="{{ route('checkout') }}">Checkout</a>
             </div>
