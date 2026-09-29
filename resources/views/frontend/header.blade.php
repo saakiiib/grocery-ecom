@@ -1,7 +1,7 @@
 @php
     $logo = $company->company_logo
         ? asset('uploads/company/' . $company->company_logo)
-        : asset('frontend-raw/assets/images/logo.png');
+        : null;
     $brand = $company->company_name ?? 'Evergreen Foods';
     $isActive = fn (...$routes) => request()->routeIs(...$routes) ? 'active' : '';
 @endphp
@@ -16,7 +16,7 @@
 <header class="site-header">
     <div class="container header-inner">
         <a @spa href="{{ route('home') }}" class="logo">
-            <img class="logo-img" src="{{ $logo }}" alt="{{ $brand }}">
+            @if ($logo)<img class="logo-img" src="{{ $logo }}" alt="{{ $brand }}">@endif
             <span class="logo-text">
                 <strong>{{ $brand }}</strong>
                 <small>Fresh living, every day</small>
@@ -56,7 +56,7 @@
     <div class="mobile-nav-panel">
         <div class="mobile-nav-header">
             <a @spa href="{{ route('home') }}" class="logo">
-                <img class="logo-img" src="{{ $logo }}" alt="{{ $brand }}">
+                @if ($logo)<img class="logo-img" src="{{ $logo }}" alt="{{ $brand }}">@endif
                 <span class="logo-text"><strong>{{ $brand }}</strong></span>
             </a>
             <button type="button" class="icon-btn" data-close-menu aria-label="Close">

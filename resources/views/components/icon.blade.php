@@ -4,7 +4,7 @@
   static $iconPaths = null;
   if ($iconPaths === null) {
     $iconPaths = [];
-    $js = @file_get_contents(public_path('resources/frontend-raw/js/icons.js'));
+    $js = @file_get_contents(public_path('resources/frontend/js/icons.js'));
     if ($js && preg_match_all('/"([a-z0-9-]+)":\s*"((?:[^"\\\\]|\\\\.)*)"/', $js, $m)) {
       foreach ($m[1] as $i => $key) {
         $iconPaths[$key] = stripcslashes($m[2][$i]);

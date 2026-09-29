@@ -13,7 +13,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             UserSeeder::class,
-            OriginSpacesDemoSeeder::class,
+            GroceryDemoSeeder::class,
         ]);
     }
 }

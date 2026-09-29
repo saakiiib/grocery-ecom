@@ -1,8 +1,6 @@
 <!DOCTYPE html>
 <html lang="en-GB">
 
-{{-- $company shared globally via AppServiceProvider (cached) --}}
-
 <head>
     <meta charset="utf-8">
     <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -17,7 +15,7 @@
         <script async src="https://www.googletagmanager.com/gtag/js?id={{ $company->google_analytics_id }}"></script>
         <script>window.dataLayer = window.dataLayer || [];function gtag(){dataLayer.push(arguments);}gtag('js', new Date());gtag('config', '{{ $company->google_analytics_id }}');</script>
     @endif
-    <link rel="icon" type="image/png" href="{{ $company->fav_icon ? asset('uploads/company/' . $company->fav_icon) : asset('frontend-raw/assets/images/favicon.png') }}">
+    <link rel="icon" href="{{ $company->fav_icon ? asset('uploads/company/' . $company->fav_icon) : asset('favicon.ico') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
@@ -50,7 +48,7 @@
                 'tags' => trim($p->name . ' ' . ($p->category?->name ?? '') . ' ' . ($v->sku ?? '')),
                 'price' => $v->sellingPrice(),
                 'pack' => $v->combinationLabel() ?? '',
-                'img' => $v->image ? url($v->image) : ($p->hero_image ? url($p->hero_image) : asset('frontend-raw/assets/images/tomatoes.jpg')),
+                'img' => $v->image ? url($v->image) : ($p->hero_image ? url($p->hero_image) : url('placeholder.webp')),
                 'variant_id' => $v->id,
             ];
         })->filter()->values();
@@ -66,7 +64,7 @@
         checkout: "{{ route('checkout') }}",
         product: "{{ url('/product') }}"
     };
-    window.EGF_ASSETS = { placeholder: "{{ asset('frontend-raw/assets/images/tomatoes.jpg') }}" };
+    window.EGF_ASSETS = { placeholder: "{{ asset('placeholder.webp') }}" };
     window.EGF_CATALOG = @json($egfCatalog);
 </script>
 <script src="{{ asset('resources/frontend/js/egf.js') }}?v={{ filemtime(public_path('resources/frontend/js/egf.js')) }}"></script>

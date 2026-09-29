@@ -21,17 +21,8 @@ use Twitter;
 
 class FrontendController extends Controller
 {
-    /** Static Unsplash fallbacks keyed by category slug (raw design imagery). */
-    public const FALLBACK_IMAGES = [
-        'kitchen' => 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=85',
-        'bath-wellness' => 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=1200&q=85',
-        'sculptural-lighting' => 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?auto=format&fit=crop&w=1200&q=85',
-        'architectural-joinery' => 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=1200&q=85',
-        'hardware-surfaces' => 'https://images.unsplash.com/photo-1558211553-d9326f10c561?auto=format&fit=crop&w=1200&q=85',
-        'expandable-homes' => 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?auto=format&fit=crop&w=1200&q=85',
-    ];
-
-    public const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=85';
+    /** Absolute fallback image used when a product and its category have none. */
+    public const DEFAULT_IMAGE = 'placeholder.webp';
 
     public function index()
     {
@@ -51,11 +42,10 @@ class FrontendController extends Controller
         $productsJson = $products->map(fn ($p) => $this->productCard($p))->values();
         $featuredJson = $featured->map(fn ($p) => $this->productCard($p))->values();
         $featuredCards = $products->where('is_featured', true)->values()->map(fn ($p) => $this->productCard($p))->values();
-        $tileFallbacks = ['cat-veg', 'cat-fruit', 'cat-bakery', 'cat-dairy', 'cat-seafood', 'cat-pantry'];
         $categoriesJson = $categories->values()->map(fn ($c, $i) => [
             'name' => $c->name,
             'slug' => $c->slug,
-            'image' => $c->image ? url($c->image) : asset('frontend-raw/assets/images/'.$tileFallbacks[$i % count($tileFallbacks)].'.jpg'),
+            'image' => $c->image ? url($c->image) : asset('placeholder.webp'),
             'count' => $products->where('category_id', $c->id)->count(),
         ])->values();
         $offerCards = $products->filter(fn ($p) => collect($p->variants)->contains(fn ($v) => $v->status && $v->offer_price !== null && (float) $v->offer_price < (float) $v->mrp))
@@ -199,7 +189,7 @@ class FrontendController extends Controller
             'subject' => $data['topic'] ?? 'Website Enquiry',
         ]);
 
-        return response()->json(['success' => true, 'message' => 'Enquiry received. The studio will reply within one working day.']);
+        return response()->json(['success' => true, 'message' => 'Message received. The shop will reply within one working day.']);
     }
 
     public function offers()
@@ -297,7 +287,7 @@ class FrontendController extends Controller
     {
         return $this->imgUrl($p->hero_image)
             ?? $this->imgUrl($p->category?->image)
-            ?? self::FALLBACK_IMAGES[$p->category?->slug ?? ''] ?? self::DEFAULT_IMAGE;
+            ?? url(self::DEFAULT_IMAGE);
     }
 
     private function priceFor(Product $p): string
@@ -305,7 +295,7 @@ class FrontendController extends Controller
         return $p->priceRange() ?? 'On request';
     }
 
-    /** Card shape used by collections grid, featured rail, configurator, related. */
+    /** Card shape used by collections grid, featured rail, offers rail, related. */
     private function productCard(Product $p): array
     {
         $gallery = $p->relationLoaded('images')

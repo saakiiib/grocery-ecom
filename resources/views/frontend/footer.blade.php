@@ -1,7 +1,7 @@
 @php
     $logo = $company->company_logo
         ? asset('uploads/company/' . $company->company_logo)
-        : asset('frontend-raw/assets/images/logo.png');
+        : null;
     $brand = $company->company_name ?? 'Evergreen Foods';
     $footCats = \App\Models\Category::where('status', true)->orderBy('sort_order')->take(3)->get(['name', 'slug']);
 @endphp
@@ -10,7 +10,7 @@
         <div class="footer-grid">
             <div class="footer-brand">
                 <a @spa href="{{ route('home') }}" class="logo">
-                    <img class="logo-img" src="{{ $logo }}" alt="{{ $brand }}">
+                    @if ($logo)<img class="logo-img" src="{{ $logo }}" alt="{{ $brand }}">@endif
                     <span class="logo-text">
                         <strong>{{ $brand }}</strong>
                         <small>Fresh living, every day</small>

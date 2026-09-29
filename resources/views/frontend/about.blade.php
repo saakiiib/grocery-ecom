@@ -4,7 +4,6 @@
 @section('content')
 <main>
     <section class="hero" style="min-height:420px;">
-        <div class="hero-bg"><img src="{{ asset('frontend-raw/assets/images/hero.jpg') }}" alt=""></div>
         <div class="hero-overlay"></div>
         <div class="container">
             <div class="hero-content">

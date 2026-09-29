@@ -76,7 +76,7 @@ class BagController extends Controller
                     ? asset('uploads/products/variants/'.$variant->image)
                     : ($product && $product->hero_image
                         ? asset('uploads/products/'.$product->hero_image)
-                        : asset('resources/frontend/images/placeholder.png')),
+                        : asset('placeholder.webp')),
             ];
         }
 
