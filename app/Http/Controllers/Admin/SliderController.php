@@ -13,10 +13,11 @@ class SliderController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $sliders = Slider::select(['id', 'title', 'subtitle', 'image', 'sort_order', 'is_active'])->orderBy('sort_order');
+            $sliders = Slider::select(['id', 'badge', 'title', 'subtitle', 'image', 'sort_order', 'is_active'])->orderBy('sort_order');
 
             return DataTables::of($sliders)
                 ->addIndexColumn()
+                ->addColumn('title', fn ($row) => $row->title ?: '<span class="text-muted">-</span>')
                 ->addColumn('image', function ($row) {
                     $src = $row->image ? asset($row->image) : asset('placeholder.webp');
 
@@ -54,7 +55,7 @@ class SliderController extends Controller
                             </ul>
                         </div>';
                 })
-                ->rawColumns(['image', 'status', 'action'])
+                ->rawColumns(['image', 'title', 'status', 'action'])
                 ->make(true);
         }
 
@@ -64,10 +65,13 @@ class SliderController extends Controller
     public function store(Request $request)
     {
         $request->validate([
+            'badge' => 'nullable|string|max:255',
             'title' => 'nullable|string|max:255',
             'subtitle' => 'nullable|string',
             'btn_text' => 'nullable|string|max:255',
             'btn_url' => 'nullable|string|max:255',
+            'btn_text2' => 'nullable|string|max:255',
+            'btn_url2' => 'nullable|string|max:255',
             'image' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:3072',
         ]);
 
@@ -91,10 +95,13 @@ class SliderController extends Controller
         }
 
         Slider::create([
+            'badge' => $request->badge,
             'title' => $request->title,
             'subtitle' => $request->subtitle,
             'btn_text' => $request->btn_text,
             'btn_url' => $request->btn_url,
+            'btn_text2' => $request->btn_text2,
+            'btn_url2' => $request->btn_url2,
             'image' => $imagePath,
             'sort_order' => Slider::max('sort_order') + 1,
             'is_active' => true,
@@ -115,10 +122,13 @@ class SliderController extends Controller
         $slider = Slider::findOrFail($request->id);
 
         $request->validate([
+            'badge' => 'nullable|string|max:255',
             'title' => 'nullable|string|max:255',
             'subtitle' => 'nullable|string',
             'btn_text' => 'nullable|string|max:255',
             'btn_url' => 'nullable|string|max:255',
+            'btn_text2' => 'nullable|string|max:255',
+            'btn_url2' => 'nullable|string|max:255',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:3072',
         ]);
 
@@ -144,10 +154,13 @@ class SliderController extends Controller
             $slider->image = '/uploads/sliders/'.$filename;
         }
 
+        $slider->badge = $request->badge;
         $slider->title = $request->title;
         $slider->subtitle = $request->subtitle;
         $slider->btn_text = $request->btn_text;
         $slider->btn_url = $request->btn_url;
+        $slider->btn_text2 = $request->btn_text2;
+        $slider->btn_url2 = $request->btn_url2;
         $slider->save();
 
         return response()->json(['success' => true, 'message' => 'Slider updated successfully.']);
@@ -182,5 +195,33 @@ class SliderController extends Controller
         $slider->update(['is_active' => ! $slider->is_active]);
 
         return response()->json(['success' => true, 'message' => 'Status updated successfully.']);
+    }
+
+    public function sortList()
+    {
+        $sliders = Slider::select(['id', 'badge', 'title', 'image', 'sort_order'])
+            ->orderBy('sort_order', 'asc')
+            ->orderBy('id', 'desc')
+            ->get()
+            ->map(function ($slider) {
+                $slider->image = $slider->image ? url($slider->image) : url('placeholder.webp');
+
+                return $slider;
+            });
+
+        return response()->json($sliders);
+    }
+
+    public function sortUpdate(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+        ]);
+
+        foreach ($request->ids as $index => $id) {
+            Slider::where('id', $id)->update(['sort_order' => $index]);
+        }
+
+        return response()->json(['message' => 'Sort order updated successfully']);
     }
 }

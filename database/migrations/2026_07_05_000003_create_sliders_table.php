@@ -10,10 +10,13 @@ return new class extends Migration
     {
         Schema::create('sliders', function (Blueprint $table) {
             $table->id();
+            $table->string('badge')->nullable();
             $table->string('title')->nullable();
             $table->string('subtitle')->nullable();
             $table->string('btn_text')->nullable();
             $table->string('btn_url')->nullable();
+            $table->string('btn_text2')->nullable();
+            $table->string('btn_url2')->nullable();
             $table->string('image')->nullable();
             $table->integer('sort_order')->default(0);
             $table->boolean('is_active')->default(true);

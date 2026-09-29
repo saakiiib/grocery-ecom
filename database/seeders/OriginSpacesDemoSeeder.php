@@ -11,6 +11,7 @@ use App\Models\OptionGroup;
 use App\Models\OptionValue;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\Slider;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
@@ -19,6 +20,7 @@ class OriginSpacesDemoSeeder extends Seeder
     public function run(): void
     {
         $this->seedGroceryCatalog();
+        $this->seedGrocerySliders();
 
         $data = [
             'faqs' => [
@@ -194,10 +196,43 @@ class OriginSpacesDemoSeeder extends Seeder
         }
     }
 
+    /** Demo hero slides matching the raw theme (badge, title, subtitle, two buttons). Images can be uploaded later in admin. */
+    private function seedGrocerySliders(): void
+    {
+        $sort = 0;
+        foreach ([
+            [
+                'badge' => 'Fresh picks · Everyday goodness',
+                'title' => 'Good food. Better days.',
+                'subtitle' => 'From just-picked produce to pantry favourites, bring home the good stuff without leaving home.',
+                'btn_text' => 'Shop groceries', 'btn_url' => '/collections',
+                'btn_text2' => 'Explore offers', 'btn_url2' => '/collections',
+            ],
+            [
+                'badge' => 'Market garden · Picked today',
+                'title' => 'Produce with real character.',
+                'subtitle' => 'Vegetables and leaves chosen by hand each morning, from growers we actually know.',
+                'btn_text' => 'Shop produce', 'btn_url' => '/collections',
+                'btn_text2' => 'About us', 'btn_url2' => '/about',
+            ],
+            [
+                'badge' => 'Counter service · Premium quality',
+                'title' => 'The good counter cuts.',
+                'subtitle' => 'Meat and deli favourites, prepared to order and packed cold for the journey home.',
+                'btn_text' => 'Shop fresh meat', 'btn_url' => '/collections',
+                'btn_text2' => null, 'btn_url2' => null,
+            ],
+        ] as $s) {
+            Slider::firstOrCreate(
+                ['title' => $s['title']],
+                [...$s, 'image' => null, 'sort_order' => $sort++, 'is_active' => true]
+            );
+        }
+    }
+
     /** Grocery catalog: categories, reusable option library, templates, products + variants. */
     private function seedGroceryCatalog(): void
-    {
-        // Option groups (the reusable shop-wide vocabulary)
+    {        // Option groups (the reusable shop-wide vocabulary)
         $groups = [];
         $sort = 0;
         foreach ([

@@ -38,7 +38,7 @@
                                 <label class="form-label">Product Name <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="name" name="name">
                             </div>
-                            <div class="col-md-9">
+                            <div class="col-md-6">
                                 <label class="form-label">Category</label>
                                 <select class="form-control select2" id="category_id" name="category_id">
                                     <option value="">Select</option>

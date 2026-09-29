@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\FaqCategoryController;
 use App\Http\Controllers\Admin\FaqController;
 use App\Http\Controllers\Admin\GalleryCategoryController;
 use App\Http\Controllers\Admin\GalleryController;
+use App\Http\Controllers\Admin\OptionGroupController;
 use App\Http\Controllers\Admin\PageSeoController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ProductExcelController;
@@ -41,6 +42,22 @@ Route::group(['prefix' => 'admin/', 'middleware' => ['auth', 'is_admin']], funct
     Route::get('/profile', [AdminProfileController::class, 'index'])->name('admin.profile');
     Route::post('/profile', [AdminProfileController::class, 'update'])->name('admin.profile.update');
 
+    // Option groups (shop-wide variant vocabulary + values)
+    Route::get('/option-groups', [OptionGroupController::class, 'index'])->name('option-groups.index');
+    Route::post('/option-groups', [OptionGroupController::class, 'store'])->name('option-groups.store');
+    Route::get('/option-groups/{id}/edit', [OptionGroupController::class, 'edit'])->name('option-groups.edit');
+    Route::post('/option-groups/update', [OptionGroupController::class, 'update'])->name('option-groups.update');
+    Route::get('/option-groups/{id}/manage', [OptionGroupController::class, 'manage'])->name('option-groups.manage');
+    Route::delete('/option-groups/{id}', [OptionGroupController::class, 'delete'])->name('option-groups.delete');
+    Route::post('/option-groups/toggle-status', [OptionGroupController::class, 'toggleStatus'])->name('option-groups.toggleStatus');
+    Route::get('/option-group-sort-list', [OptionGroupController::class, 'sortList'])->name('option-groups.sortList');
+    Route::post('/option-group-sort-update', [OptionGroupController::class, 'sortUpdate'])->name('option-groups.sortUpdate');
+    Route::post('/option-groups/{id}/values', [OptionGroupController::class, 'storeValue'])->name('option-groups.values.store');
+    Route::post('/option-groups/{id}/values-sort-update', [OptionGroupController::class, 'sortValuesUpdate'])->name('option-groups.values.sortUpdate');
+    Route::post('/option-values/{id}', [OptionGroupController::class, 'updateValue'])->name('option-values.update');
+    Route::delete('/option-values/{id}', [OptionGroupController::class, 'deleteValue'])->name('option-values.delete');
+    Route::post('/option-values/toggle-status', [OptionGroupController::class, 'toggleValueStatus'])->name('option-values.toggleStatus');
+
     // Page SEO
     Route::get('/page-seo', [PageSeoController::class, 'index'])->name('page-seo.index');
     Route::get('/page-seo/{id}/edit', [PageSeoController::class, 'edit'])->name('page-seo.edit');
@@ -54,6 +71,8 @@ Route::group(['prefix' => 'admin/', 'middleware' => ['auth', 'is_admin']], funct
     Route::delete('/sliders/{id}', [SliderController::class, 'destroy'])->name('slider.delete');
     Route::delete('/sliders/{id}/image', [SliderController::class, 'removeImage'])->name('slider.removeImage');
     Route::post('/sliders/toggle-status', [SliderController::class, 'toggleStatus'])->name('slider.toggleStatus');
+    Route::get('/slider-sort-list', [SliderController::class, 'sortList'])->name('slider.sortList');
+    Route::post('/slider-sort-update', [SliderController::class, 'sortUpdate'])->name('slider.sortUpdate');
 
     // Testimonials
     Route::get('/testimonials', [TestimonialController::class, 'index'])->name('testimonial.index');

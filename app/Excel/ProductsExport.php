@@ -196,7 +196,7 @@ class ProductsExport
         $sheet = new Worksheet($book, 'Reference');
         $book->addSheet($sheet);
 
-        $sheet->fromArray([['Use these exact names in the Products sheet. New categories and new option values are created on import; option groups are NOT — ask admin to add a group first.']], null, 'A1');
+        $sheet->fromArray([['Use these exact names in the Products sheet. New categories and new option values are created on import; option groups are NOT — create the group first under Master Setup → Option Groups.']], null, 'A1');
         $sheet->getStyle('A1')->getFont()->setBold(true);
 
         $sheet->fromArray([['Categories']], null, 'A3');

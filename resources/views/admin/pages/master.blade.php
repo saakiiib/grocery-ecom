@@ -60,17 +60,15 @@
             </section>
         </div>
 
-        <footer class="footer d-none">
+        <footer class="footer">
             <div class="container-fluid">
                 <div class="row">
                     <div class="col-sm-6">
-                        <script>
-                            document.write(new Date().getFullYear())
-                        </script> ©
+                        {{ date('Y') }} © {{ $company->company_name ?? config('app.name') }}
                     </div>
                     <div class="col-sm-6">
                         <div class="text-sm-end d-none d-sm-block">
-                            Design & Develop by
+                            Design & Develop by <a href="https://mentosoftware.co.uk/" target="_blank" rel="noopener">MentoSoftware</a>
                         </div>
                     </div>
                 </div>

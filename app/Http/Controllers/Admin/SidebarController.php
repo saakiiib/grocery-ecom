@@ -17,14 +17,25 @@ class SidebarController
                 'href' => route('admin.dashboard'),
             ],
             [
-                'type' => 'group',
+                'type' => 'item',
+                'icon' => 'ri-shopping-basket-line',
+                'label' => 'Products',
+                'route' => 'products.*',
+                'href' => route('products.index'),
+            ],
+            [
+                'type' => 'item',
                 'icon' => 'ri-folder-line',
-                'label' => 'Master Setup',
-                'id' => 'sidebarMasterSetup',
-                'children' => [
-                    ['label' => 'Category', 'route' => 'allcategory', 'href' => route('allcategory')],
-                    ['label' => 'Products', 'route' => 'products.*', 'href' => route('products.index')],
-                ],
+                'label' => 'Category',
+                'route' => '*category*',
+                'href' => route('allcategory'),
+            ],
+            [
+                'type' => 'item',
+                'icon' => 'ri-list-check',
+                'label' => 'Option Groups',
+                'route' => 'option-groups.*',
+                'href' => route('option-groups.index'),
             ],
             [
                 'type' => 'group',
@@ -32,7 +43,7 @@ class SidebarController
                 'label' => 'Content',
                 'id' => 'sidebarContent',
                 'children' => [
-                    ['label' => 'Sliders', 'route' => 'slider.index', 'href' => route('slider.index')],
+                    ['label' => 'Sliders', 'route' => 'slider.*', 'href' => route('slider.index')],
                     ['label' => 'Testimonials', 'route' => 'testimonial.index', 'href' => route('testimonial.index')],
                     ['label' => 'FAQ Categories', 'route' => 'faq-categories.*', 'href' => route('faq-categories.index')],
                     ['label' => 'FAQs', 'route' => 'faqs.*', 'href' => route('faqs.index')],
@@ -41,13 +52,11 @@ class SidebarController
                 ],
             ],
             [
-                'type' => 'group',
+                'type' => 'item',
                 'icon' => 'ri-mail-line',
-                'label' => 'Leads',
-                'id' => 'sidebarLeads',
-                'children' => [
-                    ['label' => 'Contacts', 'route' => 'admin.contacts.*', 'href' => route('admin.contacts.index')],
-                ],
+                'label' => 'Contacts',
+                'route' => 'admin.contacts.*',
+                'href' => route('admin.contacts.index'),
             ],
             [
                 'type' => 'group',

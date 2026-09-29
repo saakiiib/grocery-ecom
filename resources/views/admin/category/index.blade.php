@@ -45,6 +45,21 @@
                                     <textarea class="form-control" id="description" name="description" rows="3" placeholder=""></textarea>
                                 </div>
 
+                                <div class="col-md-12">
+                                    <label class="form-label">{{ 'Variant Template' }} <small class="text-muted">(option groups inherited by products in this category)</small></label>
+                                    <div class="border rounded p-3">
+                                        @forelse ($optionGroups as $group)
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input template-group" type="checkbox"
+                                                    id="templateGroup{{ $group->id }}" value="{{ $group->id }}">
+                                                <label class="form-check-label" for="templateGroup{{ $group->id }}">{{ $group->name }}</label>
+                                            </div>
+                                        @empty
+                                            <p class="text-muted mb-0"><small>No option groups yet. Create them under Master Setup → Option Groups first.</small></p>
+                                        @endforelse
+                                    </div>
+                                </div>
+
                                 <div class="col-md-6">
                                     <label class="form-label">{{ 'Image' }}</label>
                                     <input type="file" class="form-control" id="image" accept="image/*"
@@ -346,6 +361,9 @@
                     form_data.append("name", $("#name").val());
                     form_data.append("parent_id", $("#parent_id").val());
                     form_data.append("description", $("#description").val());
+                    $('.template-group:checked').each(function() {
+                        form_data.append("option_group_ids[]", $(this).val());
+                    });
                     form_data.append("video_url", $("#video_url").val());
                     form_data.append("meta_title", $("#meta_title").val());
                     form_data.append("meta_description", $("#meta_description").val());
@@ -403,6 +421,9 @@
                     form_data.append("name", $("#name").val());
                     form_data.append("parent_id", $("#parent_id").val());
                     form_data.append("description", $("#description").val());
+                    $('.template-group:checked').each(function() {
+                        form_data.append("option_group_ids[]", $(this).val());
+                    });
                     form_data.append("video_url", $("#video_url").val());
                     form_data.append("meta_title", $("#meta_title").val());
                     form_data.append("meta_description", $("#meta_description").val());
@@ -465,6 +486,12 @@
             function populateForm(data) {
                 $("#name").val(data.name);
                 $("#description").val(data.description);
+                $('.template-group').prop('checked', false);
+                if (data.option_group_ids) {
+                    data.option_group_ids.forEach(function(gid) {
+                        $('#templateGroup' + gid).prop('checked', true);
+                    });
+                }
                 $("#video_url").val(data.video_url);
                 $("#meta_title").val(data.meta_title);
                 $("#meta_description").val(data.meta_description);
@@ -548,6 +575,7 @@
 
             function clearform() {
                 $('#createThisForm')[0].reset();
+                $('.template-group').prop('checked', false);
                 $("#addBtn").val('Create');
                 $("#addBtn").html("{{ 'Create' }}");
                 $('#preview-image').attr('src', '#');

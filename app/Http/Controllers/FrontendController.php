@@ -11,6 +11,7 @@ use App\Models\Gallery;
 use App\Models\GalleryCategory;
 use App\Models\PageSeo;
 use App\Models\Product;
+use App\Models\Slider;
 use Illuminate\Http\Request;
 use OpenGraph;
 use SEOMeta;
@@ -55,8 +56,12 @@ class FrontendController extends Controller
         $galleryCatsJson = $this->galleryCatsJson();
         $filesJson = collect();
         $zonesJson = collect();
+        $slidersJson = Slider::where('is_active', true)->orderBy('sort_order')->orderBy('id')
+            ->get(['badge', 'title', 'subtitle', 'btn_text', 'btn_url', 'btn_text2', 'btn_url2', 'image'])
+            ->map(fn ($s) => [...$s->toArray(), 'image' => $s->image ? url($s->image) : url('placeholder.webp')])
+            ->values();
 
-        return spa('frontend.index', compact('productsJson', 'featuredJson', 'featuredCards', 'categoriesJson', 'faqsJson', 'faqCatsJson', 'galleryJson', 'galleryCatsJson', 'filesJson', 'zonesJson'));
+        return spa('frontend.index', compact('productsJson', 'featuredJson', 'featuredCards', 'categoriesJson', 'faqsJson', 'faqCatsJson', 'galleryJson', 'galleryCatsJson', 'filesJson', 'zonesJson', 'slidersJson'));
     }
 
     public function collections(Request $request)

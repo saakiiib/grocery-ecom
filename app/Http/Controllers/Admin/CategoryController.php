@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Models\OptionGroup;
 use DataTables;
 use Illuminate\Http\Request;
 use Intervention\Image\Facades\Image;
@@ -78,8 +79,9 @@ class CategoryController extends Controller
         }
 
         $parentCategories = Category::whereNull('parent_id')->where('status', 1)->get();
+        $optionGroups = OptionGroup::where('status', true)->orderBy('sort_order')->orderBy('id')->get(['id', 'name']);
 
-        return view('admin.category.index', compact('parentCategories'));
+        return view('admin.category.index', compact('parentCategories', 'optionGroups'));
     }
 
     public function store(Request $request)
@@ -87,6 +89,8 @@ class CategoryController extends Controller
         $request->validate([
             'name' => 'required|unique:categories,name',
             'parent_id' => 'nullable|exists:categories,id',
+            'option_group_ids' => 'nullable|array',
+            'option_group_ids.*' => 'exists:option_groups,id',
         ], [
             'name.required' => 'Category name is required',
             'name.unique' => 'This category already exists',
@@ -144,6 +148,8 @@ class CategoryController extends Controller
         }
 
         if ($data->save()) {
+            $data->optionGroups()->sync($this->groupSyncPayload($request->option_group_ids));
+
             return response()->json([
                 'message' => 'Category created successfully',
                 'category' => $data,
@@ -161,6 +167,7 @@ class CategoryController extends Controller
             'id' => $id,
         ];
         $info = Category::where($where)->get()->first();
+        $info->option_group_ids = $info->optionGroups()->pluck('option_groups.id')->all();
 
         return response()->json($info);
     }
@@ -170,6 +177,8 @@ class CategoryController extends Controller
         $request->validate([
             'name' => 'required|unique:categories,name,'.$request->codeid,
             'parent_id' => 'nullable|exists:categories,id',
+            'option_group_ids' => 'nullable|array',
+            'option_group_ids.*' => 'exists:option_groups,id',
         ], [
             'name.required' => 'Category name is required',
             'name.unique' => 'This category already exists',
@@ -230,6 +239,8 @@ class CategoryController extends Controller
         }
 
         if ($data->save()) {
+            $data->optionGroups()->sync($this->groupSyncPayload($request->option_group_ids));
+
             return response()->json([
                 'message' => 'Category updated successfully',
             ], 200);
@@ -327,6 +338,19 @@ class CategoryController extends Controller
             ->get();
 
         return response()->json($parentCategories);
+    }
+
+    /**
+     * Template sync payload: checked group ids with their display order.
+     */
+    protected function groupSyncPayload($ids): array
+    {
+        $sync = [];
+        foreach (array_values((array) $ids) as $i => $gid) {
+            $sync[$gid] = ['sort_order' => $i];
+        }
+
+        return $sync;
     }
 
     public function sortList()

@@ -50,7 +50,7 @@
                             <div class="collapse menu-dropdown {{ $item['active'] ? 'show' : '' }}" id="{{ $item['id'] }}">
                                 <ul class="nav nav-sm flex-column">
                                     @foreach($item['children'] as $child)
-                                        <li class="nav-item {{ in_array($child['label'], ['Sliders', 'Testimonials']) ? 'd-none' : '' }}">
+                                        <li class="nav-item {{ in_array($child['label'], ['Testimonials']) ? 'd-none' : '' }}">
                                             <a href="{{ $child['href'] }}" class="nav-link {{ $child['active'] ? 'active' : '' }}">
                                                 {{ $child['label'] }}
                                             </a>
