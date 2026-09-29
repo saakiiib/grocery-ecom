@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vine-Ripened Tomatoes | Evergreen Foods</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="../assets/images/favicon.png">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <div class="topbar">
+    <span>Fresh to your door</span><span class="sep">·</span>
+    <span>Free delivery on orders over £50</span><span class="sep">·</span>
+    <span>Thoughtfully sourced, every day</span>
+  </div>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="../index.html" class="logo">
+        <img class="logo-img" src="../assets/images/logo.png" alt="Evergreen Foods">
+        <span class="logo-text"><strong>Evergreen Foods</strong><small>Fresh living, every day</small></span>
+      </a>
+      <nav class="nav-desktop">
+        <a href="../index.html">Home</a>
+        <a href="shop.html">Shop all</a>
+        <a href="shop.html">Categories</a>
+        <a href="offers.html">Offers</a>
+        <a href="about.html">Our story</a>
+        <a href="contact.html">Contact</a>
+      </nav>
+      <div class="header-actions">
+        <button type="button" class="icon-btn" aria-label="Search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></button>
+        <a href="account.html" class="icon-btn" aria-label="Account"><svg viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></a>
+        <a href="cart.html" class="cart-btn"><svg viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg><span data-cart-count>0</span></a>
+        <button type="button" class="icon-btn mobile-menu-btn" data-mobile-menu aria-label="Menu"><svg viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16"/></svg></button>
+      </div>
+    </div>
+  </header>
+  <div class="mobile-nav"><div class="mobile-nav-overlay" data-close-menu></div>
+    <div class="mobile-nav-panel">
+      <div class="mobile-nav-header">
+        <a href="../index.html" class="logo"><img class="logo-img" src="../assets/images/logo.png" alt="Evergreen Foods"><span class="logo-text"><strong>Evergreen Foods</strong></span></a>
+        <button type="button" class="icon-btn" data-close-menu><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      </div>
+      <nav class="mobile-nav-links">
+        <a href="../index.html">Home</a><a href="shop.html">Shop all</a><a href="offers.html">Offers</a>
+        <a href="about.html">Our story</a><a href="contact.html">Contact</a><a href="cart.html">Your bag</a>
+      </nav>
+    </div>
+  </div>
+
+  <main>
+    <div class="container">
+      <div class="product-detail">
+        <div class="product-gallery">
+          <div class="product-main-img">
+            <img src="../assets/images/tomatoes.jpg" alt="Vine-Ripened Tomatoes">
+          </div>
+        </div>
+        <div class="product-info">
+          <p class="breadcrumb"><a href="shop.html">← Back to Vegetables</a></p>
+          <p class="meta-label">Vegetables · Locally grown</p>
+          <h1>Vine-Ripened Tomatoes</h1>
+          <div class="rating">
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <strong>4.9</strong> <span class="text-muted">(128 reviews)</span>
+          </div>
+          <p class="desc">Sweet, juicy tomatoes harvested at their ripest. Perfect for salads, sauces, and everything in between.</p>
+
+          <p style="font-weight:600;font-size:14px;margin-bottom:0.6rem;">Choose your pack</p>
+          <div class="pack-options">
+            <button type="button" class="pack-opt active" data-pack="500 g" data-price="1.89" data-old="2.10">500 g</button>
+            <button type="button" class="pack-opt" data-pack="1 kg" data-price="3.49">1 kg</button>
+            <button type="button" class="pack-opt" data-pack="2 kg" data-price="6.49">2 kg</button>
+          </div>
+
+          <div class="price-block">
+            <span class="current" data-current-price>£1.89</span>
+            <span class="old" data-old-price>£2.10</span>
+            <span class="save">Save 10%</span>
+            <p class="text-muted" style="font-size:13px;margin-top:0.35rem;">500 g pack · Price includes all taxes</p>
+          </div>
+
+          <div class="qty-row">
+            <div class="qty-control">
+              <button type="button" data-qty-minus aria-label="Decrease">−</button>
+              <span data-qty-value>1</span>
+              <button type="button" data-qty-plus aria-label="Increase">+</button>
+            </div>
+          </div>
+
+          <button type="button" class="btn btn-dark add-to-bag" data-add-to-bag
+            data-id="vine-tomatoes" data-name="Vine-Ripened Tomatoes" data-price="1.89"
+            data-pack="500 g" data-image="../assets/images/tomatoes.jpg">
+            + Add to bag
+          </button>
+
+          <div class="delivery-notes">
+            <div>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M5 12a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2M5 12a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4a2 2 0 0 0-2-2m-7-4v10"/></svg>
+              Free delivery when your order reaches £50
+            </div>
+            <div>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>
+              Carefully selected for freshness
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="../index.html" class="logo"><img class="logo-img" src="../assets/images/logo.png" alt="Evergreen Foods"><span class="logo-text"><strong>Evergreen Foods</strong><small>Fresh living, every day</small></span></a>
+          <p>Thoughtfully sourced groceries delivered to your door.</p>
+        </div>
+        <div class="footer-col"><h4>Shop</h4><a href="shop.html">All groceries</a><a href="offers.html">Offers</a></div>
+        <div class="footer-col"><h4>Company</h4><a href="about.html">Our story</a><a href="contact.html">Contact</a></div>
+        <div class="footer-col"><h4>Account</h4><a href="account.html">My account</a><a href="cart.html">Your bag</a></div>
+      </div>
+      <div class="footer-bottom"><span>© 2026 Evergreen Foods</span><span>Prices in GBP</span></div>
+    </div>
+  </footer>
+  <script src="../js/main.js"></script>
+</body>
+</html>
