@@ -24,10 +24,11 @@
         </a>
         <nav class="nav-desktop" aria-label="Main">
             <a @spa href="{{ route('home') }}" class="{{ $isActive('home') }}">Home</a>
-            <a @spa href="{{ route('collections') }}" class="{{ $isActive('collections') }}">Shop all</a>
-            <a @spa href="{{ route('offers') }}" class="{{ $isActive('offers') }}">Offers</a>
-            <a @spa href="{{ route('about') }}" class="{{ $isActive('about') }}">Our story</a>
-            <a @spa href="{{ route('contact') }}" class="{{ $isActive('contact') }}">Contact</a>
+            <a @spa href="{{ route('about') }}" class="{{ $isActive('about') }}">About Us</a>
+            <a @spa href="{{ route('shop') }}" class="{{ $isActive('shop') && ! request()->boolean('only_offers') ? 'active' : '' }}">Shop</a>
+            <a @spa href="{{ route('shop.offers') }}" class="{{ $isActive('shop') && request()->boolean('only_offers') ? 'active' : '' }}">Offers</a>
+            <a @spa href="{{ route('gallery') }}" class="{{ $isActive('gallery') }}">Gallery</a>
+            <a @spa href="{{ route('contact') }}" class="{{ $isActive('contact') }}">Contact Us</a>
         </nav>
         <div class="header-actions">
             <button type="button" class="icon-btn" data-search-open aria-label="Search" title="Search">
@@ -35,7 +36,7 @@
             </button>
             <a @spa href="{{ route('account') }}" class="icon-btn" aria-label="My account" title="{{ auth()->check() ? auth()->user()->name : 'My account' }}">
                 @auth
-                    <span style="font-weight:700;">{{ strtoupper(mb_substr(auth()->user()->name, 0, 1)) }}</span>
+                    <span class="avatar-initial">{{ strtoupper(mb_substr(auth()->user()->name, 0, 1)) }}</span>
                 @else
                     <x-icon name="user" />
                 @endauth
@@ -65,12 +66,11 @@
         </div>
         <nav class="mobile-nav-links">
             <a @spa href="{{ route('home') }}">Home</a>
-            <a @spa href="{{ route('collections') }}">Shop all</a>
-            <a @spa href="{{ route('offers') }}">Offers</a>
-            <a @spa href="{{ route('about') }}">Our story</a>
-            <a @spa href="{{ route('contact') }}">Contact</a>
-            <a @spa href="{{ route('account') }}">My account</a>
-            <a @spa href="{{ route('bag') }}">Your bag</a>
+            <a @spa href="{{ route('about') }}">About Us</a>
+            <a @spa href="{{ route('shop') }}">Shop</a>
+            <a @spa href="{{ route('shop.offers') }}">Offers</a>
+            <a @spa href="{{ route('gallery') }}">Gallery</a>
+            <a @spa href="{{ route('contact') }}">Contact Us</a>
         </nav>
     </div>
 </div>

@@ -13,8 +13,7 @@ class PageSeoController extends Controller
     private array $pages = [
         'home' => 'Home',
         'about' => 'About Us',
-        'collections' => 'Collections',
-        'offers' => 'Weekly Offers',
+        'shop' => 'Shop',
         'gallery' => 'Gallery',
         'cart' => 'Shopping Bag',
         'checkout' => 'Checkout',
@@ -23,6 +22,7 @@ class PageSeoController extends Controller
         'contact' => 'Contact Us',
         'privacy' => 'Privacy Policy',
         'terms' => 'Terms of Supply',
+        'refund' => 'Refund Policy',
     ];
 
     public function index(Request $request)

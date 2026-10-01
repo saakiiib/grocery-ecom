@@ -151,7 +151,7 @@ class BagController extends Controller
     public function update(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'variant_id' => 'required|integer',
+            'variant_id' => 'required|integer|exists:product_variants,id',
             'qty' => 'required|integer|min:0|max:99',
         ]);
 
@@ -175,7 +175,7 @@ class BagController extends Controller
 
     public function remove(Request $request): JsonResponse
     {
-        $data = $request->validate(['variant_id' => 'required|integer']);
+        $data = $request->validate(['variant_id' => 'required|integer|exists:product_variants,id']);
 
         $bag = static::bag();
         unset($bag[$data['variant_id']]);

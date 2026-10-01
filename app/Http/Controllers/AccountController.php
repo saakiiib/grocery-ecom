@@ -94,7 +94,7 @@ class AccountController extends Controller
 
         $user->update($data);
 
-        return redirect()->route('account')->with('status', 'Your details were saved.');
+        return redirect()->to(route('account').'#details')->with('status', 'Your details were saved.');
     }
 
     public function password(Request $request): RedirectResponse
@@ -109,7 +109,7 @@ class AccountController extends Controller
 
         auth()->user()->update(['password' => Hash::make($data['password'])]);
 
-        return redirect()->route('account')->with('status', 'Your password was changed.');
+        return redirect()->to(route('account').'#password')->with('status', 'Your password was changed.');
     }
 
     /** Start (or retry) online payment for an unpaid order. Returns SDK credentials. */

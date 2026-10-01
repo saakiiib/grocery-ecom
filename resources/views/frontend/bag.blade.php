@@ -19,12 +19,12 @@
                     <div class="empty-state">
                         <h2>Your bag is empty</h2>
                         <p>Browse the market and add some fresh finds.</p>
-                        <a @spa href="{{ route('collections') }}" class="btn btn-dark">Shop groceries</a>
+                        <a @spa href="{{ route('shop') }}" class="btn btn-dark">Shop groceries</a>
                     </div>
                 @else
                     @foreach ($bag['lines'] as $item)
                         <div class="cart-item" data-key="{{ $item['variant_id'] }}">
-                            <a @spa href="{{ $item['slug'] ? route('product.show', $item['slug']) : route('collections') }}">
+                            <a @spa href="{{ $item['slug'] ? route('product.show', $item['slug']) : route('shop') }}">
                                 <img src="{{ $item['image'] }}" alt="{{ $item['name'] }}" loading="lazy">
                             </a>
                             <div>
@@ -57,7 +57,7 @@
                 <div class="summary-row"><span>Delivery</span><span>Calculated at checkout</span></div>
                 <div class="summary-row total"><span>Total</span><span data-summary-total>£{{ number_format($bag['subtotal'], 2) }}</span></div>
                 <a @spa href="{{ route('checkout') }}" class="btn btn-dark btn-block" style="margin-top:1.25rem;">Proceed to checkout</a>
-                <a @spa href="{{ route('collections') }}" class="btn btn-ghost btn-block" style="margin-top:0.5rem;">Continue shopping</a>
+                <a @spa href="{{ route('shop') }}" class="btn btn-ghost btn-block" style="margin-top:0.5rem;">Continue shopping</a>
             </aside>
         </div>
     </div>

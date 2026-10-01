@@ -8,7 +8,7 @@
         @elseif ($p['isFeatured'])
             <span class="product-badge badge-bestseller">Bestseller</span>
         @endif
-        <img src="{{ $p['imgAbs'] }}" alt="{{ $p['name'] }}" loading="lazy">
+        <img src="{{ $p['imgAbs'] }}" alt="{{ $p['name'] }}" loading="lazy" onerror="this.onerror=null;this.src='{{ url('placeholder.webp') }}'">
     </a>
     <div class="product-body">
         <span class="product-meta">{{ $p['category'] }}</span>

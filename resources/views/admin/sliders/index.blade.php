@@ -42,7 +42,7 @@
 
                             <div class="col-md-6">
                                 <label class="form-label">Primary Button URL</label>
-                                <input type="text" class="form-control" id="btn_url" placeholder="e.g. /collections">
+                                <input type="text" class="form-control" id="btn_url" placeholder="e.g. /shop">
                             </div>
 
                             <div class="col-md-6">

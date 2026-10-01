@@ -30,7 +30,7 @@
         <div class="product-detail">
             <div class="product-gallery">
                 <div class="product-main-img">
-                    <img src="{{ $mainImage }}" alt="{{ $product->name }}" data-main-image>
+                    <img src="{{ $mainImage }}" alt="{{ $product->name }}" data-main-image onerror="this.onerror=null;this.src='{{ url('placeholder.webp') }}'">
                 </div>
                 @if (count($gallery) > 1)
                     <div class="product-thumbs" style="display:flex;gap:.5rem;margin-top:.75rem;flex-wrap:wrap;">
@@ -43,7 +43,7 @@
                 @endif
             </div>
             <div class="product-info">
-                <p class="breadcrumb"><a @spa href="{{ route('collections', $product->category ? ['category' => $product->category->slug] : []) }}">← Back to {{ $product->category?->name ?? 'shop' }}</a></p>
+                <p class="breadcrumb"><a @spa href="{{ $product->category ? route('shop.category', ['category' => $product->category->slug]) : route('shop') }}">← Back to {{ $product->category?->name ?? 'shop' }}</a></p>
                 <p class="meta-label">{{ $product->category?->name ?? '' }}{{ $product->tagline ? ' · ' . $product->tagline : '' }}</p>
                 <h1>{{ $product->name }}</h1>
                 @if ($product->tagline)<p class="desc">{{ $product->tagline }}</p>@endif
@@ -98,19 +98,18 @@
                 <script type="application/json" id="variant-data">@json($pickerVariants)</script>
                 <script type="application/json" id="variant-groups">@json(collect($groups)->map(fn ($g) => ['slug' => $g['slug']])->values())</script>
 
-                <div class="qty-row">
+                <div class="buy-row">
                     <div class="qty-control">
                         <button type="button" data-qty-minus aria-label="Decrease">−</button>
                         <span data-qty-value>1</span>
                         <button type="button" data-qty-plus aria-label="Increase">+</button>
                     </div>
+                    <button type="button" class="btn btn-dark add-to-bag" data-add-to-bag data-detail-add
+                        data-variant-id="{{ $defaultVariant['id'] ?? '' }}" data-product-id="{{ $product->id }}"
+                        data-name="{{ $product->name }}" data-price="{{ number_format($defaultVariant['selling'] ?? 0, 2, '.', '') }}"
+                        data-pack="{{ $defaultVariant['pack'] ?? '' }}" data-image="{{ $mainImage }}"
+                        @disabled(!($defaultVariant['in_stock'] ?? false))>{{ ($defaultVariant['in_stock'] ?? false) ? '+ Add to bag' : 'Out of stock' }}</button>
                 </div>
-
-                <button type="button" class="btn btn-dark add-to-bag" data-add-to-bag data-detail-add
-                    data-variant-id="{{ $defaultVariant['id'] ?? '' }}" data-product-id="{{ $product->id }}"
-                    data-name="{{ $product->name }}" data-price="{{ number_format($defaultVariant['selling'] ?? 0, 2, '.', '') }}"
-                    data-pack="{{ $defaultVariant['pack'] ?? '' }}" data-image="{{ $mainImage }}"
-                    @disabled(!($defaultVariant['in_stock'] ?? false))>{{ ($defaultVariant['in_stock'] ?? false) ? '+ Add to bag' : 'Out of stock' }}</button>
 
                 @if ($product->description)
                     <div style="margin-top:1.5rem;">{!! $product->description !!}</div>

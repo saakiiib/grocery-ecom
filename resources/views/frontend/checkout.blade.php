@@ -14,7 +14,7 @@
             <div class="empty-state">
                 <h2>Your bag is empty</h2>
                 <p>Add something fresh before checking out.</p>
-                <a @spa href="{{ route('collections') }}" class="btn btn-dark">Shop groceries</a>
+                <a @spa href="{{ route('shop') }}" class="btn btn-dark">Shop groceries</a>
             </div>
         @else
             @if (session('error'))

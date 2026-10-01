@@ -49,7 +49,7 @@
                     Whether you're stocking the week or picking up something for tonight, we're here to make good food the easy choice.
                 </p>
             @endif
-            <a @spa href="{{ route('collections') }}" class="btn btn-dark" style="margin-top:2rem;">Shop the market</a>
+            <a @spa href="{{ route('shop') }}" class="btn btn-dark" style="margin-top:2rem;">Shop the market</a>
         </div>
     </section>
 </main>

@@ -255,19 +255,22 @@ class GroceryDemoSeeder extends Seeder
         $sort = 0;
         foreach ([
             ['name' => 'Pack Size', 'type' => 'buttons'],
-            ['name' => 'Cut Option', 'type' => 'dropdown'],
-            ['name' => 'Fat Option', 'type' => 'dropdown'],
+            ['name' => 'Cut Option', 'type' => 'buttons'],
+            ['name' => 'Fat Option', 'type' => 'buttons'],
         ] as $g) {
             $groups[$g['name']] = OptionGroup::firstOrCreate(
                 ['slug' => Str::slug($g['name'])],
                 ['name' => $g['name'], 'type' => $g['type'], 'status' => true, 'sort_order' => $sort++]
             );
+            if ($groups[$g['name']]->type !== $g['type']) {
+                $groups[$g['name']]->update(['type' => $g['type']]);
+            }
         }
 
         // Option values (defined once, referenced by every variant)
         $values = [];
         $defs = [
-            'Pack Size' => ['500g', '1kg', '2kg', '5kg'],
+            'Pack Size' => ['100g', '250g', '500g', '1kg', '2kg', '5kg', '500ml', '1L', '2L'],
             'Cut Option' => ['Large pcs', 'Medium-Cube', 'Thick'],
             'Fat Option' => ['Fat On', 'Fat Off'],
         ];
@@ -281,22 +284,56 @@ class GroceryDemoSeeder extends Seeder
             }
         }
 
-        // Categories + option-group templates
+        // Categories (parents first) + option-group templates.
+        // Children inherit nothing automatically: each category carries its own template.
         $catIds = [];
         $sort = 0;
         $cats = [
-            'Fresh Meat' => ['Pack Size', 'Cut Option', 'Fat Option'],
-            'Rice & Grains' => ['Pack Size'],
-            'Pantry Essentials' => [],
+            'Fresh Meat' => ['groups' => ['Pack Size', 'Cut Option', 'Fat Option'], 'parent' => null],
+            'Lamb' => ['groups' => ['Pack Size', 'Cut Option', 'Fat Option'], 'parent' => 'Fresh Meat'],
+            'Beef & Poultry' => ['groups' => ['Pack Size'], 'parent' => 'Fresh Meat'],
+            'Rice & Grains' => ['groups' => ['Pack Size'], 'parent' => null],
+            'Basmati' => ['groups' => ['Pack Size'], 'parent' => 'Rice & Grains'],
+            'Everyday Rice' => ['groups' => ['Pack Size'], 'parent' => 'Rice & Grains'],
+            'Pantry Essentials' => ['groups' => [], 'parent' => null],
+            'Salt & Seasoning' => ['groups' => [], 'parent' => 'Pantry Essentials'],
+            'Oils & Vinegar' => ['groups' => ['Pack Size'], 'parent' => 'Pantry Essentials'],
+            'Fresh Produce' => ['groups' => ['Pack Size'], 'parent' => null],
+            'Vegetables' => ['groups' => ['Pack Size'], 'parent' => 'Fresh Produce'],
+            'Fruits' => ['groups' => ['Pack Size'], 'parent' => 'Fresh Produce'],
+            'Dairy & Eggs' => ['groups' => ['Pack Size'], 'parent' => null],
+            'Milk & Eggs' => ['groups' => ['Pack Size'], 'parent' => 'Dairy & Eggs'],
+            'Cheese & Yogurt' => ['groups' => ['Pack Size'], 'parent' => 'Dairy & Eggs'],
+            'Bakery' => ['groups' => ['Pack Size'], 'parent' => null],
+            'Bread' => ['groups' => ['Pack Size'], 'parent' => 'Bakery'],
+            'Cakes & Pastries' => ['groups' => ['Pack Size'], 'parent' => 'Bakery'],
+            'Frozen' => ['groups' => ['Pack Size'], 'parent' => null],
+            'Frozen Veg' => ['groups' => ['Pack Size'], 'parent' => 'Frozen'],
+            'Ice Cream & Desserts' => ['groups' => ['Pack Size'], 'parent' => 'Frozen'],
+            'Beverages' => ['groups' => ['Pack Size'], 'parent' => null],
+            'Tea & Coffee' => ['groups' => ['Pack Size'], 'parent' => 'Beverages'],
+            'Juices & Soft Drinks' => ['groups' => ['Pack Size'], 'parent' => 'Beverages'],
+            'Snacks' => ['groups' => ['Pack Size'], 'parent' => null],
+            'Crisps & Nuts' => ['groups' => ['Pack Size'], 'parent' => 'Snacks'],
+            'Biscuits & Sweets' => ['groups' => ['Pack Size'], 'parent' => 'Snacks'],
+            'Breakfast' => ['groups' => ['Pack Size'], 'parent' => null],
+            'Cereals' => ['groups' => ['Pack Size'], 'parent' => 'Breakfast'],
+            'Spreads & Honey' => ['groups' => ['Pack Size'], 'parent' => 'Breakfast'],
         ];
-        foreach ($cats as $name => $template) {
+        foreach ($cats as $name => $def) {
             $cat = Category::firstOrCreate(
                 ['slug' => Str::slug($name)],
-                ['name' => $name, 'meta_title' => $name.' | Grocery', 'status' => true, 'sort_order' => $sort++]
+                [
+                    'name' => $name,
+                    'parent_id' => $def['parent'] ? ($catIds[$def['parent']] ?? null) : null,
+                    'meta_title' => $name.' | Grocery',
+                    'status' => true,
+                    'sort_order' => $sort++,
+                ]
             );
             $catIds[$name] = $cat->id;
             $sync = [];
-            foreach (array_values($template) as $i => $groupName) {
+            foreach (array_values($def['groups']) as $i => $groupName) {
                 $sync[$groups[$groupName]->id] = ['sort_order' => $i];
             }
             $cat->optionGroups()->sync($sync);
@@ -307,7 +344,8 @@ class GroceryDemoSeeder extends Seeder
             [
                 'slug' => 'lamb-leg-bone-in',
                 'name' => 'Lamb Leg Bone-In',
-                'category' => 'Fresh Meat',
+                'category' => 'Lamb',
+                'hero' => 'https://images.unsplash.com/photo-1603360946369-dc9bb6258143?auto=format&fit=crop&w=900&q=80',
                 'tagline' => 'Halal British lamb leg, butchered to your cut and fat preference.',
                 'highlights' => "100% British halal lamb\nMatured 7 days for flavour\nFreezer-friendly",
                 'extra' => [
@@ -330,7 +368,8 @@ class GroceryDemoSeeder extends Seeder
             [
                 'slug' => 'basmati-rice-extra-long',
                 'name' => 'Basmati Rice Extra Long',
-                'category' => 'Rice & Grains',
+                'category' => 'Basmati',
+                'hero' => 'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=900&q=80',
                 'tagline' => 'Aged extra-long grain basmati, perfect for biryani.',
                 'highlights' => "Aged 2 years for aroma\nExtra-long grain, non-sticky\n",
                 'extra' => [
@@ -347,7 +386,8 @@ class GroceryDemoSeeder extends Seeder
             [
                 'slug' => 'sea-salt-flakes',
                 'name' => 'Sea Salt Flakes',
-                'category' => 'Pantry Essentials',
+                'category' => 'Salt & Seasoning',
+                'hero' => 'https://images.unsplash.com/photo-1506368249639-73a05d6f6488?auto=format&fit=crop&w=900&q=80',
                 'tagline' => 'Hand-harvested flaky sea salt for finishing.',
                 'highlights' => "Hand-harvested flakes\nNo anti-caking agents",
                 'extra' => [
@@ -356,6 +396,91 @@ class GroceryDemoSeeder extends Seeder
                 'featured' => false,
                 'variants' => [
                     ['SALT-01', 2.49, null, true, true, []],
+                ],
+            ],
+            [
+                'slug' => 'lamb-chops-french-trimmed',
+                'name' => 'Lamb Chops French Trimmed',
+                'category' => 'Lamb',
+                'hero' => 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=900&q=80',
+                'tagline' => 'Tender French-trimmed chops, grill-ready in minutes.',
+                'highlights' => "100% British halal lamb\nFrench-trimmed racks\nGrill or pan-fry",
+                'extra' => [
+                    ['Cooking suggestion', 'Sear 3 mins per side in a hot pan, rest 5 mins. Serve blushing.'],
+                    ['Storage', 'Keep refrigerated below 4°C. Use within 2 days or freeze on day of delivery.'],
+                ],
+                'featured' => true,
+                'variants' => [
+                    ['CHOP-500', 12.99, 10.99, true, true, ['500g', 'Thick', 'Fat On']],
+                    ['CHOP-1K', 23.99, 20.99, true, false, ['1kg', 'Thick', 'Fat On']],
+                    ['CHOP-1K-LO', 23.49, null, true, false, ['1kg', 'Thick', 'Fat Off']],
+                ],
+            ],
+            [
+                'slug' => 'chicken-breast-fillets',
+                'name' => 'Chicken Breast Fillets',
+                'category' => 'Beef & Poultry',
+                'hero' => 'https://images.unsplash.com/photo-1587593810167-a84920ea0781?auto=format&fit=crop&w=900&q=80',
+                'tagline' => 'Free-range chicken breasts, skinless and boneless.',
+                'highlights' => "Free-range British chicken\nSkinless and boneless\nHigh in protein",
+                'extra' => [
+                    ['Cooking suggestion', 'Bake at 200°C for 20–25 mins until juices run clear.'],
+                    ['Storage', 'Keep refrigerated below 4°C. Use within 2 days or freeze on day of delivery.'],
+                ],
+                'featured' => false,
+                'variants' => [
+                    ['CHK-500', 6.49, 5.49, true, true, ['500g']],
+                    ['CHK-1K', 11.99, 10.49, true, false, ['1kg']],
+                    ['CHK-2K', 21.99, null, true, false, ['2kg']],
+                ],
+            ],
+            [
+                'slug' => 'beef-mince-lean',
+                'name' => 'Beef Mince Lean',
+                'category' => 'Beef & Poultry',
+                'hero' => 'https://images.unsplash.com/photo-1558030006-450675393462?auto=format&fit=crop&w=900&q=80',
+                'tagline' => 'Lean British beef mince, perfect for bolognese.',
+                'highlights' => "100% British beef\n5% fat, extra lean\nMince fresh daily",
+                'extra' => [
+                    ['Cooking suggestion', 'Brown in batches over high heat, then simmer with tomatoes for 30 mins.'],
+                    ['Storage', 'Keep refrigerated below 4°C. Use within 2 days or freeze on day of delivery.'],
+                ],
+                'featured' => false,
+                'variants' => [
+                    ['MINCE-500', 5.99, 4.99, true, true, ['500g']],
+                    ['MINCE-1K', 10.99, null, true, false, ['1kg']],
+                ],
+            ],
+            [
+                'slug' => 'everyday-long-grain-rice',
+                'name' => 'Everyday Long Grain Rice',
+                'category' => 'Everyday Rice',
+                'hero' => 'https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=900&q=80',
+                'tagline' => 'Fluffy everyday long grain at a family price.',
+                'highlights' => "Easy-cook, non-sticky\nGreat value 5kg sack",
+                'extra' => [
+                    ['Cooking suggestion', 'Boil 1 part rice to 2 parts water for 12 mins. Drain and rest 3 mins.'],
+                    ['Storage', 'Store in a cool dry place in an airtight container.'],
+                ],
+                'featured' => false,
+                'variants' => [
+                    ['EVR-1K', 3.49, 2.99, true, true, ['1kg']],
+                    ['EVR-5K', 14.99, 12.99, true, false, ['5kg']],
+                ],
+            ],
+            [
+                'slug' => 'cracked-black-pepper',
+                'name' => 'Cracked Black Pepper',
+                'category' => 'Salt & Seasoning',
+                'hero' => 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?auto=format&fit=crop&w=900&q=80',
+                'tagline' => 'Coarse-cracked Tellicherry peppercorns.',
+                'highlights' => "Extra-bold Tellicherry berries\nCracked for instant aroma",
+                'extra' => [
+                    ['Storage', 'Keep dry and away from heat to hold the aroma.'],
+                ],
+                'featured' => false,
+                'variants' => [
+                    ['PEP-01', 3.29, 2.79, true, true, []],
                 ],
             ],
         ];
@@ -369,6 +494,7 @@ class GroceryDemoSeeder extends Seeder
                     'name' => $p['name'],
                     'tagline' => $p['tagline'],
                     'highlights' => $p['highlights'] ?? null,
+                    'hero_image' => $p['hero'] ?? null,
                     'meta_title' => $p['name'].' | Grocery',
                     'is_featured' => $p['featured'],
                     'status' => true,
@@ -398,6 +524,101 @@ class GroceryDemoSeeder extends Seeder
                     ['label' => $label],
                     ['value' => $value, 'sort_order' => $i]
                 );
+            }
+        }
+
+        $this->seedBulkScale($catIds, $values);
+    }
+
+    /**
+     * Large-scale demo data: 94 generated products across the child categories
+     * (102 with the hand-crafted ones above). Deterministic — same SKUs, slugs
+     * and prices on every run, safe with updateOrCreate.
+     */
+    private function seedBulkScale(array $catIds, array $values): void
+    {
+        $u = fn ($id) => "https://images.unsplash.com/{$id}?auto=format&fit=crop&w=900&q=80";
+        $heroes = [
+            'Vegetables' => [$u('photo-1518843875459-f738682238a6'), $u('photo-1540420773420-3366772f4999')],
+            'Fruits' => [$u('photo-1490474418585-ba9bad8fd0ea'), $u('photo-1610832958506-aa56368176cf')],
+            'Milk & Eggs' => [$u('photo-1550583724-b2692b85b150'), $u('photo-1582722872445-44dc5f7e3c8f')],
+            'Cheese & Yogurt' => [$u('photo-1486297678162-eb2a19b0a32d'), $u('photo-1550583724-b2692b85b150')],
+            'Bread' => [$u('photo-1509440159596-0249088772ff'), $u('photo-1567620905732-2d1ec7ab7445')],
+            'Cakes & Pastries' => [$u('photo-1567620905732-2d1ec7ab7445'), $u('photo-1509440159596-0249088772ff')],
+            'Frozen Veg' => [$u('photo-1518843875459-f738682238a6'), $u('photo-1488459716781-31db52582fe9')],
+            'Ice Cream & Desserts' => [$u('photo-1563805042-7684c019e1cb'), $u('photo-1567620905732-2d1ec7ab7445')],
+            'Tea & Coffee' => [$u('photo-1544787219-7f47ccb76574'), $u('photo-1506368249639-73a05d6f6488')],
+            'Juices & Soft Drinks' => [$u('photo-1547514701-42782101795e'), $u('photo-1490474418585-ba9bad8fd0ea')],
+            'Crisps & Nuts' => [$u('photo-1596040033229-a9821ebd058d'), $u('photo-1506368249639-73a05d6f6488')],
+            'Biscuits & Sweets' => [$u('photo-1509440159596-0249088772ff'), $u('photo-1596040033229-a9821ebd058d')],
+            'Cereals' => [$u('photo-1567620905732-2d1ec7ab7445'), $u('photo-1509440159596-0249088772ff')],
+            'Spreads & Honey' => [$u('photo-1596040033229-a9821ebd058d'), $u('photo-1506368249639-73a05d6f6488')],
+            'Oils & Vinegar' => [$u('photo-1506368249639-73a05d6f6488'), $u('photo-1474979266404-7eaacbcd87c5')],
+        ];
+        $items = [
+            'Vegetables' => ['Vine Tomatoes', 'Baby Spinach', 'Broccoli Florets', 'Carrot Bunch', 'Red Onions', 'Bell Pepper Trio', 'Cauliflower', 'Courgettes'],
+            'Fruits' => ['Bananas', 'Gala Apples', 'Strawberries', 'Blueberries', 'Easy Peelers', 'Green Grapes'],
+            'Milk & Eggs' => ['Whole Milk', 'Semi-Skimmed Milk', 'Skimmed Milk', 'Double Cream', 'Free-Range Eggs Half Dozen', 'Free-Range Eggs Ten Pack', 'Clotted Cream'],
+            'Cheese & Yogurt' => ['Mature Cheddar', 'Mozzarella', 'Greek Yogurt', 'Natural Yogurt', 'Parmesan', 'Feta'],
+            'Bread' => ['White Bloomer', 'Wholemeal Loaf', 'Sourdough Boule', 'Butter Croissants', 'Plain Bagels', 'Pitta Breads', 'Tiger Rolls'],
+            'Cakes & Pastries' => ['Victoria Sponge', 'Chocolate Fudge Cake', 'Blueberry Muffins', 'Cinnamon Swirls', 'Shortbread Fingers', 'Lemon Drizzle Loaf'],
+            'Frozen Veg' => ['Garden Peas', 'Sweetcorn', 'Mixed Peppers', 'Frozen Broccoli', 'Spinach Portions', 'Diced Onions', 'Roast Potatoes', 'Cauliflower Rice'],
+            'Ice Cream & Desserts' => ['Vanilla Ice Cream', 'Chocolate Ice Cream', 'Strawberry Sorbet', 'Sticky Toffee Pudding', 'Apple Pie', 'Custard Pots'],
+            'Tea & Coffee' => ['English Breakfast Tea', 'Earl Grey Tea', 'Green Tea', 'Instant Coffee', 'Ground Coffee', 'Decaf Coffee'],
+            'Juices & Soft Drinks' => ['Orange Juice', 'Apple Juice', 'Cloudy Lemonade', 'Sparkling Water', 'Cola', 'Mango Smoothie'],
+            'Crisps & Nuts' => ['Sea Salt Crisps', 'Salt & Vinegar Crisps', 'Dry Roasted Peanuts', 'Cashews', 'Mixed Nuts', 'Salted Popcorn'],
+            'Biscuits & Sweets' => ['Digestive Biscuits', 'Chocolate Chip Cookies', 'Milk Chocolate Bar', 'Gummy Sweets', 'Ginger Nuts', 'Custard Creams'],
+            'Cereals' => ['Cornflakes', 'Wheat Biscuits', 'Honey Oats', 'Fruit Muesli', 'Porridge Oats', 'Chocolate Hoops'],
+            'Spreads & Honey' => ['Strawberry Jam', 'Orange Marmalade', 'Peanut Butter', 'Chocolate Spread', 'Clear Honey', 'Lemon Curd'],
+            'Oils & Vinegar' => ['Olive Oil', 'Vegetable Oil', 'Apple Cider Vinegar', 'Balsamic Vinegar'],
+        ];
+        $volumeCats = ['Milk & Eggs', 'Juices & Soft Drinks', 'Oils & Vinegar'];
+        $weightPacks = ['500g', '1kg', '2kg'];
+        $volumePacks = ['500ml', '1L', '2L'];
+        $mults = [1.0, 1.8, 3.2];
+
+        mt_srand(20261001);
+        $n = 0;
+        foreach ($items as $catName => $names) {
+            $volume = in_array($catName, $volumeCats, true);
+            foreach ($names as $i => $name) {
+                $n++;
+                $slug = Str::slug($name);
+                $packSet = $volume ? $volumePacks : $weightPacks;
+                $roll = mt_rand(1, 100);
+                $take = (str_contains($name, 'Eggs') || $roll <= 60) ? 1 : ($roll <= 85 ? 2 : 3);
+                $base = mt_rand(150, 1899) / 100;
+                $product = Product::updateOrCreate(
+                    ['slug' => $slug],
+                    [
+                        'category_id' => $catIds[$catName],
+                        'name' => $name,
+                        'tagline' => 'Quality '.strtolower($name).' for the weekly shop.',
+                        'hero_image' => $heroes[$catName][$i % 2],
+                        'is_featured' => $n % 12 === 0,
+                        'status' => true,
+                        'sort_order' => 100 + $n,
+                    ]
+                );
+                for ($k = 0; $k < $take; $k++) {
+                    $mrp = round($base * $mults[$k], 2);
+                    $offer = mt_rand(1, 100) <= 40 ? round($mrp * 0.85, 2) : null;
+                    $pack = $take > 1 ? $packSet[$k] : null;
+                    $sku = 'DEMO-'.strtoupper(Str::slug($name.($pack ? ' '.$pack : '')));
+                    $variant = ProductVariant::updateOrCreate(
+                        ['sku' => $sku],
+                        [
+                            'product_id' => $product->id,
+                            'mrp' => $mrp,
+                            'offer_price' => $offer,
+                            'in_stock' => mt_rand(1, 100) <= 92,
+                            'is_default' => $k === 0,
+                            'status' => true,
+                            'sort_order' => $k,
+                        ]
+                    );
+                    $variant->values()->sync($pack ? [$values[$pack]->id] : []);
+                }
             }
         }
     }

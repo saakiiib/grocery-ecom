@@ -44,12 +44,16 @@ class FrontendController extends Controller
         $productsJson = $products->map(fn ($p) => $this->productCard($p))->values();
         $featuredJson = $featured->map(fn ($p) => $this->productCard($p))->values();
         $featuredCards = $products->where('is_featured', true)->values()->map(fn ($p) => $this->productCard($p))->values();
-        $categoriesJson = $categories->values()->map(fn ($c, $i) => [
-            'name' => $c->name,
-            'slug' => $c->slug,
-            'image' => $c->image ? url($c->image) : asset('placeholder.webp'),
-            'count' => $products->where('category_id', $c->id)->count(),
-        ])->values();
+        $categoriesJson = $categories->whereNull('parent_id')->values()->map(function ($c) use ($products, $categories) {
+            $ids = $this->categorySubtreeIds($categories, $c->id);
+
+            return [
+                'name' => $c->name,
+                'slug' => $c->slug,
+                'image' => $c->image ? url($c->image) : asset('placeholder.webp'),
+                'count' => $products->whereIn('category_id', $ids)->count(),
+            ];
+        })->values();
         $offerCards = $products->filter(fn ($p) => collect($p->variants)->contains(fn ($v) => $v->status && $v->offer_price !== null && (float) $v->offer_price < (float) $v->mrp))
             ->take(4)->values()->map(fn ($p) => $this->productCard($p))->values();
         $faqsJson = $this->faqsJson();
@@ -66,9 +70,9 @@ class FrontendController extends Controller
         return spa('frontend.index', compact('productsJson', 'featuredJson', 'featuredCards', 'categoriesJson', 'offerCards', 'faqsJson', 'faqCatsJson', 'galleryJson', 'galleryCatsJson', 'filesJson', 'zonesJson', 'slidersJson'));
     }
 
-    public function collections(Request $request)
+    public function shop(Request $request, ?string $category = null)
     {
-        $this->seo('collections');
+        $this->seo('shop');
 
         $categories = Category::where('status', true)->orderBy('sort_order')->get();
         $products = Product::with(['category', 'images', 'variants.values.group'])
@@ -77,14 +81,37 @@ class FrontendController extends Controller
             ->orderByDesc('id')
             ->get();
 
-        // Header/footer link with ?category=slug — resolved to the category name.
-        $activeCategory = $request->get('category', 'All');
+        // Parent/child tree for the shop pills. Parents render first, children as chips.
+        $parents = $categories->whereNull('parent_id')->values();
+
+        // Pretty paths: /shop/{category-slug} filters, /shop/offers shows offers.
+        // Plain query params (?category=, ?only_offers=1) still work but 301 to
+        // the pretty URL so only one canonical address exists. A parent selection
+        // includes every descendant category's products.
+        if ($category !== null && $category !== 'offers' && ! $categories->firstWhere('slug', $category)) {
+            abort(404);
+        }
+        $onlyOffers = $category === 'offers' || $request->boolean('only_offers');
+
+        $activeCategory = $category ?? $request->get('category', 'All');
         $activeCategorySlug = null;
-        if ($activeCategory !== 'All') {
+        $activeParent = null;
+        $descendantIds = null;
+        if ($activeCategory !== 'All' && $activeCategory !== 'offers') {
             $match = $categories->firstWhere('slug', $activeCategory)
                 ?? $categories->first(fn ($c) => strcasecmp($c->name, $activeCategory) === 0);
-            $activeCategory = $match?->name ?? 'All';
-            $activeCategorySlug = $match?->slug;
+            if ($match) {
+                $activeCategory = $match->name;
+                $activeCategorySlug = $match->slug;
+                $descendantIds = $this->categorySubtreeIds($categories, $match->id);
+                $activeParent = $match->parent_id
+                    ? $categories->firstWhere('id', $match->parent_id)
+                    : $match;
+            } else {
+                $activeCategory = 'All';
+            }
+        } elseif ($activeCategory === 'offers') {
+            $activeCategory = 'All';
         }
 
         $search = trim((string) $request->get('q', ''));
@@ -93,14 +120,77 @@ class FrontendController extends Controller
             $sort = 'featured';
         }
 
-        $cards = $products
-            ->when($activeCategorySlug, fn ($c) => $c->filter(fn ($p) => $p->category?->slug === $activeCategorySlug)->values())
+        // Price range filters against the cheapest variant — clamped to the shop bounds.
+        // (Parsed here so the canonical redirects below can carry every filter.)
+        $minPrice = $request->get('min_price');
+        $minPrice = is_numeric($minPrice) && $minPrice >= 0 ? (float) $minPrice : null;
+        $maxPrice = $request->get('max_price');
+        $maxPrice = is_numeric($maxPrice) && $maxPrice >= 0 ? (float) $maxPrice : null;
+
+        $rawPage = $request->get('page');
+        $page = (is_scalar($rawPage) && ctype_digit((string) $rawPage) && (int) $rawPage >= 1) ? (int) $rawPage : 1;
+
+        if ($category === null) {
+            $rest = array_filter([
+                'q' => $search ?: null,
+                'sort' => $sort !== 'featured' ? $sort : null,
+                'min_price' => $minPrice,
+                'max_price' => $maxPrice,
+                'only_offers' => $onlyOffers ? 1 : null,
+                'page' => $page > 1 ? $page : null,
+            ]);
+            if ($activeCategorySlug) {
+                return redirect()->route('shop.category', array_merge(['category' => $activeCategorySlug], $rest), 301);
+            }
+            if ($onlyOffers && $search === '' && $sort === 'featured' && $minPrice === null && $maxPrice === null && $page === 1) {
+                return redirect()->route('shop.offers', [], 301);
+            }
+        }
+
+        // Cheapest-variant price per product — drives the slider bounds and the filter.
+        $withFloors = $products
+            ->when($descendantIds, fn ($c) => $c->filter(fn ($p) => in_array($p->category_id, $descendantIds, true))->values())
+            ->when($onlyOffers, fn ($c) => $c->filter(fn ($p) => $p->variants->contains(fn ($v) => $v->status && $v->offer_price !== null && (float) $v->offer_price < (float) $v->mrp))->values())
             ->when($search !== '', function ($c) use ($search) {
                 $term = mb_strtolower($search);
 
                 return $c->filter(fn ($p) => str_contains(mb_strtolower($p->name.' '.($p->category?->name ?? '').' '.($p->defaultVariant()?->sku ?? '')), $term));
             })
-            ->map(fn ($p) => $this->productCard($p))
+            ->map(fn ($p) => [
+                'product' => $p,
+                'floor' => $p->variants->where('status', true)
+                    ->map(fn ($v) => $v->sellingPrice())
+                    ->filter(fn ($s) => $s !== null)
+                    ->min(),
+            ])
+            ->filter(fn ($row) => $row['floor'] !== null)
+            ->values();
+
+        $priceFloor = (int) floor($withFloors->min('floor') ?? 0);
+        $priceCeil = (int) ceil($withFloors->max('floor') ?? 0);
+
+        // Price range filters against the cheapest variant — clamped to the shop bounds.
+        if ($minPrice !== null) {
+            $minPrice = max($minPrice, $priceFloor);
+        }
+        if ($maxPrice !== null) {
+            $maxPrice = min($maxPrice, $priceCeil);
+        }
+
+        $cards = $withFloors
+            ->when($minPrice !== null || $maxPrice !== null, function ($c) use ($minPrice, $maxPrice) {
+                return $c->filter(function ($row) use ($minPrice, $maxPrice) {
+                    if ($minPrice !== null && $row['floor'] < $minPrice) {
+                        return false;
+                    }
+                    if ($maxPrice !== null && $row['floor'] > $maxPrice) {
+                        return false;
+                    }
+
+                    return true;
+                })->values();
+            })
+            ->map(fn ($row) => $this->productCard($row['product']))
             ->values();
 
         $cards = match ($sort) {
@@ -114,7 +204,36 @@ class FrontendController extends Controller
         $productsJson = $cards;
         $categoriesJson = $categories->map(fn ($c) => $c->name)->values();
 
-        return spa('frontend.collections', compact('categories', 'productsJson', 'activeCategory', 'activeCategorySlug', 'categoriesJson', 'search', 'sort'));
+        // Paged grid with a Load more button — each page keeps everything above
+        // it (?page=2 shows items 1–48), filters reset to page 1, and the
+        // button carries every active filter forward via ?page=.
+        $perPage = 24;
+        $total = $cards->count();
+        $productsJson = $cards->slice(0, $page * $perPage)->values();
+        $shown = $productsJson->count();
+        $hasMore = $total > $page * $perPage;
+
+        $categoryPath = ($category !== null && $category !== 'offers') ? $category : null;
+        $offersPath = $category === 'offers';
+
+        return spa('frontend.shop', compact('categories', 'parents', 'activeParent', 'productsJson', 'activeCategory', 'activeCategorySlug', 'categoriesJson', 'search', 'sort', 'onlyOffers', 'minPrice', 'maxPrice', 'priceFloor', 'priceCeil', 'page', 'perPage', 'total', 'shown', 'hasMore', 'categoryPath', 'offersPath'));
+    }
+
+    /** Offers landing page — the shop with the offers filter pre-selected. */
+    public function shopOffers(Request $request)
+    {
+        return $this->shop($request, 'offers');
+    }
+
+    /** Category id plus every descendant id (parents include children's products). */
+    private function categorySubtreeIds($categories, int $rootId): array
+    {
+        $ids = [$rootId];
+        foreach ($categories->where('parent_id', $rootId) as $child) {
+            $ids = array_merge($ids, $this->categorySubtreeIds($categories, $child->id));
+        }
+
+        return $ids;
     }
 
     public function productShow($slug)
@@ -194,23 +313,11 @@ class FrontendController extends Controller
         return response()->json(['success' => true, 'message' => 'Message received. The shop will reply within one working day.']);
     }
 
-    public function offers()
+    public function refund()
     {
-        $this->seo('offers');
+        $this->seo('refund');
 
-        $products = Product::with(['category', 'images', 'variants.values.group'])
-            ->where('status', true)
-            ->whereHas('variants', fn ($q) => $q->where('status', true)
-                ->whereNotNull('offer_price')
-                ->whereColumn('offer_price', '<', 'mrp'))
-            ->orderBy('sort_order')
-            ->orderByDesc('id')
-            ->get();
-
-        $offerCards = $products->map(fn ($p) => $this->productCard($p))
-            ->sortByDesc(fn ($p) => $p['savePct'] ?? 0)->values();
-
-        return spa('frontend.offers', compact('offerCards'));
+        return spa('frontend.refund');
     }
 
     public function bag()
@@ -334,7 +441,7 @@ class FrontendController extends Controller
         return $p->priceRange() ?? 'On request';
     }
 
-    /** Card shape used by collections grid, featured rail, offers rail, related. */
+    /** Card shape used by shop grid, featured rail, offers rail, related. */
     private function productCard(Product $p): array
     {
         $gallery = $p->relationLoaded('images')

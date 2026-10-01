@@ -20,24 +20,24 @@
             </div>
             <div class="footer-col">
                 <h4>Shop</h4>
-                <a @spa href="{{ route('collections') }}">All groceries</a>
+                <a @spa href="{{ route('shop') }}">Shop all</a>
                 @foreach ($footCats as $c)
-                    <a @spa href="{{ route('collections', ['category' => $c->slug]) }}">{{ $c->name }}</a>
+                    <a @spa href="{{ route('shop.category', ['category' => $c->slug]) }}">{{ $c->name }}</a>
                 @endforeach
-                <a @spa href="{{ route('offers') }}">Weekly offers</a>
+                <a @spa href="{{ route('shop.offers') }}">Offers</a>
             </div>
             <div class="footer-col">
                 <h4>Company</h4>
-                <a @spa href="{{ route('about') }}">Our story</a>
-                <a @spa href="{{ route('contact') }}">Contact us</a>
+                <a @spa href="{{ route('about') }}">About Us</a>
+                <a @spa href="{{ route('contact') }}">Contact Us</a>
                 <a @spa href="{{ route('faq') }}">FAQ</a>
+                <a @spa href="{{ route('privacy') }}">Privacy Policy</a>
+                <a @spa href="{{ route('terms') }}">Terms of Supply</a>
+                <a @spa href="{{ route('refund') }}">Refund Policy</a>
             </div>
             <div class="footer-col">
-                <h4>Account</h4>
-                <a @spa href="{{ route('account') }}">My account</a>
+                <h4>Orders</h4>
                 <a @spa href="{{ route('track') }}">Track order</a>
-                <a @spa href="{{ route('bag') }}">Your bag</a>
-                <a @spa href="{{ route('checkout') }}">Checkout</a>
             </div>
         </div>
         <div class="footer-bottom">

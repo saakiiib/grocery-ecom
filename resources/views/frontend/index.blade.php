@@ -16,8 +16,8 @@
                                 @if ($s['title'])<h1>{!! nl2br(e($s['title'])) !!}</h1>@endif
                                 @if ($s['subtitle'])<p>{{ $s['subtitle'] }}</p>@endif
                                 <div class="hero-ctas">
-                                    @if ($s['btn_text'])<a @spa href="{{ $s['btn_url'] ?: route('collections') }}" class="btn btn-primary">{{ $s['btn_text'] }} <span aria-hidden="true">→</span></a>@endif
-                                    @if ($s['btn_text2'])<a @spa href="{{ $s['btn_url2'] ?: route('collections') }}" class="btn btn-outline">{{ $s['btn_text2'] }}</a>@endif
+                                    @if ($s['btn_text'])<a @spa href="{{ $s['btn_url'] ?: route('shop') }}" class="btn btn-primary">{{ $s['btn_text'] }} <span aria-hidden="true">→</span></a>@endif
+                                    @if ($s['btn_text2'])<a @spa href="{{ $s['btn_url2'] ?: route('shop') }}" class="btn btn-outline">{{ $s['btn_text2'] }}</a>@endif
                                 </div>
                             </div>
                         </div>
@@ -70,7 +70,7 @@
                 </div>
                 <div class="cat-grid">
                     @foreach ($categoriesJson as $c)
-                        <a @spa href="{{ route('collections', ['category' => $c['slug']]) }}" class="cat-card">
+                        <a @spa href="{{ route('shop.category', ['category' => $c['slug']]) }}" class="cat-card">
                             <img src="{{ $c['image'] }}" alt="{{ $c['name'] }}" loading="lazy">
                             <div class="cat-card-overlay">
                                 <span class="cat-card-label">{{ $c['count'] }} product{{ $c['count'] === 1 ? '' : 's' }}</span>
@@ -98,7 +98,7 @@
                     @endforeach
                 </div>
                 <div class="text-center" style="margin-top: 2rem;">
-                    <a @spa href="{{ route('collections') }}" class="btn btn-ghost">Explore the shop</a>
+                    <a @spa href="{{ route('shop') }}" class="btn btn-ghost">Explore the shop</a>
                 </div>
             </div>
         </section>
@@ -118,20 +118,20 @@
                     @endforeach
                 </div>
                 <div class="text-center" style="margin-top: 2rem;">
-                    <a @spa href="{{ route('offers') }}" class="btn btn-ghost">All weekly offers</a>
+                    <a @spa href="{{ route('shop.offers') }}" class="btn btn-ghost">All offers</a>
                 </div>
             </div>
         </section>
     @endif
 
-    <section class="section">
+    <section class="section" style="background: var(--muted);">
         <div class="container text-center">
             <p class="section-label">Ready when you are</p>
             <h2 class="section-title" style="max-width: 520px; margin-left: auto; margin-right: auto;">Good food starts with better ingredients.</h2>
-            <p class="section-desc" style="margin-bottom: 1.5rem;">Browse the full market or jump straight into this week's offers.</p>
+            <p class="section-desc" style="margin-bottom: 1.5rem;">Browse the full market or jump straight into our offers.</p>
             <div class="flex items-center gap-2" style="justify-content: center; flex-wrap: wrap;">
-                <a @spa href="{{ route('collections') }}" class="btn btn-dark">Start shopping</a>
-                <a @spa href="{{ route('offers') }}" class="btn btn-ghost">Weekly offers</a>
+                <a @spa href="{{ route('shop') }}" class="btn btn-dark">Start shopping</a>
+                <a @spa href="{{ route('shop.offers') }}" class="btn btn-ghost">Offers</a>
             </div>
         </div>
     </section>

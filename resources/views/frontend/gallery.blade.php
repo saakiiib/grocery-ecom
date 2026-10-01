@@ -14,7 +14,7 @@
         @if ($galleryJson->isNotEmpty())
             <div class="cat-grid">
                 @foreach ($galleryJson as $g)
-                    <div class="cat-card" style="cursor:default;">
+                    <div class="cat-card" data-gallery-item data-full="{{ $g['src'] }}" data-caption="{{ $g['caption'] ?? '' }}" role="button" tabindex="0" aria-label="View larger: {{ $g['caption'] ?? 'Gallery image' }}">
                         <img src="{{ $g['src'] }}" alt="{{ $g['caption'] ?? 'Gallery image' }}" loading="lazy">
                         @if ($g['caption'])
                             <div class="cat-card-overlay">

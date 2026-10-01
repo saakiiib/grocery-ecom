@@ -279,7 +279,7 @@ test('sliders store full slide content, sort and toggle', function () {
         'title' => 'Good food.',
         'subtitle' => 'Bring home the good stuff.',
         'btn_text' => 'Shop groceries',
-        'btn_url' => '/collections',
+        'btn_url' => '/shop',
         'btn_text2' => 'Offers',
         'btn_url2' => '/about',
         'image' => UploadedFile::fake()->image('hero.jpg', 1920, 800),
