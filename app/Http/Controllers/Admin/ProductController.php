@@ -32,6 +32,17 @@ class ProductController extends Controller
                 ->addColumn('category', fn ($row) => $row->category?->name ?? '<span class="text-muted">-</span>')
                 ->addColumn('sku', fn ($row) => $row->defaultVariant()?->sku ?? '<span class="text-muted">-</span>')
                 ->addColumn('price', fn ($row) => $row->priceRange() ?? '<span class="text-muted">No variants</span>')
+                ->addColumn('stock', function ($row) {
+                    $total = $row->variants->count();
+                    if ($total === 0) {
+                        return '<span class="text-muted">-</span>';
+                    }
+                    $out = $row->variants->where('in_stock', false)->count();
+
+                    return $out === 0
+                        ? '<span class="badge bg-success">In stock</span>'
+                        : '<span class="badge bg-warning text-dark">'.$out.' of '.$total.' out</span>';
+                })
                 ->addColumn('featured', function ($row) {
                     $checked = $row->is_featured ? 'checked' : '';
 
@@ -54,7 +65,7 @@ class ProductController extends Controller
                             </ul>
                         </div>';
                 })
-                ->rawColumns(['image', 'category', 'sku', 'price', 'featured', 'status', 'action'])
+                ->rawColumns(['image', 'category', 'sku', 'price', 'stock', 'featured', 'status', 'action'])
                 ->make(true);
         }
 

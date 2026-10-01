@@ -2,9 +2,12 @@
 
 namespace App\Models;
 
+use App\Mail\OrderDelivered;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Mail\Mailable;
+use Illuminate\Support\Facades\Mail;
 
 class Order extends Model
 {
@@ -90,7 +93,30 @@ class Order extends Model
 
         $this->settlePoints($to->slug);
 
+        if ($to->slug === 'delivered') {
+            static::sendMail($this->receiptEmail(), new OrderDelivered($this));
+        }
+
         return $history;
+    }
+
+    /** Checkout email, else the shopper's account email — null when unknown. */
+    public function receiptEmail(): ?string
+    {
+        return $this->email ?: $this->user?->email;
+    }
+
+    /** Fire-and-forget mail — a down mailer must never break orders. */
+    public static function sendMail(?string $to, Mailable $mail): void
+    {
+        if (! $to) {
+            return;
+        }
+        try {
+            Mail::to($to)->send($mail);
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 
     /**

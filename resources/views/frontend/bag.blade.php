@@ -41,7 +41,7 @@
                                     <button type="button" data-bag-plus aria-label="Increase">+</button>
                                 </div>
                             </div>
-                            <div>
+                            <div class="cart-item-actions">
                                 <div class="cart-item-price">£{{ number_format($item['line_total'], 2) }}</div>
                                 <button type="button" class="icon-btn" data-bag-remove aria-label="Remove" title="Remove">
                                     <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>

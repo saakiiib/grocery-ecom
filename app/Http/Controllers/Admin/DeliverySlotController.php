@@ -25,7 +25,7 @@ class DeliverySlotController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $this->validated($request);
-        $data['sort_order'] = DeliverySlot::max('sort_order') + 1;
+        $data['sort_order'] = $data['sort_order'] ?? ((int) DeliverySlot::max('sort_order') + 1);
         DeliverySlot::create($data);
 
         return redirect()->route('delivery-slots.index')->with('status', 'Delivery slot added.');

@@ -226,7 +226,7 @@ class OptionGroupController extends Controller
 
     public function manage($id)
     {
-        $group = OptionGroup::with(['values' => fn ($q) => $q->orderBy('sort_order')->orderBy('id')])->findOrFail($id);
+        $group = OptionGroup::with(['values' => fn ($q) => $q->withCount('variants')->orderBy('sort_order')->orderBy('id')])->findOrFail($id);
 
         return view('admin.option-groups.manage', compact('group'));
     }

@@ -107,7 +107,7 @@
         <div class="card-body">
             <div class="table-responsive">
                 <table id="productTable" class="table table-bordered table-striped w-100">
-                    <thead><tr><th>Sl</th><th>Image</th><th>Name</th><th>Default SKU</th><th>Category</th><th>Price</th><th>Featured</th><th>Status</th><th>Action</th></tr></thead>
+                    <thead><tr><th>Sl</th><th>Image</th><th>Name</th><th>Default SKU</th><th>Category</th><th>Price</th><th>Stock</th><th>Featured</th><th>Status</th><th>Action</th></tr></thead>
                 </table>
             </div>
         </div>
@@ -174,6 +174,7 @@ $(function () {
             { data: 'sku', name: 'sku', orderable: false, searchable: false },
             { data: 'category', name: 'category' },
             { data: 'price', orderable: false, searchable: false },
+            { data: 'stock', orderable: false, searchable: false },
             { data: 'featured', orderable: false, searchable: false },
             { data: 'status', orderable: false, searchable: false },
             { data: 'action', orderable: false, searchable: false },

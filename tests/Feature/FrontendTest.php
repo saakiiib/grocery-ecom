@@ -1,7 +1,10 @@
 <?php
 
 use App\Models\Category;
+use App\Models\CompanyDetails;
 use App\Models\Contact;
+use App\Models\Faq;
+use App\Models\FaqCategory;
 use App\Models\Gallery;
 use App\Models\GalleryCategory;
 use App\Models\OptionGroup;
@@ -39,7 +42,7 @@ test('all public pages render with layout shell', function () {
 
     foreach ([
         '/', '/about', '/shop', '/product/lamb-leg',
-        '/gallery', '/bag', '/checkout', '/faq',
+        '/gallery', '/bag', '/checkout', '/faq', '/loyalty', '/delivery',
         '/contact', '/privacy-policy', '/terms-of-service', '/refund-policy', '/login',
     ] as $uri) {
         $this->get($uri)->assertOk($uri);
@@ -176,8 +179,8 @@ test('home category cards show parents only with subtree counts', function () {
 
     $html = $this->get('/')->assertOk()->getContent();
     expect($html)->toContain('/shop/fresh-meat')
-        // The child link appears once (footer) — never as a home category card.
-        ->and(substr_count($html, '/shop/lamb'))->toBe(1);
+        // Child categories appear nowhere — home grid and footer are parents-only.
+        ->and(substr_count($html, '/shop/lamb'))->toBe(0);
 });
 
 test('gallery items carry lightbox data', function () {
@@ -205,6 +208,33 @@ test('account portal renders sidebar tabs and panels', function () {
         ->toContain('data-portal-tab="password"')
         ->toContain('data-portal-panel="orders"')
         ->toContain('egfPortalInit');
+});
+
+test('shoppers can favourite, list and move favourites to the bag', function () {
+    $product = seedGrocery();
+    $variant = $product->variants()->firstOrFail();
+    $user = User::create([
+        'name' => 'Favs', 'email' => 'favs@example.com',
+        'password' => bcrypt('password'), 'user_type' => 0,
+    ]);
+
+    $this->actingAs($user)->postJson(route('favourites.toggle'), ['product_id' => $product->id])
+        ->assertOk()->assertJson(['favourited' => true]);
+
+    $this->actingAs($user)->get(route('favourites'))->assertOk()->assertSee('Lamb Leg', false);
+
+    $this->actingAs($user)->post(route('favourites.move-all'))->assertRedirect(route('bag'));
+    expect(session('bag'))->toBe([$variant->id => 1]);
+
+    $this->actingAs($user)->postJson(route('favourites.toggle'), ['product_id' => $product->id])
+        ->assertOk()->assertJson(['favourited' => false]);
+
+    $this->actingAs($user)->get(route('favourites'))->assertOk()->assertSee('Nothing saved yet', false);
+});
+
+test('guests are sent to sign in for favourites', function () {
+    $this->get(route('favourites'))->assertRedirect(route('login'));
+    $this->postJson(route('favourites.toggle'), ['product_id' => 1])->assertUnauthorized();
 });
 
 test('shop price range narrows by cheapest variant', function () {
@@ -289,4 +319,47 @@ test('contact form validates and stores into contacts inbox', function () {
 
     $c = Contact::where('email', 'jane@example.co.uk')->firstOrFail();
     expect($c->subject)->toBe('Callback request')->and($c->postcode)->toBe('GL54 3AA');
+});
+
+test('footer shows company social icons and pages show the map', function () {
+    CompanyDetails::firstOrCreate()->update([
+        'facebook' => 'https://facebook.com/egf',
+        'google_map' => '<iframe src="https://maps.example.com"></iframe>',
+    ]);
+
+    $home = $this->get('/')->assertOk()->getContent();
+    expect($home)->toContain('social-row')
+        ->toContain('https://facebook.com/egf')
+        ->toContain('maps.example.com')
+        ->toContain('data-cookie-banner')
+        ->toContain('Accept all');
+
+    $contact = $this->get('/contact')->assertOk()->getContent();
+    expect($contact)->toContain('maps.example.com')
+        ->toContain('contact-grid');
+});
+
+test('faq page renders a grouped accordion', function () {
+    $c = FaqCategory::create(['name' => 'Orders', 'slug' => 'orders', 'status' => true, 'sort_order' => 0]);
+    Faq::create([
+        'faq_category_id' => $c->id, 'question' => 'Is there a minimum order?',
+        'answer' => 'Yes, £15 for delivery.', 'badge' => 'Orders',
+        'status' => true, 'sort_order' => 0,
+    ]);
+
+    $html = $this->get('/faq')->assertOk()->getContent();
+    expect($html)->toContain('faq-item')
+        ->toContain('Is there a minimum order?')
+        ->toContain('Yes, £15 for delivery.');
+});
+
+test('loyalty and delivery pages show live rates and minimums', function () {
+    $loyalty = $this->get('/loyalty')->assertOk()->getContent();
+    expect($loyalty)->toContain('How it works')
+        ->toContain('point per £1');
+
+    $delivery = $this->get('/delivery')->assertOk()->getContent();
+    expect($delivery)->toContain('Minimum order')
+        ->toContain('£15.00')
+        ->toContain('£50.00');
 });

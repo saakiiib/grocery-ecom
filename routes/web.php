@@ -4,6 +4,7 @@ use App\Http\Controllers\AccountController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\BagController;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\FavouriteController;
 use App\Http\Controllers\FrontendController;
 use App\Http\Controllers\HomeController;
 use Illuminate\Support\Facades\Auth;
@@ -59,9 +60,14 @@ Route::post('/account/orders/{number}/pay', [AccountController::class, 'pay'])->
 Route::post('/account/orders/{number}/cancel', [AccountController::class, 'cancel'])->name('account.cancel');
 Route::post('/account/profile', [AccountController::class, 'profile'])->name('account.profile');
 Route::post('/account/password', [AccountController::class, 'password'])->name('account.password');
+Route::get('/favourites', [FavouriteController::class, 'index'])->name('favourites');
+Route::post('/favourites/toggle', [FavouriteController::class, 'toggle'])->name('favourites.toggle');
+Route::post('/favourites/move-all', [FavouriteController::class, 'moveAll'])->name('favourites.move-all');
 Route::get('/faq', [FrontendController::class, 'faq'])->name('faq');
 Route::get('/track', [FrontendController::class, 'track'])->name('track');
 Route::post('/track', [FrontendController::class, 'trackLookup'])->middleware('throttle:20,1')->name('track.lookup');
+Route::get('/loyalty', [FrontendController::class, 'loyalty'])->name('loyalty');
+Route::get('/delivery', [FrontendController::class, 'delivery'])->name('delivery');
 Route::get('/contact', [FrontendController::class, 'contact'])->name('contact');
 Route::post('/contact', [FrontendController::class, 'contactStore'])->name('contact.store');
 

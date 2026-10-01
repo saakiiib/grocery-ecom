@@ -30,6 +30,8 @@
 
 @include('frontend.footer')
 
+@include('frontend.partials.cookie-banner')
+
 @php
     $egfCatalog = \App\Models\Product::with(['category:id,name', 'variants' => fn ($q) => $q->where('status', true)->orderBy('sort_order')])
         ->where('status', true)
@@ -59,6 +61,8 @@
         bagUpdate: "{{ route('bag.update') }}",
         bagRemove: "{{ route('bag.remove') }}",
         checkout: "{{ route('checkout') }}",
+        favToggle: "{{ route('favourites.toggle') }}",
+        login: "{{ route('login') }}",
         product: "{{ url('/product') }}"
     };
     window.EGF_ASSETS = { placeholder: "{{ asset('placeholder.webp') }}" };

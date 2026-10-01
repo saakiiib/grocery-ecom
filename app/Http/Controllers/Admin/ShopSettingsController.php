@@ -7,7 +7,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 
 class ShopSettingsController extends Controller
 {
@@ -56,7 +55,6 @@ class ShopSettingsController extends Controller
         foreach ($data as $key => $value) {
             Setting::put($key, $value);
         }
-        Cache::flush();
 
         return redirect()->route('shop-settings.edit')->with('status', 'Shop settings saved. Empty payment keys hide that method at checkout automatically.');
     }

@@ -15,6 +15,7 @@
                         <h4 class="card-title mb-0 flex-grow-1">Order {{ $order->number }}</h4>
                         @php $st = $order->status; @endphp
                         <span class="badge fs-6" style="background:{{ $st?->color ?? '#1A2E22' }};">{{ $st?->name ?? ucfirst($order->status_slug) }}</span>
+                        <button type="button" class="btn btn-soft-secondary btn-sm ms-2" onclick="window.print()">Print</button>
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
@@ -48,7 +49,7 @@
                                 <h6>Deliver to</h6>
                                 <p class="mb-1"><strong>{{ $order->name }}</strong> · {{ $order->phone }}</p>
                                 <p class="mb-1">{{ $order->address }}, {{ $order->city }} {{ $order->postcode }}</p>
-                                <p class="mb-1">Slot: <strong>{{ $order->delivery_date->format('D j M Y') }}</strong> · {{ $order->delivery_slot_label }}</p>
+                                <p class="mb-1">Slot: <strong>{{ $order->delivery_date ? $order->delivery_date->format('D j M Y') : '—' }}</strong> · {{ $order->delivery_slot_label }}</p>
                                 @if ($order->notes)<p class="mb-1 text-muted">Note: {{ $order->notes }}</p>@endif
                                 @if ($order->user)<p class="mb-0 text-muted">Account: {{ $order->user->name }} ({{ $order->user->email }})</p>@endif
                             </div>

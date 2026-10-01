@@ -10,6 +10,7 @@
         @endif
         <img src="{{ $p['imgAbs'] }}" alt="{{ $p['name'] }}" loading="lazy" onerror="this.onerror=null;this.src='{{ url('placeholder.webp') }}'">
     </a>
+    <button type="button" class="product-fav {{ ($p['favourited'] ?? false) ? 'active' : '' }}" data-fav-toggle data-product-id="{{ $p['id'] }}" aria-label="Save to favourites" aria-pressed="{{ ($p['favourited'] ?? false) ? 'true' : 'false' }}"><x-icon name="heart" /></button>
     <div class="product-body">
         <span class="product-meta">{{ $p['category'] }}</span>
         <a @spa href="{{ $p['url'] }}" class="product-name">{{ $p['name'] }}</a>

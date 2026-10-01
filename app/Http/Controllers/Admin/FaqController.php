@@ -18,7 +18,7 @@ class FaqController extends Controller
                 $q->where('faq_category_id', $request->faq_category_id);
             }
 
-            return DataTables::of($q->get())
+            return DataTables::of($q)
                 ->addIndexColumn()
                 ->addColumn('category', fn ($r) => $r->category?->name ?? '-')
                 ->addColumn('question', fn ($r) => strlen($r->question) > 80 ? substr($r->question, 0, 80).'...' : $r->question)

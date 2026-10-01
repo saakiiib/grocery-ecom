@@ -55,6 +55,10 @@
                         </div>
                     </div>
                     <div class="form-group">
+                        <label for="co-email">Email <span class="text-muted">(for your receipt)</span></label>
+                        <input type="email" id="co-email" name="email" maxlength="255" value="{{ old('email', $shopper->email ?? '') }}" placeholder="you@example.com" autocomplete="email">
+                    </div>
+                    <div class="form-group">
                         <label for="co-address">Street address</label>
                         <input type="text" id="co-address" name="address" required maxlength="500" value="{{ old('address', $shopper->address ?? '') }}" placeholder="Flat, street" autocomplete="street-address">
                     </div>
@@ -121,36 +125,31 @@
                             <span class="pay-card-tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
                             <span class="pay-card-flag">Most flexible</span>
                         </label>
-                        @if ($stripeOn)
-                            <label class="pay-card">
-                                <input type="radio" name="payment_method" value="stripe">
-                                <span class="pay-card-icon">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
-                                </span>
-                                <span class="pay-card-text"><strong>Card now</strong><span class="text-muted">Visa · Mastercard · Amex</span></span>
-                                <span class="pay-card-tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+                        <label class="pay-card @if (! $stripeOn) pay-card-off @endif">
+                            <input type="radio" name="payment_method" value="stripe" @disabled(! $stripeOn)>
+                            <span class="pay-card-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+                            </span>
+                            <span class="pay-card-text"><strong>Card now</strong><span class="text-muted">Visa · Mastercard · Amex</span></span>
+                            <span class="pay-card-tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+                            @if ($stripeOn)
                                 <span class="pay-card-flag">Fast &amp; secure</span>
-                            </label>
-                        @endif
-                        @if ($paypalOn)
-                            <label class="pay-card pay-card-paypal">
-                                <input type="radio" name="payment_method" value="paypal">
-                                <span class="pay-card-icon paypal-mark"><em>Pay</em><strong>Pal</strong></span>
-                                <span class="pay-card-text"><strong>PayPal</strong><span class="text-muted">Buyer protection included</span></span>
-                                <span class="pay-card-tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
-                            </label>
-                        @endif
+                            @else
+                                <span class="pay-card-flag">Switching on soon</span>
+                            @endif
+                        </label>
+                        <label class="pay-card pay-card-paypal @if (! $paypalOn) pay-card-off @endif">
+                            <input type="radio" name="payment_method" value="paypal" @disabled(! $paypalOn)>
+                            <span class="pay-card-icon paypal-mark"><em>Pay</em><strong>Pal</strong></span>
+                            <span class="pay-card-text"><strong>PayPal</strong><span class="text-muted">Buyer protection included</span></span>
+                            <span class="pay-card-tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+                            @if (! $paypalOn)
+                                <span class="pay-card-flag">Switching on soon</span>
+                            @endif
+                        </label>
                     </div>
                     @if (! $stripeOn || ! $paypalOn)
-                        <p class="text-muted" style="font-size:13px;margin:-0.25rem 0 1rem;">
-                            @if (! $stripeOn && ! $paypalOn)
-                                Online payments are being switched on — cash on delivery works today.
-                            @elseif (! $stripeOn)
-                                Card payments are being switched on — PayPal or cash on delivery work today.
-                            @else
-                                PayPal is being switched on — card or cash on delivery work today.
-                            @endif
-                        </p>
+                        <p class="text-muted" style="font-size:13px;margin:-0.25rem 0 1rem;">Online payments go live as soon as the shop connects its card and PayPal accounts — cash on delivery works today.</p>
                     @endif
                     <div class="form-group" id="co-card-wrap" style="display:none;">
                         <label>Card details</label>
@@ -276,6 +275,7 @@
             return {
                 name: document.getElementById('co-name').value,
                 phone: document.getElementById('co-phone').value,
+                email: document.getElementById('co-email').value,
                 address: document.getElementById('co-address').value,
                 city: document.getElementById('co-city').value,
                 postcode: document.getElementById('co-postcode').value,

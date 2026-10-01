@@ -135,5 +135,17 @@
             </div>
         </div>
     </section>
+
+    @if ($company->google_map)
+        <section class="section">
+            <div class="container">
+                <div class="section-header">
+                    <p class="section-label">Visit us</p>
+                    <h2 class="section-title">Find the market</h2>
+                </div>
+                <div class="map-embed">{!! $company->google_map !!}</div>
+            </div>
+        </section>
+    @endif
 </main>
 @endsection

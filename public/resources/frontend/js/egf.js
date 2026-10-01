@@ -828,6 +828,58 @@
     });
   }
 
+  /* ---------------- Cookie consent (localStorage, no dependencies) ---------------- */
+  function initCookieBanner() {
+    var bar = document.querySelector('[data-cookie-banner]');
+    if (!bar || bar._egfBound) return;
+    bar._egfBound = true;
+    var choice = null;
+    try { choice = window.localStorage.getItem('egf-consent'); } catch (e) { choice = null; }
+    if (choice) return;
+    bar.hidden = false;
+    function decide(value) {
+      try { window.localStorage.setItem('egf-consent', value); } catch (e) {}
+      bar.hidden = true;
+    }
+    var accept = bar.querySelector('[data-cookie-accept]');
+    var decline = bar.querySelector('[data-cookie-decline]');
+    if (accept) accept.addEventListener('click', function () { decide('accepted'); });
+    if (decline) decline.addEventListener('click', function () { decide('declined'); });
+  }
+
+  /* ---------------- Favourites (heart toggle, shoppers only) ---------------- */
+  function initFavToggles() {
+    if (window._egfFavBound) return;
+    window._egfFavBound = true;
+    document.addEventListener('click', function (e) {
+      var btn = e.target.closest ? e.target.closest('[data-fav-toggle]') : null;
+      if (!btn || !routes().favToggle) return;
+      e.preventDefault();
+      var pid = btn.dataset.productId;
+      fetch(routes().favToggle, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf(), 'Accept': 'application/json' },
+        body: JSON.stringify({ product_id: parseInt(pid, 10) })
+      }).then(function (res) {
+        if (res.status === 401) {
+          window.location.href = routes().login || '/login';
+          return null;
+        }
+        return res.json().then(function (json) {
+          if (!res.ok) throw json;
+          return json;
+        });
+      }).then(function (data) {
+        if (!data) return;
+        document.querySelectorAll('[data-fav-toggle][data-product-id="' + pid + '"]').forEach(function (b) {
+          b.classList.toggle('active', !!data.favourited);
+          b.setAttribute('aria-pressed', data.favourited ? 'true' : 'false');
+        });
+        showToast(data.message || (data.favourited ? 'Saved to favourites.' : 'Removed from favourites.'));
+      }).catch(function (err) { showToast((err && err.message) || 'Please sign in to save favourites.'); });
+    });
+  }
+
   /* ---------------- Sticky header + reveal ---------------- */
   function initStickyHeader() {
     var header = document.querySelector('.site-header');
@@ -867,6 +919,8 @@
     initShopFilters();
     initPriceSlider();
     initGalleryLightbox();
+    initCookieBanner();
+    initFavToggles();
     renderBagPage();
     initHeroSlider();
     initSearchTriggers();

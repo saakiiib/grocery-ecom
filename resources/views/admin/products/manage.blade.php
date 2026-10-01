@@ -58,14 +58,14 @@
                             <button type="button" id="attrSave" class="btn btn-sm btn-outline-primary ms-2">Save details</button>
                         </div>
                         <div class="col-12"><label class="form-label">Hero Image</label><input type="file" class="form-control" name="hero_image" accept="image/*">
-                            @if ($product->hero_image)<img src="{{ $product->hero_image }}" class="img-thumbnail mt-2" style="max-width:200px;">
+                            @if ($product->hero_image)<img src="{{ url($product->hero_image) }}" class="img-thumbnail mt-2" style="max-width:200px;">
                             <div class="mt-2"><button type="button" class="btn btn-sm btn-outline-danger manage-remove-file" data-field="hero_image">Remove image</button></div>@endif</div>
                         <div class="col-12"><hr><h6>SEO (frontend meta tags)</h6></div>
                         <div class="col-md-6"><label class="form-label">Meta Title</label><input type="text" class="form-control" name="meta_title" value="{{ $product->meta_title }}"></div>
                         <div class="col-md-6"><label class="form-label">Meta Keywords</label><input type="text" class="form-control" name="meta_keywords" value="{{ $product->meta_keywords }}"></div>
                         <div class="col-md-8"><label class="form-label">Meta Description</label><textarea class="form-control" name="meta_description" rows="2">{{ $product->meta_description }}</textarea></div>
                         <div class="col-md-4"><label class="form-label">Meta Image</label><input type="file" class="form-control" name="meta_image" accept="image/*">
-                            @if ($product->meta_image)<img src="{{ $product->meta_image }}" class="img-thumbnail mt-2" style="max-width:150px;">
+                            @if ($product->meta_image)<img src="{{ url($product->meta_image) }}" class="img-thumbnail mt-2" style="max-width:150px;">
                             <div class="mt-2"><button type="button" class="btn btn-sm btn-outline-danger manage-remove-file" data-field="meta_image">Remove image</button></div>@endif</div>
                     </div>
                     <div class="text-end mt-3"><button type="button" id="saveBasic" class="btn btn-primary">Save Basic + SEO</button></div>

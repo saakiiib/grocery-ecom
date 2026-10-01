@@ -77,7 +77,7 @@ class TestimonialController extends Controller
             'designation' => $request->designation,
             'review' => $request->review,
             'image' => $this->uploadImage($request) ?? null,
-            'sort_order' => Testimonial::max('sort_order') + 1,
+            'sort_order' => (int) Testimonial::max('sort_order') + 1,
             'is_active' => true,
         ]);
 
@@ -129,7 +129,7 @@ class TestimonialController extends Controller
     public function destroy($id)
     {
         $testimonial = Testimonial::findOrFail($id);
-        if ($testimonial->image && file_exists(public_path(ltrim($testimonial->image, '/')))) {
+        if ($testimonial->image && $testimonial->image !== 'placeholder.webp' && file_exists(public_path(ltrim($testimonial->image, '/')))) {
             @unlink(public_path(ltrim($testimonial->image, '/')));
         }
         $testimonial->delete();

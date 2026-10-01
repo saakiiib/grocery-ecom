@@ -3,7 +3,17 @@
         ? asset('uploads/company/' . $company->company_logo)
         : null;
     $brand = $company->company_name ?? 'Evergreen Foods';
-    $footCats = \App\Models\Category::where('status', true)->orderBy('sort_order')->take(3)->get(['name', 'slug']);
+    $footCats = \App\Models\Category::where('status', true)->whereNull('parent_id')->orderBy('sort_order')->take(5)->get(['name', 'slug']);
+    $socials = [
+        ['facebook', $company->facebook, 'Facebook'],
+        ['instagram', $company->instagram, 'Instagram'],
+        ['twitter', $company->twitter, 'Twitter'],
+        ['linkedin', $company->linkedin, 'LinkedIn'],
+        ['youtube', $company->youtube, 'YouTube'],
+        ['music', $company->tiktok, 'TikTok'],
+        ['message-circle', $company->whatsapp ? 'https://wa.me/' . preg_replace('/\D/', '', $company->whatsapp) : null, 'WhatsApp'],
+    ];
+    $hasSocials = collect($socials)->contains(fn ($s) => ! empty($s[1]));
 @endphp
 <footer class="site-footer">
     <div class="container">
@@ -16,7 +26,16 @@
                         <small>Fresh living, every day</small>
                     </span>
                 </a>
-                <p>Thoughtfully sourced groceries delivered to your door. Fresh picks, everyday essentials, and a simpler way to shop.</p>
+                {!! $company->footer_content ?? '<p>Thoughtfully sourced groceries delivered to your door. Fresh picks, everyday essentials, and a simpler way to shop.</p>' !!}
+                @if ($hasSocials)
+                    <div class="social-row">
+                        @foreach ($socials as [$icon, $url, $label])
+                            @if ($url)
+                                <a href="{{ $url }}" target="_blank" rel="noopener" aria-label="{{ $label }}" title="{{ $label }}"><x-icon name="{{ $icon }}" /></a>
+                            @endif
+                        @endforeach
+                    </div>
+                @endif
             </div>
             <div class="footer-col">
                 <h4>Shop</h4>
@@ -38,6 +57,8 @@
             <div class="footer-col">
                 <h4>Orders</h4>
                 <a @spa href="{{ route('track') }}">Track order</a>
+                <a @spa href="{{ route('loyalty') }}">Loyalty points</a>
+                <a @spa href="{{ route('delivery') }}">Delivery info</a>
             </div>
         </div>
         <div class="footer-bottom">

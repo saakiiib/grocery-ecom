@@ -21,11 +21,19 @@ class OrderStatusHistory extends Model
 
     public function fromStatus(): ?OrderStatus
     {
-        return $this->from_slug ? OrderStatus::where('slug', $this->from_slug)->first() : null;
+        static $cache = [];
+
+        if (! $this->from_slug) {
+            return null;
+        }
+
+        return $cache['from:'.$this->from_slug] ??= OrderStatus::where('slug', $this->from_slug)->first();
     }
 
     public function toStatus(): ?OrderStatus
     {
-        return OrderStatus::where('slug', $this->to_slug)->first();
+        static $cache = [];
+
+        return $cache['to:'.$this->to_slug] ??= OrderStatus::where('slug', $this->to_slug)->first();
     }
 }

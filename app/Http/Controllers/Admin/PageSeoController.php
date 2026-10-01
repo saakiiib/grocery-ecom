@@ -23,6 +23,9 @@ class PageSeoController extends Controller
         'privacy' => 'Privacy Policy',
         'terms' => 'Terms of Supply',
         'refund' => 'Refund Policy',
+        'loyalty' => 'Loyalty Points',
+        'delivery' => 'Delivery Information',
+        'favourites' => 'Favourites',
     ];
 
     public function index(Request $request)
@@ -39,7 +42,7 @@ class PageSeoController extends Controller
         PageSeo::whereNotIn('page_key', $validKeys)->delete();
 
         if ($request->ajax()) {
-            return DataTables::of(PageSeo::latest()->get())
+            return DataTables::of(PageSeo::latest())
                 ->addIndexColumn()
                 ->addColumn('image', fn ($row) => $row->meta_image
                     ? '<img src="'.asset($row->meta_image).'" class="img-thumbnail" style="max-width:80px;">'

@@ -45,7 +45,10 @@
             <div class="product-info">
                 <p class="breadcrumb"><a @spa href="{{ $product->category ? route('shop.category', ['category' => $product->category->slug]) : route('shop') }}">← Back to {{ $product->category?->name ?? 'shop' }}</a></p>
                 <p class="meta-label">{{ $product->category?->name ?? '' }}{{ $product->tagline ? ' · ' . $product->tagline : '' }}</p>
-                <h1>{{ $product->name }}</h1>
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;">
+                    <h1 style="margin-bottom:0;">{{ $product->name }}</h1>
+                    <button type="button" class="product-fav product-fav-inline {{ ($productJson['favourited'] ?? false) ? 'active' : '' }}" data-fav-toggle data-product-id="{{ $product->id }}" aria-label="Save to favourites" aria-pressed="{{ ($productJson['favourited'] ?? false) ? 'true' : 'false' }}"><x-icon name="heart" /></button>
+                </div>
                 @if ($product->tagline)<p class="desc">{{ $product->tagline }}</p>@endif
 
                 @php $highlights = $product->highlightList(); @endphp

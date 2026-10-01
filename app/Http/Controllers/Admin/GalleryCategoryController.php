@@ -12,7 +12,7 @@ class GalleryCategoryController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            return DataTables::of(GalleryCategory::withCount('galleries')->orderBy('sort_order')->get())
+            return DataTables::of(GalleryCategory::withCount('galleries')->orderBy('sort_order'))
                 ->addIndexColumn()
                 ->addColumn('count', fn ($r) => $r->galleries_count)
                 ->addColumn('status', fn ($r) => '<div class="form-check form-switch"><input type="checkbox" class="form-check-input toggle-status" data-id="'.$r->id.'" '.($r->status ? 'checked' : '').'></div>')
@@ -59,7 +59,11 @@ class GalleryCategoryController extends Controller
 
     public function destroy($id)
     {
-        GalleryCategory::findOrFail($id)->delete();
+        $cat = GalleryCategory::findOrFail($id);
+        if ($cat->galleries()->exists()) {
+            return response()->json(['message' => 'This category has photos — move them first'], 422);
+        }
+        $cat->delete();
 
         return response()->json(['message' => 'Gallery category deleted']);
     }

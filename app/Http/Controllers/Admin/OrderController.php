@@ -15,9 +15,17 @@ class OrderController extends Controller
     {
         if ($request->ajax()) {
             $orders = Order::with(['status', 'items'])->orderByDesc('id');
+            if ($request->filled('status')) {
+                $orders->where('status_slug', $request->status);
+            }
 
             return DataTables::of($orders)
                 ->addIndexColumn()
+                ->filterColumn('customer', function ($q, $keyword) {
+                    $q->where(fn ($w) => $w->where('name', 'like', "%{$keyword}%")
+                        ->orWhere('phone', 'like', "%{$keyword}%")
+                        ->orWhere('number', 'like', "%{$keyword}%"));
+                })
                 ->addColumn('number', fn ($row) => '<a href="'.route('orders.show', $row->id).'"><strong>'.$row->number.'</strong></a>')
                 ->addColumn('customer', fn ($row) => e($row->name).'<br><small class="text-muted">'.e($row->phone).'</small>')
                 ->addColumn('items', fn ($row) => $row->items->sum('qty').' item'.($row->items->sum('qty') === 1 ? '' : 's'))
@@ -34,7 +42,7 @@ class OrderController extends Controller
 
                     return '<span class="badge" style="background:'.$color.';">'.$name.'</span>';
                 })
-                ->addColumn('date', fn ($row) => $row->created_at->format('d M Y, h:i A').'<br><small class="text-muted">For '.$row->delivery_date->format('D j M').'</small>')
+                ->addColumn('date', fn ($row) => $row->created_at->format('d M Y, h:i A').'<br><small class="text-muted">For '.($row->delivery_date ? $row->delivery_date->format('D j M') : '—').'</small>')
                 ->addColumn('action', function ($row) {
                     return '<a href="'.route('orders.show', $row->id).'" class="btn btn-soft-secondary btn-sm"><i class="ri-eye-fill align-bottom me-1 text-muted"></i> View</a>';
                 })
@@ -42,7 +50,9 @@ class OrderController extends Controller
                 ->make(true);
         }
 
-        return view('admin.orders.index');
+        $statuses = OrderStatus::ordered();
+
+        return view('admin.orders.index', compact('statuses'));
     }
 
     public function show(int $id)
@@ -58,7 +68,7 @@ class OrderController extends Controller
         $order = Order::findOrFail($id);
 
         $data = $request->validate([
-            'status' => 'required|string|exists:order_statuses,slug',
+            'status' => 'required|string|exists:order_statuses,slug,is_active,1',
             'note' => 'nullable|string|max:255',
         ]);
 
@@ -66,7 +76,7 @@ class OrderController extends Controller
 
         return redirect()->route('orders.show', $order->id)->with(
             'status',
-            $changed ? 'Order moved to '.$changed->toStatus()->name.'.' : 'Order is already '.$order->status->name.'.'
+            $changed ? 'Order moved to '.$changed->toStatus()->name.'.' : 'Order is already '.($order->status?->name ?? $order->status_slug).'.'
         );
     }
 }

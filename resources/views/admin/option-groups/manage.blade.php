@@ -77,7 +77,7 @@
                                                 <td>{{ $i + 1 }}</td>
                                                 <td class="fw-semibold">{{ $value->label }}</td>
                                                 <td>
-                                                    @php $used = $value->variants()->count(); @endphp
+                                                    @php $used = $value->variants_count ?? $value->variants()->count(); @endphp
                                                     @if ($used)
                                                         <span class="badge bg-info">{{ $used }} variant{{ $used > 1 ? 's' : '' }}</span>
                                                     @else

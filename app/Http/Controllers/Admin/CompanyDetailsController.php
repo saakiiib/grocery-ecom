@@ -19,11 +19,11 @@ class CompanyDetailsController extends Controller
 
     public function update(Request $request)
     {
-        $data = CompanyDetails::first();
+        $data = CompanyDetails::firstOrCreate();
 
         $request->validate([
             'company_name' => 'required|string|max:255',
-            'business_name' => 'nullable|max:255',
+            'business_name' => 'nullable|string|max:255',
             'opening_cash_balance' => 'nullable|numeric|min:0',
             'email1' => 'nullable|email|max:255',
             'email2' => 'nullable|email|max:255',
@@ -43,7 +43,7 @@ class CompanyDetailsController extends Controller
             'youtube' => 'nullable|string|max:255',
             'tiktok' => 'nullable|string|max:255',
             'tawkto' => 'nullable|string|max:255',
-            'vat_percent' => 'nullable|string|max:255',
+            'vat_percent' => 'nullable|numeric|min:0|max:100',
             'google_appstore_link' => 'nullable|string|max:255',
             'google_play_link' => 'nullable|string|max:255',
             'footer_link' => 'nullable|string|max:255',
@@ -209,7 +209,7 @@ class CompanyDetailsController extends Controller
             'about_us' => 'required|string',
         ]);
 
-        $companyDetails = CompanyDetails::first();
+        $companyDetails = CompanyDetails::firstOrCreate();
         $companyDetails->about_us = $request->about_us;
         $companyDetails->save();
 
@@ -229,7 +229,7 @@ class CompanyDetailsController extends Controller
             'privacy_policy' => 'required|string',
         ]);
 
-        $companyDetails = CompanyDetails::first();
+        $companyDetails = CompanyDetails::firstOrCreate();
         $companyDetails->privacy_policy = $request->privacy_policy;
         $companyDetails->save();
 
@@ -251,7 +251,7 @@ class CompanyDetailsController extends Controller
             'terms_and_conditions' => 'required|string',
         ]);
 
-        $companyDetails = CompanyDetails::first();
+        $companyDetails = CompanyDetails::firstOrCreate();
         $companyDetails->terms_and_conditions = $request->terms_and_conditions;
         $companyDetails->save();
 
@@ -273,7 +273,7 @@ class CompanyDetailsController extends Controller
             'mail_body' => 'required',
         ]);
 
-        $companyDetails = CompanyDetails::first();
+        $companyDetails = CompanyDetails::firstOrCreate();
         $companyDetails->mail_body = $request->mail_body;
         $companyDetails->save();
 
@@ -293,7 +293,7 @@ class CompanyDetailsController extends Controller
             'footer_content' => 'required',
         ]);
 
-        $companyDetails = CompanyDetails::first();
+        $companyDetails = CompanyDetails::firstOrCreate();
         $companyDetails->footer_content = $request->footer_content;
         $companyDetails->save();
 
@@ -313,7 +313,7 @@ class CompanyDetailsController extends Controller
             'copyright' => 'required',
         ]);
 
-        $companyDetails = CompanyDetails::first();
+        $companyDetails = CompanyDetails::firstOrCreate();
         $companyDetails->copyright = $request->copyright;
         $companyDetails->save();
 
@@ -322,7 +322,7 @@ class CompanyDetailsController extends Controller
 
     public function seoMeta()
     {
-        $companyDetails = CompanyDetails::first();
+        $companyDetails = CompanyDetails::firstOrCreate();
 
         return view('admin.company.seo-meta', compact('companyDetails'));
     }
@@ -337,7 +337,7 @@ class CompanyDetailsController extends Controller
             'meta_image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
         ]);
 
-        $companyDetails = CompanyDetails::first();
+        $companyDetails = CompanyDetails::firstOrCreate();
         if (! $companyDetails) {
             $companyDetails = new CompanyDetails;
         }
@@ -352,7 +352,7 @@ class CompanyDetailsController extends Controller
             $metaImage = $request->file('meta_image');
             $metaExt = strtolower($metaImage->getClientOriginalExtension());
             $metaImageName = 'meta_'.time().'.'.(in_array($metaExt, ['jpg', 'jpeg', 'png']) ? $metaExt : 'jpg');
-            $path = public_path('uploads/company/meta/');
+            $path = public_path('uploads/company/');
 
             // Ensure directory exists
             if (! file_exists($path)) {

@@ -72,11 +72,9 @@ class BagController extends Controller
                 'sku' => $variant?->sku,
                 'price' => $price,
                 'line_total' => $lineTotal,
-                'image' => $variant && $variant->image
-                    ? asset('uploads/products/variants/'.$variant->image)
-                    : ($product && $product->hero_image
-                        ? asset('uploads/products/'.$product->hero_image)
-                        : asset('placeholder.webp')),
+                'image' => static::bagImage($variant?->image, 'uploads/products/variants/')
+                    ?? static::bagImage($product?->hero_image, 'uploads/products/')
+                    ?? asset('placeholder.webp'),
             ];
         }
 
@@ -85,6 +83,26 @@ class BagController extends Controller
             'count' => array_sum($bag),
             'subtotal' => round($subtotal, 2),
         ];
+    }
+
+    /**
+     * Resolve a stored image to a URL. Handles absolute URLs (seeded),
+     * paths that already carry their folder (admin uploads), and bare
+     * filenames. Null when there is nothing to resolve.
+     */
+    private static function bagImage(?string $path, string $dir): ?string
+    {
+        if (! $path) {
+            return null;
+        }
+        if (str_starts_with($path, 'http')) {
+            return $path;
+        }
+        if (str_starts_with($path, $dir)) {
+            return asset($path);
+        }
+
+        return asset($dir.'/'.ltrim($path, '/'));
     }
 
     /**

@@ -1,6 +1,12 @@
 @extends('frontend.layout')
 @section('title', 'Contact us')
 
+@php
+    $address = collect([$company->address1, $company->address2, $company->address3])->filter()->implode(', ');
+    $phones = collect([$company->phone1, $company->phone2])->filter()->values();
+    $emails = collect([$company->email1, $company->email2])->filter()->values();
+@endphp
+
 @section('content')
 <main>
     <div class="page-hero">
@@ -10,44 +16,71 @@
             <p>Questions about an order, delivery, or our produce? We're here to help.</p>
         </div>
     </div>
-    <div class="container" style="max-width:560px;padding-bottom:4rem;">
-        <form class="auth-card" onsubmit="return handleContactSubmit(event)">
-            <div id="contact-form-fields">
-                <div class="form-group">
-                    <label for="contact-name">Name</label>
-                    <input type="text" id="contact-name" required placeholder="Your name">
-                </div>
-                <div class="form-group">
-                    <label for="contact-email">Email</label>
-                    <input type="email" id="contact-email" required placeholder="you@example.com">
-                </div>
-                <div class="form-group">
-                    <label for="contact-topic">Topic</label>
-                    <input type="text" id="contact-topic" placeholder="How can we help?">
-                </div>
-                <div class="form-group">
-                    <label for="contact-postcode">Postcode</label>
-                    <input type="text" id="contact-postcode" placeholder="e.g. SW1A 1AA">
-                </div>
-                <div class="form-group">
-                    <label for="contact-message">Message</label>
-                    <textarea id="contact-message" required placeholder="Tell us a little more…"></textarea>
-                </div>
-                <button type="submit" class="btn btn-dark btn-block">Send message</button>
+    <div class="container" style="padding-bottom:4rem;">
+        <div class="contact-grid">
+            <div class="auth-card">
+                <h2 style="font-size:1.25rem;margin-bottom:1.25rem;">Visit or call</h2>
+                @if ($address)
+                    <div class="info-row">
+                        <x-icon name="map-pin" />
+                        <span>{{ $address }}</span>
+                    </div>
+                @endif
+                @foreach ($phones as $phone)
+                    <div class="info-row">
+                        <x-icon name="phone" />
+                        <a href="tel:{{ preg_replace('/\s/', '', $phone) }}">{{ $phone }}</a>
+                    </div>
+                @endforeach
+                @foreach ($emails as $email)
+                    <div class="info-row">
+                        <x-icon name="mail" />
+                        <a href="mailto:{{ $email }}">{{ $email }}</a>
+                    </div>
+                @endforeach
+                @if ($company->opening_time)
+                    <div class="info-row">
+                        <x-icon name="clock" />
+                        <span>{{ $company->opening_time }}</span>
+                    </div>
+                @endif
+                @if ($company->whatsapp)
+                    <a class="btn btn-dark btn-block" style="margin-top:1rem;" href="https://wa.me/{{ preg_replace('/\D/', '', $company->whatsapp) }}" target="_blank" rel="noopener"><x-icon name="message-circle" />Chat on WhatsApp</a>
+                @endif
             </div>
-            <div id="contact-form-success" style="display:none;text-align:center;padding:2rem 0;">
-                <h3>Message received.</h3>
-                <p class="text-muted">Thank you — we'll reply within one working day.</p>
-            </div>
-        </form>
-        <div style="margin-top:2rem;text-align:center;color:var(--muted-foreground);font-size:14px;">
-            @if ($company->email1)<p><strong>Email:</strong> {{ $company->email1 }}</p>@endif
-            @if ($company->phone1)<p style="margin-top:0.35rem;"><strong>Phone:</strong> {{ $company->phone1 }}</p>@endif
-            @if ($company->opening_time)<p style="margin-top:0.35rem;"><strong>Hours:</strong> {{ $company->opening_time }}</p>@endif
+            <form class="auth-card" style="margin:0;" onsubmit="return handleContactSubmit(event)">
+                <h2 style="font-size:1.25rem;margin-bottom:1.25rem;">Send a message</h2>
+                <div id="contact-form-fields">
+                    <div class="form-group">
+                        <label for="contact-name">Name</label>
+                        <input type="text" id="contact-name" required placeholder="Your name">
+                    </div>
+                    <div class="form-group">
+                        <label for="contact-email">Email</label>
+                        <input type="email" id="contact-email" required placeholder="you@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="contact-topic">Topic</label>
+                        <input type="text" id="contact-topic" placeholder="How can we help?">
+                    </div>
+                    <div class="form-group">
+                        <label for="contact-postcode">Postcode</label>
+                        <input type="text" id="contact-postcode" placeholder="e.g. SW1A 1AA">
+                    </div>
+                    <div class="form-group">
+                        <label for="contact-message">Message</label>
+                        <textarea id="contact-message" required placeholder="Tell us a little more…"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-dark btn-block">Send message</button>
+                </div>
+                <div id="contact-form-success" style="display:none;text-align:center;padding:2rem 0;">
+                    <h3>Message received.</h3>
+                    <p class="text-muted">Thank you — we'll reply within one working day.</p>
+                </div>
+            </form>
         </div>
         @if ($company->google_map)
-            <div class="contact-map" style="margin-top:2rem;">{!! $company->google_map !!}</div>
-            <style>.contact-map iframe{width:100%!important;height:380px!important;border:0!important;border-radius:12px;}</style>
+            <div class="map-embed" style="margin-top:1.5rem;">{!! $company->google_map !!}</div>
         @endif
     </div>
 </main>

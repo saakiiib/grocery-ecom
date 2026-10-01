@@ -15,7 +15,7 @@
 
                         <div class="text-center mb-4">
                             <img id="imagePreview"
-                                src="{{ $admin->image ? asset($admin->image) : asset('frontend/images/default-avatar.png') }}"
+                                src="{{ $admin->image ? asset($admin->image) : asset('placeholder.webp') }}"
                                 class="rounded-circle"
                                 style="width:130px; height:130px; object-fit:cover; border:3px solid #e9ecef;">
                             <div class="mt-2">
@@ -98,7 +98,7 @@ $(function () {
             success: function (res) {
                 showSuccess(res.message);
                 if ($('#remove_image').is(':checked')) {
-                    $('#imagePreview').attr('src', "{{ asset('frontend/images/default-avatar.png') }}");
+                    $('#imagePreview').attr('src', "{{ asset('placeholder.webp') }}");
                     $('#remove_image').prop('checked', false);
                     $('#removeImageWrap').hide();
                 }

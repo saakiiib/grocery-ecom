@@ -106,6 +106,10 @@
                 showSuccess("{{ session('success') }}");
             @endif
 
+            @if(session('status'))
+                showSuccess("{{ session('status') }}");
+            @endif
+
             @if(session('error'))
                 showError("{{ session('error') }}");
             @endif

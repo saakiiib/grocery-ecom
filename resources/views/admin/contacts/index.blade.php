@@ -54,6 +54,14 @@
                             <td id="viewSubject"></td>
                         </tr>
                         <tr>
+                            <th>Topic</th>
+                            <td id="viewTopic"></td>
+                        </tr>
+                        <tr>
+                            <th>Postcode</th>
+                            <td id="viewPostcode"></td>
+                        </tr>
+                        <tr>
                             <th>Message</th>
                             <td id="viewMessage"></td>
                         </tr>
@@ -68,6 +76,7 @@
                     </table>
                 </div>
                 <div class="modal-footer">
+                    <a href="#" id="viewReply" class="btn btn-primary">Reply by email</a>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
@@ -112,7 +121,10 @@
                         $('#viewEmail').text(d.email || '-');
                         $('#viewPhone').text(d.phone || '-');
                         $('#viewSubject').text(d.subject);
+                        $('#viewTopic').text(d.topic || '-');
+                        $('#viewPostcode').text(d.postcode || '-');
                         $('#viewMessage').text(d.message);
+                        $('#viewReply').attr('href', 'mailto:' + d.email + '?subject=' + encodeURIComponent('Re: ' + (d.subject || 'Your enquiry')));
                         $('#viewDate').text(new Date(d.created_at).toLocaleString());
                         $('#viewStatus').html(d.status
                             ? '<span class="badge bg-success">Read</span>'

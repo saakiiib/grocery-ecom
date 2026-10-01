@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Models\OrderStatus;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 
@@ -26,10 +27,11 @@ class HomeController extends Controller
     public function adminHome()
     {
         $today = Order::whereDate('created_at', today());
+        $openSlugs = OrderStatus::where('is_active', true)->where('is_final', false)->pluck('slug')->all();
         $stats = [
             'today_orders' => (clone $today)->count(),
-            'today_revenue' => (float) (clone $today)->sum('total'),
-            'open_orders' => Order::whereIn('status_slug', ['new', 'confirmed', 'packed', 'out_for_delivery'])->count(),
+            'today_revenue' => (float) (clone $today)->whereNotIn('status_slug', ['cancelled'])->sum('total'),
+            'open_orders' => Order::whereIn('status_slug', $openSlugs ?: ['new'])->count(),
             'customers' => User::where('user_type', 0)->count(),
         ];
         $recent = Order::with('status')->orderByDesc('id')->take(5)->get();

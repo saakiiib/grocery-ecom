@@ -106,7 +106,7 @@ class CategoryController extends Controller
         $data->meta_description = $request->meta_description;
         $data->meta_keywords = $request->meta_keywords;
         $data->video_url = $request->video_url;
-        $data->sort_order = Category::max('sort_order') + 1;
+        $data->sort_order = (int) Category::max('sort_order') + 1;
 
         if ($request->hasFile('image')) {
             $uploadedFile = $request->file('image');
@@ -167,6 +167,11 @@ class CategoryController extends Controller
             'id' => $id,
         ];
         $info = Category::where($where)->get()->first();
+        if (! $info) {
+            return response()->json([
+                'message' => 'Category not found',
+            ], 404);
+        }
         $info->option_group_ids = $info->optionGroups()->pluck('option_groups.id')->all();
 
         return response()->json($info);
@@ -289,6 +294,12 @@ class CategoryController extends Controller
         if ($hasSubcategories) {
             return response()->json([
                 'message' => 'This category has subcategories',
+            ], 422);
+        }
+
+        if ($data->products()->exists()) {
+            return response()->json([
+                'message' => 'This category has products — move them first',
             ], 422);
         }
 

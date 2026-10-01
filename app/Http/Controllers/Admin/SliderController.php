@@ -103,7 +103,7 @@ class SliderController extends Controller
             'btn_text2' => $request->btn_text2,
             'btn_url2' => $request->btn_url2,
             'image' => $imagePath,
-            'sort_order' => Slider::max('sort_order') + 1,
+            'sort_order' => (int) Slider::max('sort_order') + 1,
             'is_active' => true,
         ]);
 

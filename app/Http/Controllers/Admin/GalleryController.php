@@ -19,7 +19,7 @@ class GalleryController extends Controller
                 $q->where('gallery_category_id', $request->gallery_category_id);
             }
 
-            return DataTables::of($q->get())
+            return DataTables::of($q)
                 ->addIndexColumn()
                 ->addColumn('image', fn ($r) => $r->image
                     ? '<img src="'.url($r->image).'" class="img-thumbnail" style="max-width:100px;">'

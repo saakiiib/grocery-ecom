@@ -76,7 +76,9 @@ class ProductVariantController extends Controller
             $variant->image = $this->storeWebp($request->file('image'), 'uploads/products/variants/', 800, 75);
         }
         $variant->save();
-        $variant->values()->sync($request->value_ids ?? []);
+        if ($request->has('value_ids')) {
+            $variant->values()->sync($request->value_ids ?? []);
+        }
 
         return response()->json(['message' => 'Variant updated']);
     }

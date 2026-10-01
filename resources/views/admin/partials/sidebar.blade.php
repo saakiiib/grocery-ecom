@@ -1,6 +1,6 @@
 <div class="app-menu navbar-menu">
     <div class="navbar-brand-box">
-        <a href="{{ route('dashboard') }}" class="logo logo-dark">
+        <a href="{{ route('admin.dashboard') }}" class="logo logo-dark">
             <span class="logo-sm">
                 <img src="{{ asset('uploads/company/' . $company->company_logo) }}" alt="" height="40">
             </span>
@@ -8,7 +8,7 @@
                 <img src="{{ asset('uploads/company/' . $company->company_logo) }}" alt="" height="40">
             </span>
         </a>
-        <a href="{{ route('dashboard') }}" class="logo logo-light">
+        <a href="{{ route('admin.dashboard') }}" class="logo logo-light">
             <span class="logo-sm">
                 <img src="{{ asset('uploads/company/' . $company->company_logo) }}" alt="" height="40">
             </span>
@@ -50,7 +50,7 @@
                             <div class="collapse menu-dropdown {{ $item['active'] ? 'show' : '' }}" id="{{ $item['id'] }}">
                                 <ul class="nav nav-sm flex-column">
                                     @foreach($item['children'] as $child)
-                                        <li class="nav-item {{ in_array($child['label'], ['Testimonials']) ? 'd-none' : '' }}">
+                                        <li class="nav-item">
                                             <a href="{{ $child['href'] }}" class="nav-link {{ $child['active'] ? 'active' : '' }}">
                                                 {{ $child['label'] }}
                                             </a>

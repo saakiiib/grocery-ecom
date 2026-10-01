@@ -8,6 +8,7 @@ use App\Models\Contact;
 use App\Models\DeliverySlot;
 use App\Models\Faq;
 use App\Models\FaqCategory;
+use App\Models\Favourite;
 use App\Models\Gallery;
 use App\Models\GalleryCategory;
 use App\Models\Order;
@@ -320,6 +321,33 @@ class FrontendController extends Controller
         return spa('frontend.refund');
     }
 
+    /** Public loyalty explainer — live rates from Shop Settings, balance when signed in. */
+    public function loyalty()
+    {
+        $this->seo('loyalty');
+
+        $rates = [
+            'perPound' => UserPoint::perPound(),
+            'value' => UserPoint::value(),
+            'minRedeem' => UserPoint::minRedeem(),
+        ];
+        $balance = auth()->check() ? UserPoint::balance(auth()->id()) : null;
+
+        return spa('frontend.loyalty', compact('rates', 'balance'));
+    }
+
+    /** Delivery info — live fees, minimums and bookable windows, no checkout required. */
+    public function delivery()
+    {
+        $this->seo('delivery');
+
+        $minOrder = Setting::money('delivery_min_order', 15.00);
+        $freeOver = Setting::money('delivery_free_over', 50.00);
+        $slots = DeliverySlot::ordered();
+
+        return spa('frontend.delivery', compact('minOrder', 'freeOver', 'slots'));
+    }
+
     public function bag()
     {
         $this->seo('cart');
@@ -442,7 +470,7 @@ class FrontendController extends Controller
     }
 
     /** Card shape used by shop grid, featured rail, offers rail, related. */
-    private function productCard(Product $p): array
+    public function productCard(Product $p): array
     {
         $gallery = $p->relationLoaded('images')
             ? $p->images->map(fn ($i) => $this->imgUrl($i->image))->values()->all()
@@ -479,6 +507,7 @@ class FrontendController extends Controller
             'savePct' => $savePct,
             'inStock' => $default ? (bool) $default->in_stock : false,
             'isFeatured' => (bool) $p->is_featured,
+            'favourited' => Favourite::isFavourited(auth()->id(), $p->id),
             'url' => route('product.show', $p->slug),
             'imgAbs' => $this->imgUrl($this->heroFor($p)),
             'cardVariants' => $p->relationLoaded('variants')

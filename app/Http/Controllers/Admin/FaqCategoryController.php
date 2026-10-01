@@ -12,7 +12,7 @@ class FaqCategoryController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            return DataTables::of(FaqCategory::withCount('faqs')->orderBy('sort_order')->get())
+            return DataTables::of(FaqCategory::withCount('faqs')->orderBy('sort_order'))
                 ->addIndexColumn()
                 ->addColumn('count', fn ($r) => $r->faqs_count)
                 ->addColumn('status', fn ($r) => '<div class="form-check form-switch"><input type="checkbox" class="form-check-input toggle-status" data-id="'.$r->id.'" '.($r->status ? 'checked' : '').'></div>')
@@ -59,7 +59,11 @@ class FaqCategoryController extends Controller
 
     public function destroy($id)
     {
-        FaqCategory::findOrFail($id)->delete();
+        $cat = FaqCategory::findOrFail($id);
+        if ($cat->faqs()->exists()) {
+            return response()->json(['message' => 'This category has FAQs — move them first'], 422);
+        }
+        $cat->delete();
 
         return response()->json(['message' => 'FAQ category deleted']);
     }

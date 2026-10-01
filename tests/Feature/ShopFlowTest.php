@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\CheckoutController;
+use App\Mail\OrderDelivered;
+use App\Mail\OrderPlaced;
 use App\Models\Category;
 use App\Models\DeliverySlot;
 use App\Models\OptionGroup;
@@ -14,6 +16,7 @@ use App\Models\User;
 use App\Models\UserPoint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 
 uses(RefreshDatabase::class);
 
@@ -158,6 +161,91 @@ test('guest can place a cash-on-delivery order end to end', function () {
     expect(session('bag', []))->toBe([]);
     $response->assertJsonPath('redirect', route('order.success', $order->number));
     $this->get(route('order.success', $order->number))->assertOk()->assertSee($order->number, false);
+});
+
+test('order emails go out on placement and delivery', function () {
+    Mail::fake();
+    $f = shopFixtures();
+    $slot = shopSetup()['slot'];
+
+    // Guest with a checkout email gets the receipt.
+    $this->postJson(route('bag.add'), ['variant_id' => $f['a']->id, 'qty' => 2])->assertOk();
+    $payload = array_merge(checkoutPayload($slot->id), ['email' => 'guest@example.com']);
+    $this->postJson(route('checkout.place'), $payload)->assertOk()->assertJsonPath('ok', true);
+
+    $order = Order::firstOrFail();
+    Mail::assertSent(OrderPlaced::class, fn ($mail) => $mail->hasTo('guest@example.com'));
+
+    // Guest without any email stays silent.
+    $this->postJson(route('bag.add'), ['variant_id' => $f['a']->id, 'qty' => 2])->assertOk();
+    $this->postJson(route('checkout.place'), checkoutPayload($slot->id))->assertOk();
+    Mail::assertSent(OrderPlaced::class, 1);
+
+    // Delivered triggers the thank-you mail (points note included when earned).
+    $order->changeStatus('packed', null);
+    $order->changeStatus('out_for_delivery', null);
+    $order->changeStatus('delivered', null);
+    Mail::assertSent(OrderDelivered::class, fn ($mail) => $mail->hasTo('guest@example.com'));
+});
+
+test('bag lines resolve variant, product and placeholder images', function () {
+    $f = shopFixtures();
+    $this->postJson(route('bag.add'), ['variant_id' => $f['a']->id, 'qty' => 1])->assertOk();
+
+    // Nothing stored → placeholder.
+    $data = $this->getJson(route('bag.data'))->assertOk()->json();
+    expect($data['lines'][0]['image'])->toEndWith('placeholder.webp');
+
+    // Absolute hero URL passes through untouched.
+    $f['product']->update(['hero_image' => 'https://images.unsplash.com/photo-x']);
+    $data = $this->getJson(route('bag.data'))->assertOk()->json();
+    expect($data['lines'][0]['image'])->toBe('https://images.unsplash.com/photo-x');
+
+    // Stored paths already carry their folder — never doubled.
+    $f['product']->update(['hero_image' => 'uploads/products/lamb.webp']);
+    $f['a']->update(['image' => 'uploads/products/variants/lamb-500.webp']);
+    $data = $this->getJson(route('bag.data'))->assertOk()->json();
+    expect($data['lines'][0]['image'])->toEndWith('uploads/products/variants/lamb-500.webp')
+        ->and(substr_count($data['lines'][0]['image'], 'uploads/products/'))->toBe(1);
+});
+
+test('a shopper journeys from registration to reorder to cancel', function () {
+    Mail::fake();
+    $f = shopFixtures();
+    $slot = shopSetup()['slot'];
+
+    // 1. Register on the same users table.
+    $this->post(route('register.store'), [
+        'name' => 'Journey', 'email' => 'journey@example.com',
+        'password' => 'password123', 'password_confirmation' => 'password123',
+    ])->assertRedirect(route('account'));
+    expect(auth()->check())->toBeTrue();
+
+    // 2. Browse shop + details.
+    $this->get('/shop')->assertOk()->assertSee('Lamb Leg', false);
+    $this->get('/product/lamb-leg')->assertOk();
+
+    // 3. Fill the bag past the minimum.
+    $this->postJson(route('bag.add'), ['variant_id' => $f['a']->id, 'qty' => 2])->assertOk();
+    $this->get(route('bag'))->assertOk();
+
+    // 4. Checkout COD with a receipt email.
+    $payload = array_merge(checkoutPayload($slot->id), ['email' => 'journey@example.com']);
+    $this->postJson(route('checkout.place'), $payload)->assertOk()->assertJsonPath('ok', true);
+    $order = Order::firstOrFail();
+    Mail::assertSent(OrderPlaced::class, fn ($mail) => $mail->hasTo('journey@example.com'));
+
+    // 5. Success page, account history, guest-style tracking.
+    $this->get(route('order.success', $order->number))->assertOk();
+    $this->get(route('account'))->assertOk()->assertSee($order->number, false);
+    $this->post(route('track.lookup'), ['number' => $order->number, 'phone' => '07123456789'])
+        ->assertOk()->assertSee($order->number, false);
+
+    // 6. Reorder refills the bag, then cancel the untouched COD order.
+    $this->post(route('account.reorder', $order->number))->assertRedirect(route('bag'));
+    expect(session('bag'))->not->toBe([]);
+    $this->post(route('account.cancel', $order->number))->assertRedirect(route('account'));
+    expect($order->refresh()->status_slug)->toBe('cancelled');
 });
 
 test('checkout rejects empty bag, minimum order, bad slot and bad date', function () {

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\OrderPlaced;
 use App\Models\DeliverySlot;
 use App\Models\Order;
 use App\Models\OrderStatus;
@@ -126,6 +127,7 @@ class CheckoutController extends Controller
         $data = $request->validate([
             'name' => 'required|string|max:100',
             'phone' => 'required|string|max:30',
+            'email' => 'nullable|email|max:255',
             'address' => 'required|string|max:500',
             'city' => 'required|string|max:100',
             'postcode' => 'required|string|max:20',
@@ -182,6 +184,7 @@ class CheckoutController extends Controller
                     'user_id' => auth()->id(),
                     'name' => $data['name'],
                     'phone' => $data['phone'],
+                    'email' => $data['email'] ?? null,
                     'address' => $data['address'],
                     'city' => $data['city'],
                     'postcode' => $data['postcode'],
@@ -254,6 +257,7 @@ class CheckoutController extends Controller
 
         if ($data['payment_method'] === 'cod') {
             $order->changeStatus('confirmed', auth()->id(), 'Cash on delivery — pay the driver.');
+            Order::sendMail($order->receiptEmail(), new OrderPlaced($order));
 
             return response()->json([
                 'ok' => true,
@@ -341,6 +345,7 @@ class CheckoutController extends Controller
         $order->payment_status = 'paid';
         $order->save();
         $order->changeStatus('confirmed', $order->user_id, 'Paid online ('.$order->paymentLabel().').');
+        Order::sendMail($order->receiptEmail(), new OrderPlaced($order));
         session(['last_order_id' => $order->id]);
 
         return response()->json(['ok' => true, 'redirect' => route('order.success', $order->number)]);
