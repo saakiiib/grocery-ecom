@@ -34,23 +34,11 @@
                     <h2 style="font-size:1.25rem;">{{ $order->number }}</h2>
                     <span class="status-pill" @if ($st) style="background:{{ $st->color }}22;color:{{ $st->color }};border:1px solid {{ $st->color }}55;" @endif>{{ $st?->name ?? ucfirst($order->status_slug) }}</span>
                 </div>
-                <p class="text-muted">Arriving <strong>{{ $order->delivery_date->format('l j F') }}</strong> · {{ $order->delivery_slot_label }}</p>
+                <p class="text-muted">Arriving <strong>{{ $order->delivery_date ? $order->delivery_date->format('l j F') : '—' }}</strong> · {{ $order->delivery_slot_label }}</p>
                 <p class="text-muted">{{ $order->itemCount() }} item{{ $order->itemCount() === 1 ? '' : 's' }} · £{{ number_format($order->total, 2) }} · {{ $order->paymentLabel() }}</p>
             </div>
 
-            <div class="auth-card">
-                <h2 style="font-size:1.25rem;margin-bottom:1rem;">Journey</h2>
-                @foreach ($order->histories as $h)
-                    @php $to = $h->toStatus(); @endphp
-                    <div class="summary-row" style="align-items:start;">
-                        <span>
-                            <span class="status-pill" @if ($to) style="background:{{ $to->color }}22;color:{{ $to->color }};border:1px solid {{ $to->color }}55;" @endif>{{ $to?->name ?? ucfirst(str_replace('_', ' ', $h->to_slug)) }}</span>
-                            @if ($h->note)<br><span class="text-muted">{{ $h->note }}</span>@endif
-                        </span>
-                        <span class="text-muted">{{ $h->created_at->format('j M, H:i') }}</span>
-                    </div>
-                @endforeach
-            </div>
+            @include('frontend.partials.order-journey', ['journeyTitle' => 'Journey'])
         @endif
     </div>
 </main>

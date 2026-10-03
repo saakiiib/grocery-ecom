@@ -3,7 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Mail\OrderPlaced;
+use App\Models\CompanyDetails;
+use App\Models\Coupon;
 use App\Models\DeliverySlot;
+use App\Models\DeliveryZone;
 use App\Models\Order;
 use App\Models\OrderStatus;
 use App\Models\ProductVariant;
@@ -131,15 +134,28 @@ class CheckoutController extends Controller
             'address' => 'required|string|max:500',
             'city' => 'required|string|max:100',
             'postcode' => 'required|string|max:20',
+            'billing_name' => 'required|string|max:100',
+            'billing_phone' => 'required|string|max:30',
+            'billing_address' => 'required|string|max:500',
+            'billing_city' => 'required|string|max:100',
+            'billing_postcode' => 'required|string|max:20',
+            'save_address' => 'nullable|boolean',
+            'save_label' => 'nullable|string|max:50',
             'notes' => 'nullable|string|max:1000',
             'delivery_date' => 'required|date_format:Y-m-d',
             'delivery_slot_id' => 'required|integer',
             'payment_method' => 'required|in:cod,stripe,paypal',
             'points_redeem' => 'nullable|integer|min:0|max:1000000',
+            'coupon_code' => 'nullable|string|max:50',
+            'privacy' => 'accepted',
         ]);
 
         if (! array_key_exists($data['delivery_date'], DeliverySlot::bookableDates())) {
             return response()->json(['message' => 'Please choose a valid delivery day.'], 422);
+        }
+
+        if (! DeliveryZone::serves($data['postcode'])) {
+            return response()->json(['message' => 'Sorry — we don\'t deliver to '.$data['postcode'].' yet.'], 422);
         }
 
         if ($data['payment_method'] === 'stripe' && ! static::stripeConfigured()) {
@@ -178,7 +194,26 @@ class CheckoutController extends Controller
             $order = DB::transaction(function () use ($data, $priced, $pointsRedeem, $pointsDiscount) {
                 $status = OrderStatus::where('slug', 'new')->where('is_active', true)->firstOrFail();
 
+                // Coupon — revalidated server-side, shoppers only.
+                $coupon = null;
+                $couponDiscount = 0.0;
+                if (! empty($data['coupon_code'])) {
+                    $coupon = Coupon::findByCode($data['coupon_code']);
+                    if (! $coupon) {
+                        throw new CouponRejected('That coupon does not exist.');
+                    }
+                    $check = $coupon->checkFor(auth()->id(), $priced['subtotal']);
+                    if (! $check['ok']) {
+                        throw new CouponRejected($check['message']);
+                    }
+                    $couponDiscount = $check['discount'];
+                }
+
                 /** @var Order $order */
+                // VAT is included in shelf prices: snapshot the VAT portion of the total.
+                $total = max(0, round($priced['subtotal'] + $priced['fee'] - $pointsDiscount - $couponDiscount, 2));
+                $vatPercent = (float) (CompanyDetails::cached()->vat_percent ?? 0);
+                $vatAmount = $vatPercent > 0 ? round($total * $vatPercent / (100 + $vatPercent), 2) : 0.0;
                 $order = Order::create([
                     'number' => 'PENDING',
                     'user_id' => auth()->id(),
@@ -188,15 +223,25 @@ class CheckoutController extends Controller
                     'address' => $data['address'],
                     'city' => $data['city'],
                     'postcode' => $data['postcode'],
+                    'billing_name' => $data['billing_name'],
+                    'billing_phone' => $data['billing_phone'],
+                    'billing_address' => $data['billing_address'],
+                    'billing_city' => $data['billing_city'],
+                    'billing_postcode' => $data['billing_postcode'],
                     'notes' => $data['notes'] ?? null,
                     'delivery_date' => $data['delivery_date'],
                     'delivery_slot_id' => $priced['slot']->id,
                     'delivery_slot_label' => $priced['slot']->label(),
                     'subtotal' => $priced['subtotal'],
                     'delivery_fee' => $priced['fee'],
-                    'total' => round($priced['subtotal'] + $priced['fee'] - $pointsDiscount, 2),
+                    'total' => $total,
+                    'vat_percent' => $vatPercent,
+                    'vat_amount' => $vatAmount,
                     'points_redeemed' => $pointsRedeem,
                     'points_discount' => $pointsDiscount,
+                    'coupon_id' => $coupon?->id,
+                    'coupon_code' => $coupon?->code,
+                    'coupon_discount' => $couponDiscount,
                     'payment_method' => $data['payment_method'],
                     'payment_status' => 'unpaid',
                     'status_id' => $status->id,
@@ -242,10 +287,30 @@ class CheckoutController extends Controller
                         'city' => $order->user->city ?? $order->city,
                         'postcode' => $order->user->postcode ?? $order->postcode,
                     ]);
+                    if (! empty($data['save_address'])) {
+                        $exists = $order->user->addresses()
+                            ->where('address', $order->address)
+                            ->where('postcode', $order->postcode)
+                            ->exists();
+                        if (! $exists) {
+                            $order->user->addresses()->create([
+                                'label' => $data['save_label'] ?: 'Home',
+                                'name' => $order->name,
+                                'phone' => $order->phone,
+                                'address' => $order->address,
+                                'city' => $order->city,
+                                'postcode' => $order->postcode,
+                                'is_default_delivery' => false,
+                                'is_default_billing' => false,
+                            ]);
+                        }
+                    }
                 }
 
                 return $order;
             });
+        } catch (CouponRejected $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
         } catch (\Throwable $e) {
             report($e);
 
@@ -302,6 +367,53 @@ class CheckoutController extends Controller
             'paypal' => true,
             'paypal_order_id' => $ppOrderId,
             'order_number' => $order->number,
+        ]);
+    }
+
+    /**
+     * Validate a coupon code against the current bag. Shoppers only —
+     * guests are told to sign in (JSON, never a login redirect).
+     */
+    public function coupon(Request $request): JsonResponse
+    {
+        $data = $request->validate(['code' => 'required|string|max:50']);
+
+        $coupon = Coupon::findByCode($data['code']);
+        if (! $coupon) {
+            return response()->json(['ok' => false, 'message' => 'That coupon does not exist.'], 422);
+        }
+
+        $subtotal = BagController::detailed()['subtotal'] ?? 0.0;
+        $check = $coupon->checkFor(auth()->id(), (float) $subtotal);
+        if (! $check['ok']) {
+            return response()->json(['ok' => false, 'message' => $check['message']], 422);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'code' => $coupon->code,
+            'discount' => $check['discount'],
+            'message' => $coupon->code.' applied — £'.number_format($check['discount'], 2).' off.',
+        ]);
+    }
+
+    /**
+     * Live postcode eligibility for the checkout form (JSON, never trusted —
+     * place() rechecks against the database).
+     */
+    public function postcode(Request $request): JsonResponse
+    {
+        $data = $request->validate(['postcode' => 'required|string|max:20']);
+
+        $zone = DeliveryZone::matching($data['postcode']);
+        if ($zone === null && DeliveryZone::active()->exists()) {
+            return response()->json(['ok' => false, 'message' => 'Sorry — we don\'t deliver to '.$data['postcode'].' yet.'], 422);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'zone' => $zone?->name,
+            'message' => $zone ? 'Good news — we deliver to '.$data['postcode'].' ('.$zone->name.').' : 'Good news — we deliver to '.$data['postcode'].'.',
         ]);
     }
 

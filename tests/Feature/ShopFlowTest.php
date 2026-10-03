@@ -4,6 +4,7 @@ use App\Http\Controllers\CheckoutController;
 use App\Mail\OrderDelivered;
 use App\Mail\OrderPlaced;
 use App\Models\Category;
+use App\Models\Coupon;
 use App\Models\DeliverySlot;
 use App\Models\OptionGroup;
 use App\Models\OptionValue;
@@ -85,9 +86,12 @@ function checkoutPayload(int $slotId, string $method = 'cod'): array
     return [
         'name' => 'Shopper Name', 'phone' => '07123456789',
         'address' => '1 Market Street', 'city' => 'Leeds', 'postcode' => 'LS1 1AA',
+        'billing_name' => 'Shopper Name', 'billing_phone' => '07123456789',
+        'billing_address' => '1 Market Street', 'billing_city' => 'Leeds', 'billing_postcode' => 'LS1 1AA',
         'delivery_date' => array_key_first($dates),
         'delivery_slot_id' => $slotId,
         'payment_method' => $method,
+        'privacy' => true,
     ];
 }
 
@@ -217,7 +221,7 @@ test('a shopper journeys from registration to reorder to cancel', function () {
     // 1. Register on the same users table.
     $this->post(route('register.store'), [
         'name' => 'Journey', 'email' => 'journey@example.com',
-        'password' => 'password123', 'password_confirmation' => 'password123',
+        'password' => '123456', 'password_confirmation' => '123456',
     ])->assertRedirect(route('account'));
     expect(auth()->check())->toBeTrue();
 
@@ -246,6 +250,67 @@ test('a shopper journeys from registration to reorder to cancel', function () {
     expect(session('bag'))->not->toBe([]);
     $this->post(route('account.cancel', $order->number))->assertRedirect(route('account'));
     expect($order->refresh()->status_slug)->toBe('cancelled');
+});
+
+test('coupons discount orders within their rules', function () {
+    $f = shopFixtures();
+    $slot = shopSetup()['slot'];
+    $user = shopperUser();
+    Coupon::create(['code' => 'SAVE10', 'type' => 'percent', 'value' => 10, 'status' => true, 'max_per_user' => 1]);
+
+    // Guests are refused with JSON, never a login redirect.
+    $this->postJson(route('checkout.coupon'), ['code' => 'SAVE10'])
+        ->assertStatus(422)->assertJsonPath('message', 'Sign in to use coupons.');
+
+    // Shoppers validate + place with a lowercase code.
+    $this->actingAs($user)->postJson(route('bag.add'), ['variant_id' => $f['a']->id, 'qty' => 2])->assertOk();
+    $this->actingAs($user)->postJson(route('checkout.coupon'), ['code' => 'save10'])
+        ->assertOk()->assertJsonPath('discount', 2.2);
+
+    $payload = array_merge(checkoutPayload($slot->id), ['coupon_code' => 'save10']);
+    $this->actingAs($user)->postJson(route('checkout.place'), $payload)->assertOk();
+    $order = Order::firstOrFail();
+    expect($order->coupon_code)->toBe('SAVE10')
+        ->and((float) $order->coupon_discount)->toBe(2.2)
+        ->and((float) $order->total)->toBe(22.77);
+
+    // Same shopper cannot reuse a single-use coupon.
+    $this->actingAs($user)->postJson(route('bag.add'), ['variant_id' => $f['a']->id, 'qty' => 2])->assertOk();
+    $this->actingAs($user)->postJson(route('checkout.place'), $payload)->assertStatus(422);
+});
+
+test('coupons respect expiry, caps and minimums', function () {
+    $f = shopFixtures();
+    $slot = shopSetup()['slot'];
+    $user = shopperUser();
+
+    Coupon::create(['code' => 'OLD', 'type' => 'fixed', 'value' => 5, 'expires_at' => now()->subDay(), 'status' => true]);
+    Coupon::create(['code' => 'BIG', 'type' => 'fixed', 'value' => 5, 'min_order' => 100, 'status' => true]);
+    Coupon::create(['code' => 'MAXED', 'type' => 'fixed', 'value' => 5, 'max_uses' => 0, 'status' => true]);
+
+    $this->actingAs($user)->postJson(route('bag.add'), ['variant_id' => $f['a']->id, 'qty' => 2])->assertOk();
+    foreach (['OLD', 'BIG', 'MAXED', 'NOPE'] as $code) {
+        $this->actingAs($user)->postJson(route('checkout.coupon'), ['code' => $code])->assertStatus(422);
+    }
+
+    Coupon::create(['code' => 'FIVER', 'type' => 'fixed', 'value' => 5, 'status' => true]);
+    $this->actingAs($user)->postJson(route('checkout.coupon'), ['code' => 'fiver'])
+        ->assertOk()->assertJsonPath('discount', 5);
+});
+
+test('checkout requires privacy consent', function () {
+    $f = shopFixtures();
+    $slot = shopSetup()['slot'];
+    $this->postJson(route('bag.add'), ['variant_id' => $f['a']->id, 'qty' => 2])->assertOk();
+
+    $payload = checkoutPayload($slot->id);
+    unset($payload['privacy']);
+    $this->postJson(route('checkout.place'), $payload)->assertStatus(422)->assertInvalid('privacy');
+
+    $html = $this->get(route('checkout'))->assertOk()->getContent();
+    expect($html)->toContain('pay-tiles')
+        ->toContain('co-privacy')
+        ->toContain('privacy policy');
 });
 
 test('checkout rejects empty bag, minimum order, bad slot and bad date', function () {
@@ -362,7 +427,7 @@ test('shoppers register on the same users table and keep their bag', function ()
 
     $response = $this->post(route('register.store'), [
         'name' => 'New Shopper', 'email' => 'new@example.com',
-        'password' => 'password123', 'password_confirmation' => 'password123',
+        'password' => '123456', 'password_confirmation' => '123456',
     ]);
     $response->assertRedirect(route('account'));
 
@@ -374,7 +439,7 @@ test('shoppers register on the same users table and keep their bag', function ()
     auth()->logout();
     $this->post(route('register.store'), [
         'name' => 'Dup', 'email' => 'new@example.com',
-        'password' => 'password123', 'password_confirmation' => 'password123',
+        'password' => '123456', 'password_confirmation' => '123456',
     ])->assertSessionHasErrors('email');
 });
 
@@ -599,18 +664,24 @@ test('shoppers can change their password', function () {
 
     $this->actingAs($user)->post(route('account.password'), [
         'current_password' => 'wrong',
-        'password' => 'newpassword123',
-        'password_confirmation' => 'newpassword123',
+        'password' => '654321',
+        'password_confirmation' => '654321',
     ])->assertSessionHasErrors('current_password');
 
     $this->actingAs($user)->post(route('account.password'), [
         'current_password' => 'password',
-        'password' => 'newpassword123',
-        'password_confirmation' => 'newpassword123',
+        'password' => '12345',
+        'password_confirmation' => '12345',
+    ])->assertSessionHasErrors('password');
+
+    $this->actingAs($user)->post(route('account.password'), [
+        'current_password' => 'password',
+        'password' => '654321',
+        'password_confirmation' => '654321',
     ])->assertRedirect(route('account').'#password')->assertSessionHas('status');
 
     auth()->logout();
-    $this->post(route('login'), ['login' => 'shopper@example.com', 'password' => 'newpassword123'])
+    $this->post(route('login'), ['login' => 'shopper@example.com', 'password' => '654321'])
         ->assertRedirect(route('home'));
 });
 

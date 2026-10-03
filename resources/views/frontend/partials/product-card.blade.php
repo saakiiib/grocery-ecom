@@ -14,6 +14,16 @@
     <div class="product-body">
         <span class="product-meta">{{ $p['category'] }}</span>
         <a @spa href="{{ $p['url'] }}" class="product-name">{{ $p['name'] }}</a>
+        @if (($p['ratingCount'] ?? 0) > 0)
+            <span class="product-rating">
+                <span class="stars">
+                    @for ($i = 1; $i <= 5; $i++)
+                        <span class="{{ $i <= round($p['ratingAvg']) ? 'star-on' : 'star-off' }}"><x-icon name="star" /></span>
+                    @endfor
+                </span>
+                {{ number_format($p['ratingAvg'], 1) }} ({{ $p['ratingCount'] }})
+            </span>
+        @endif
         @if (count($p['cardVariants']) > 1)
             <div class="product-pack">
                 <select aria-label="Choose pack">

@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\CompanyDetails;
 use App\Models\Order;
 use App\Models\OrderStatus;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Yajra\DataTables\Facades\DataTables;
@@ -61,6 +63,52 @@ class OrderController extends Controller
         $statuses = OrderStatus::ordered();
 
         return view('admin.orders.show', compact('order', 'statuses'));
+    }
+
+    /** Printable Tesco-style invoice (browser print). */
+    public function invoice(int $id)
+    {
+        $order = Order::with(['items', 'status', 'user'])->findOrFail($id);
+
+        return view('admin.orders.invoice', $this->invoiceData($order));
+    }
+
+    /** Downloadable invoice PDF. */
+    public function invoicePdf(int $id)
+    {
+        $order = Order::with(['items', 'status', 'user'])->findOrFail($id);
+
+        return Pdf::loadView('admin.orders.invoice', $this->invoiceData($order))
+            ->setPaper('a4')
+            ->download('invoice-'.$order->number.'.pdf');
+    }
+
+    /**
+     * @return array{order: Order, company: CompanyDetails, logoDataUri: string|null, billTo: array}
+     */
+    public static function invoiceData(Order $order): array
+    {
+        $company = CompanyDetails::cached();
+        $logoDataUri = null;
+        if ($company->company_logo) {
+            $path = public_path('uploads/company/'.$company->company_logo);
+            if (is_file($path)) {
+                $mime = match (strtolower(pathinfo($path, PATHINFO_EXTENSION))) {
+                    'png' => 'image/png',
+                    'jpg', 'jpeg' => 'image/jpeg',
+                    'gif' => 'image/gif',
+                    default => 'image/png',
+                };
+                $logoDataUri = 'data:'.$mime.';base64,'.base64_encode((string) file_get_contents($path));
+            }
+        }
+
+        return [
+            'order' => $order,
+            'company' => $company,
+            'logoDataUri' => $logoDataUri,
+            'billTo' => $order->billTo(),
+        ];
     }
 
     public function updateStatus(Request $request, int $id): RedirectResponse

@@ -1,12 +1,14 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\AddressController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\BagController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\FavouriteController;
 use App\Http\Controllers\FrontendController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\ReviewController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -49,6 +51,8 @@ Route::post('/bag/update', [BagController::class, 'update'])->name('bag.update')
 Route::post('/bag/remove', [BagController::class, 'remove'])->name('bag.remove');
 Route::get('/bag/data', [BagController::class, 'show'])->name('bag.data');
 Route::post('/checkout/place', [CheckoutController::class, 'place'])->name('checkout.place');
+Route::post('/checkout/coupon', [CheckoutController::class, 'coupon'])->name('checkout.coupon');
+Route::post('/checkout/postcode', [CheckoutController::class, 'postcode'])->name('checkout.postcode');
 Route::post('/checkout/payment-confirm', [CheckoutController::class, 'paymentConfirm'])->name('checkout.payment-confirm');
 Route::post('/checkout/cancel', [CheckoutController::class, 'cancel'])->name('checkout.cancel');
 Route::get('/order/success/{number}', [CheckoutController::class, 'success'])->name('order.success');
@@ -60,9 +64,15 @@ Route::post('/account/orders/{number}/pay', [AccountController::class, 'pay'])->
 Route::post('/account/orders/{number}/cancel', [AccountController::class, 'cancel'])->name('account.cancel');
 Route::post('/account/profile', [AccountController::class, 'profile'])->name('account.profile');
 Route::post('/account/password', [AccountController::class, 'password'])->name('account.password');
+Route::post('/account/addresses', [AddressController::class, 'store'])->name('account.addresses.store');
+Route::post('/account/addresses/{id}', [AddressController::class, 'update'])->name('account.addresses.update');
+Route::post('/account/addresses/{id}/default', [AddressController::class, 'setDefault'])->name('account.addresses.default');
+Route::delete('/account/addresses/{id}', [AddressController::class, 'destroy'])->name('account.addresses.destroy');
 Route::get('/favourites', [FavouriteController::class, 'index'])->name('favourites');
 Route::post('/favourites/toggle', [FavouriteController::class, 'toggle'])->name('favourites.toggle');
 Route::post('/favourites/move-all', [FavouriteController::class, 'moveAll'])->name('favourites.move-all');
+Route::post('/reviews', [ReviewController::class, 'store'])->name('reviews.store');
+Route::delete('/reviews/{id}', [ReviewController::class, 'destroy'])->name('reviews.destroy');
 Route::get('/faq', [FrontendController::class, 'faq'])->name('faq');
 Route::get('/track', [FrontendController::class, 'track'])->name('track');
 Route::post('/track', [FrontendController::class, 'trackLookup'])->middleware('throttle:20,1')->name('track.lookup');

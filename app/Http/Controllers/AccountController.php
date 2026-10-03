@@ -20,6 +20,7 @@ class AccountController extends Controller
     public function index()
     {
         $user = auth()->user();
+        $user->ensureAddressBook();
         $orders = Order::with(['items', 'status'])
             ->where('user_id', $user->id)
             ->orderByDesc('id')
@@ -30,8 +31,9 @@ class AccountController extends Controller
             ->orderByDesc('id')
             ->take(10)
             ->get();
+        $addresses = $user->addresses()->get();
 
-        return spa('frontend.account', compact('user', 'orders', 'pointsBalance', 'pointsHistory'));
+        return spa('frontend.account', compact('user', 'orders', 'pointsBalance', 'pointsHistory', 'addresses'));
     }
 
     public function show(string $number)
@@ -101,7 +103,7 @@ class AccountController extends Controller
     {
         $data = $request->validate([
             'current_password' => 'required|current_password',
-            'password' => 'required|string|min:8|confirmed',
+            'password' => 'required|digits:6|confirmed',
         ], [
             'current_password.current_password' => 'Your current password is not correct',
             'password.confirmed' => 'The new passwords do not match',

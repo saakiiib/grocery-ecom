@@ -78,7 +78,7 @@ class CategoryController extends Controller
                 ->make(true);
         }
 
-        $parentCategories = Category::whereNull('parent_id')->where('status', 1)->get();
+        $parentCategories = Category::whereNull('parent_id')->where('status', 1)->orderBy('sort_order')->orderBy('id')->get();
         $optionGroups = OptionGroup::where('status', true)->orderBy('sort_order')->orderBy('id')->get(['id', 'name']);
 
         return view('admin.category.index', compact('parentCategories', 'optionGroups'));
@@ -106,7 +106,10 @@ class CategoryController extends Controller
         $data->meta_description = $request->meta_description;
         $data->meta_keywords = $request->meta_keywords;
         $data->video_url = $request->video_url;
-        $data->sort_order = (int) Category::max('sort_order') + 1;
+        // Scoped sort: parents and each parent's children each keep their own 0..n sequence,
+        // so homepage "Shop by category" / shop pills (parents only) never shift when a child moves.
+        $siblings = Category::when($request->parent_id, fn ($q) => $q->where('parent_id', $request->parent_id), fn ($q) => $q->whereNull('parent_id'));
+        $data->sort_order = (int) $siblings->max('sort_order') + 1;
 
         if ($request->hasFile('image')) {
             $uploadedFile = $request->file('image');
@@ -345,7 +348,8 @@ class CategoryController extends Controller
     {
         $parentCategories = Category::where('status', 1)
             ->select('id', 'name')
-            ->latest()
+            ->orderBy('sort_order')
+            ->orderBy('id')
             ->get();
 
         return response()->json($parentCategories);
@@ -364,12 +368,22 @@ class CategoryController extends Controller
         return $sync;
     }
 
-    public function sortList()
+    public function sortList(Request $request)
     {
-        $categories = Category::select(['id', 'name', 'image', 'parent_id', 'sort_order'])
+        // Scoped lists: ?scope=parent (default) or ?scope=children&parent_id=X.
+        // No scope param (legacy) returns parents only so the homepage/shop order stays clean.
+        $query = Category::select(['id', 'name', 'image', 'parent_id', 'sort_order'])
             ->orderBy('sort_order', 'asc')
-            ->orderBy('id', 'desc')
-            ->get()
+            ->orderBy('id', 'asc');
+
+        if ($request->get('scope') === 'children') {
+            $request->validate(['parent_id' => 'required|exists:categories,id']);
+            $query->where('parent_id', $request->parent_id);
+        } else {
+            $query->whereNull('parent_id');
+        }
+
+        $categories = $query->get()
             ->map(function ($category) {
                 $category->image = $category->image ? url($category->image) : null;
 
@@ -383,6 +397,7 @@ class CategoryController extends Controller
     {
         $request->validate([
             'ids' => 'required|array',
+            'ids.*' => 'integer|distinct|exists:categories,id',
         ]);
 
         foreach ($request->ids as $index => $id) {

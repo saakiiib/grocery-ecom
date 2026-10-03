@@ -3,6 +3,7 @@
 use App\Excel\ProductsExport;
 use App\Excel\ProductsImport;
 use App\Models\Category;
+use App\Models\Coupon;
 use App\Models\OptionGroup;
 use App\Models\OptionValue;
 use App\Models\Product;
@@ -306,4 +307,30 @@ test('sliders store full slide content, sort and toggle', function () {
 
     $this->actingAs($admin)->delete(route('slider.delete', $slide->id))->assertOk();
     expect(file_exists(public_path($slide->image)))->toBeFalse();
+});
+
+test('admin manages coupons and sees who used them', function () {
+    $admin = adminUser();
+
+    $this->actingAs($admin)->get(route('coupons.index'))->assertOk();
+
+    // Percent over 100 is refused.
+    $this->actingAs($admin)->post(route('coupons.store'), [
+        'code' => 'BIG', 'type' => 'percent', 'value' => 500, 'max_per_user' => 1,
+    ])->assertStatus(302)->assertInvalid('value');
+
+    $this->actingAs($admin)->post(route('coupons.store'), [
+        'code' => 'save10', 'type' => 'percent', 'value' => 10,
+        'min_order' => 15, 'max_uses' => 100, 'max_per_user' => 1,
+    ])->assertOk();
+
+    $coupon = Coupon::where('code', 'SAVE10')->firstOrFail();
+    expect($coupon->value)->toBe('10.00')->and($coupon->status)->toBeTrue();
+
+    $this->actingAs($admin)->post(route('coupons.toggleStatus'), ['id' => $coupon->id])->assertOk();
+    expect($coupon->fresh()->status)->toBeFalse();
+    $this->actingAs($admin)->post(route('coupons.toggleStatus'), ['id' => $coupon->id])->assertOk();
+
+    $this->actingAs($admin)->get(route('coupons.show', $coupon->id))->assertOk()
+        ->assertSee('Nobody has used this coupon yet', false);
 });

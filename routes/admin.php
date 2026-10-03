@@ -4,7 +4,9 @@ use App\Http\Controllers\Admin\AdminProfileController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\CompanyDetailsController;
 use App\Http\Controllers\Admin\ContactController;
+use App\Http\Controllers\Admin\CouponController;
 use App\Http\Controllers\Admin\DeliverySlotController;
+use App\Http\Controllers\Admin\DeliveryZoneController;
 use App\Http\Controllers\Admin\FaqCategoryController;
 use App\Http\Controllers\Admin\FaqController;
 use App\Http\Controllers\Admin\GalleryCategoryController;
@@ -17,6 +19,7 @@ use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ProductExcelController;
 use App\Http\Controllers\Admin\ProductImageController;
 use App\Http\Controllers\Admin\ProductVariantController;
+use App\Http\Controllers\Admin\ReviewController;
 use App\Http\Controllers\Admin\ShopSettingsController;
 use App\Http\Controllers\Admin\SliderController;
 use App\Http\Controllers\Admin\TestimonialController;
@@ -86,6 +89,13 @@ Route::group(['prefix' => 'admin/', 'middleware' => ['auth', 'is_admin']], funct
     Route::delete('/testimonials/{id}', [TestimonialController::class, 'destroy'])->name('testimonial.delete');
     Route::post('/testimonials/toggle-status', [TestimonialController::class, 'toggleStatus'])->name('testimonial.toggleStatus');
 
+    // Product reviews (shopper-submitted, moderated here)
+    Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
+    Route::get('/reviews/{id}/edit', [ReviewController::class, 'edit'])->name('reviews.edit');
+    Route::post('/reviews/update', [ReviewController::class, 'update'])->name('reviews.update');
+    Route::post('/reviews/toggle-status', [ReviewController::class, 'toggleStatus'])->name('reviews.toggleStatus');
+    Route::delete('/reviews/{id}', [ReviewController::class, 'destroy'])->name('reviews.delete');
+
     // Contacts
     Route::get('/contacts', [ContactController::class, 'index'])->name('admin.contacts.index');
     Route::get('/contacts/{id}', [ContactController::class, 'show'])->name('admin.contacts.show');
@@ -95,6 +105,8 @@ Route::group(['prefix' => 'admin/', 'middleware' => ['auth', 'is_admin']], funct
     // Orders (bag → checkout → here; statuses are dynamic via order_statuses)
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');
+    Route::get('/orders/{id}/invoice', [OrderController::class, 'invoice'])->name('orders.invoice');
+    Route::get('/orders/{id}/invoice-pdf', [OrderController::class, 'invoicePdf'])->name('orders.invoicePdf');
     Route::post('/orders/{id}/status', [OrderController::class, 'updateStatus'])->name('orders.updateStatus');
 
     // Delivery slots (checkout time windows + fees)
@@ -105,6 +117,24 @@ Route::group(['prefix' => 'admin/', 'middleware' => ['auth', 'is_admin']], funct
     Route::post('/delivery-slots/update', [DeliverySlotController::class, 'update'])->name('delivery-slots.update');
     Route::delete('/delivery-slots/{id}', [DeliverySlotController::class, 'destroy'])->name('delivery-slots.delete');
     Route::post('/delivery-slots/toggle-status', [DeliverySlotController::class, 'toggleStatus'])->name('delivery-slots.toggleStatus');
+
+    // Delivery zones (postcode eligibility — empty list means everywhere)
+    Route::get('/delivery-zones', [DeliveryZoneController::class, 'index'])->name('delivery-zones.index');
+    Route::get('/delivery-zones/create', [DeliveryZoneController::class, 'create'])->name('delivery-zones.create');
+    Route::post('/delivery-zones', [DeliveryZoneController::class, 'store'])->name('delivery-zones.store');
+    Route::get('/delivery-zones/{id}/edit', [DeliveryZoneController::class, 'edit'])->name('delivery-zones.edit');
+    Route::post('/delivery-zones/update', [DeliveryZoneController::class, 'update'])->name('delivery-zones.update');
+    Route::delete('/delivery-zones/{id}', [DeliveryZoneController::class, 'destroy'])->name('delivery-zones.delete');
+    Route::post('/delivery-zones/toggle-status', [DeliveryZoneController::class, 'toggleStatus'])->name('delivery-zones.toggleStatus');
+
+    // Coupons (checkout discounts with expiry + usage caps)
+    Route::get('/coupons', [CouponController::class, 'index'])->name('coupons.index');
+    Route::post('/coupons', [CouponController::class, 'store'])->name('coupons.store');
+    Route::get('/coupons/{id}', [CouponController::class, 'show'])->name('coupons.show');
+    Route::get('/coupons/{id}/edit', [CouponController::class, 'edit'])->name('coupons.edit');
+    Route::post('/coupons/update', [CouponController::class, 'update'])->name('coupons.update');
+    Route::delete('/coupons/{id}', [CouponController::class, 'destroy'])->name('coupons.delete');
+    Route::post('/coupons/toggle-status', [CouponController::class, 'toggleStatus'])->name('coupons.toggleStatus');
 
     // Order statuses (dynamic lifecycle — every change writes history)
     Route::get('/order-statuses', [OrderStatusController::class, 'index'])->name('order-statuses.index');

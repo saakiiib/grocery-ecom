@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -49,6 +50,22 @@ class Product extends Model
     public function extraAttributes(): HasMany
     {
         return $this->hasMany(ProductAttribute::class)->orderBy('sort_order');
+    }
+
+    /** Shopper reviews for this product (newest first). */
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(ProductReview::class)->latest();
+    }
+
+    /**
+     * Approved-review aggregates for cards: reviews_avg_rating + reviews_count.
+     */
+    public function scopeWithReviewSummary(Builder $query): Builder
+    {
+        return $query
+            ->withAvg(['reviews' => fn ($q) => $q->approved()], 'rating')
+            ->withCount(['reviews' => fn ($q) => $q->approved()]);
     }
 
     /** Key points as a trimmed non-empty list (one per line in admin). */

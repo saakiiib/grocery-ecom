@@ -176,16 +176,29 @@
                 <!-- Sort Categories Tab -->
                 <div class="tab-pane fade" id="tab-sort" role="tabpanel">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <p class="text-muted mb-0"><i class="ri-drag-move-2-line align-middle me-1"></i> Drag and drop categories to reorder them. Changes are saved automatically.</p>
+                        <p class="text-muted mb-0"><i class="ri-drag-move-2-line align-middle me-1"></i> Drag and drop to reorder. Parent order drives homepage "Shop by category" + shop pills; child order drives that parent's chips. Changes save automatically.</p>
                         <button type="button" class="btn btn-sm btn-outline-primary" id="refreshSortList">
                             <i class="ri-refresh-line align-middle me-1"></i> Refresh
                         </button>
                     </div>
-                    <div id="sortableCategories" class="sortable-list" style="min-height:200px;">
-                        <div class="text-center py-5 text-muted" id="sortLoading">
+                    <h6 class="mb-2">Parent categories (homepage + shop order)</h6>
+                    <div id="sortableParentCategories" class="sortable-list" style="min-height:120px;">
+                        <div class="text-center py-4 text-muted" id="parentSortLoading">
                             <div class="spinner-border text-primary" role="status"></div>
                             <p class="mt-2">Click "Sort Categories" tab to load...</p>
                         </div>
+                    </div>
+                    <hr class="my-4">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <h6 class="mb-0">Subcategories of</h6>
+                        <div style="min-width:240px;max-width:280px;flex:1;">
+                            <select id="childSortParent" class="form-control select2" data-placeholder="{{ 'Select parent' }}">
+                                <option value="">{{ 'Select parent' }}</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="sortableChildCategories" class="sortable-list" style="min-height:120px;">
+                        <div class="text-center py-4 text-muted">Select a parent above to reorder its subcategories.</div>
                     </div>
                 </div>
             </div>
@@ -218,10 +231,12 @@
         }
 
         $(document).ready(function() {
-            $('.select2').select2({
-                placeholder: "{{ 'Select Category' }}",
-                allowClear: true,
-                width: '100%'
+            $('.select2').each(function() {
+                $(this).select2({
+                    placeholder: $(this).data('placeholder') || "{{ 'Select Category' }}",
+                    allowClear: true,
+                    width: '100%'
+                });
             });
 
             $('#parentCategoryTable').DataTable({
@@ -591,48 +606,38 @@
     </script>
 
     <script>
-        // ===== SORTABLE CATEGORIES =====
-        var sortableCatLoaded = false;
+        // ===== SCOPED SORTABLE CATEGORIES =====
+        // Parents have their own 0..n order (homepage grid + shop pills + footer);
+        // each parent's children have their own 0..n order (shop child chips).
+        var parentSortLoaded = false;
+        var childSortParentId = '';
 
-        function loadCategorySortList() {
-            if (sortableCatLoaded) return;
-            $.get("{{ route('category.sortList') }}", function(categories) {
-                var html = '';
-                if (categories.length === 0) {
-                    html = '<div class="text-center py-5 text-muted"><i class="ri-inbox-line fs-1"></i><p class="mt-2">No categories found</p></div>';
-                } else {
-                    categories.forEach(function(c, i) {
-                        var img = c.image ? '<img src="' + c.image + '" class="rounded" style="width:45px;height:45px;object-fit:cover;">' : '<div class="rounded bg-light d-flex align-items-center justify-content-center" style="width:45px;height:45px;"><i class="ri-image-line text-muted"></i></div>';
-                        var parentLabel = c.parent_id ? '<small class="text-muted">Subcategory</small>' : '<small class="text-muted">Parent</small>';
-                        html += '<div class="sort-item" data-id="' + c.id + '">';
-                        html += '  <div class="d-flex align-items-center gap-3">';
-                        html += '    <span class="sort-handle text-muted"><i class="ri-drag-move-line fs-5"></i></span>';
-                        html += '    ' + img;
-                        html += '    <div class="flex-grow-1">';
-                        html += '      <div class="fw-semibold">' + (c.name || '') + '</div>';
-                        html += '      ' + parentLabel;
-                        html += '    </div>';
-                        html += '    <span class="badge bg-light text-dark sort-position">#' + (i + 1) + '</span>';
-                        html += '  </div>';
-                        html += '</div>';
-                    });
-                }
-                $('#sortableCategories').html(html);
-                sortableCatLoaded = true;
-                initCategorySortable();
-            });
+        function sortItemHtml(c, i) {
+            var img = c.image ? '<img src="' + c.image + '" class="rounded" style="width:45px;height:45px;object-fit:cover;">' : '<div class="rounded bg-light d-flex align-items-center justify-content-center" style="width:45px;height:45px;"><i class="ri-image-line text-muted"></i></div>';
+            var html = '<div class="sort-item" data-id="' + c.id + '">';
+            html += '  <div class="d-flex align-items-center gap-3">';
+            html += '    <span class="sort-handle text-muted"><i class="ri-drag-move-line fs-5"></i></span>';
+            html += '    ' + img;
+            html += '    <div class="flex-grow-1">';
+            html += '      <div class="fw-semibold">' + (c.name || '') + '</div>';
+            html += '    </div>';
+            html += '    <span class="badge bg-light text-dark sort-position">#' + (i + 1) + '</span>';
+            html += '  </div>';
+            html += '</div>';
+
+            return html;
         }
 
-        function initCategorySortable() {
-            $('#sortableCategories').sortable({
+        function initScopedSortable(selector) {
+            $(selector).sortable({
                 handle: '.sort-handle',
                 placeholder: 'sort-placeholder',
                 tolerance: 'pointer',
                 opacity: 0.8,
                 cursor: 'grabbing',
                 update: function() {
-                    var ids = $('#sortableCategories').sortable('toArray', { attribute: 'data-id' });
-                    $('#sortableCategories .sort-item').each(function(i) {
+                    var ids = $(selector).sortable('toArray', { attribute: 'data-id' });
+                    $(selector + ' .sort-item').each(function(i) {
                         $(this).find('.sort-position').text('#' + (i + 1));
                     });
                     $.ajax({
@@ -655,21 +660,95 @@
             }).disableSelection();
         }
 
-        // Load sort list when tab is clicked
+        function loadParentSortList(force) {
+            if (parentSortLoaded && !force) return;
+            $.get("{{ route('category.sortList') }}", { scope: 'parent' }, function(categories) {
+                var html = '';
+                if (categories.length === 0) {
+                    html = '<div class="text-center py-4 text-muted"><i class="ri-inbox-line fs-1"></i><p class="mt-2">No parent categories found</p></div>';
+                } else {
+                    categories.forEach(function(c, i) {
+                        html += sortItemHtml(c, i);
+                    });
+                }
+                $('#sortableParentCategories').html(html);
+                parentSortLoaded = true;
+                initScopedSortable('#sortableParentCategories');
+            });
+        }
+
+        function loadChildSortParentOptions() {
+            $.get("{{ route('parent.categories') }}", function(parents) {
+                var current = $('#childSortParent').val();
+                $('#childSortParent').empty().append('<option value="">{{ 'Select parent' }}</option>');
+                parents.forEach(function(p) {
+                    $('#childSortParent').append('<option value="' + p.id + '">' + p.name + '</option>');
+                });
+                if (current) {
+                    $('#childSortParent').val(current);
+                }
+                $('#childSortParent').trigger('change.select2');
+            });
+        }
+
+        function loadChildSortList(parentId) {
+            childSortParentId = parentId || '';
+            if (!childSortParentId) {
+                $('#sortableChildCategories').html('<div class="text-center py-4 text-muted">Select a parent above to reorder its subcategories.</div>');
+
+                return;
+            }
+            $('#sortableChildCategories').html('<div class="text-center py-4"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Loading subcategories...</p></div>');
+            $.get("{{ route('category.sortList') }}", { scope: 'children', parent_id: childSortParentId }, function(categories) {
+                var html = '';
+                if (categories.length === 0) {
+                    html = '<div class="text-center py-4 text-muted"><p class="mt-2">No subcategories under this parent</p></div>';
+                } else {
+                    categories.forEach(function(c, i) {
+                        html += sortItemHtml(c, i);
+                    });
+                }
+                $('#sortableChildCategories').html(html);
+                initScopedSortable('#sortableChildCategories');
+            }).fail(function(xhr) {
+                var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Failed to load subcategories';
+                $('#sortableChildCategories').html('<div class="text-center py-4 text-muted"><p class="mt-2">' + msg + '</p></div>');
+            });
+        }
+
+        // Load sort lists when tab is clicked
         $('#sortTab').on('shown.bs.tab', function() {
-            loadCategorySortList();
+            // Select2 inside a hidden tab miscalculates width — (re)init on first show.
+            if (!$('#childSortParent').hasClass('select2-hidden-accessible')) {
+                $('#childSortParent').select2({
+                    placeholder: "{{ 'Select parent' }}",
+                    allowClear: true,
+                    width: '100%'
+                });
+            }
+            loadParentSortList(false);
+            loadChildSortParentOptions();
+            if (childSortParentId) {
+                loadChildSortList(childSortParentId);
+            }
+        });
+
+        $('#childSortParent').on('change', function() {
+            loadChildSortList($(this).val());
         });
 
         // Refresh button
         $('#refreshSortList').on('click', function() {
-            sortableCatLoaded = false;
-            $('#sortableCategories').html('<div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Loading categories...</p></div>');
-            loadCategorySortList();
+            parentSortLoaded = false;
+            $('#sortableParentCategories').html('<div class="text-center py-4"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Loading parent categories...</p></div>');
+            loadParentSortList(true);
+            loadChildSortParentOptions();
+            loadChildSortList($('#childSortParent').val());
         });
 
         // Invalidate sort list when DataTable is reloaded
         $('#parentCategoryTable, #childCategoryTable').on('draw.dt', function() {
-            sortableCatLoaded = false;
+            parentSortLoaded = false;
         });
     </script>
 

@@ -4,7 +4,8 @@
 @php
     $pwErrors = $errors->has('current_password') || $errors->has('password');
     $profileErrors = $errors->has('name') || $errors->has('phone');
-    $defaultTab = $pwErrors ? 'password' : ($profileErrors ? 'details' : 'orders');
+    $addressErrors = $errors->has('label');
+    $defaultTab = $pwErrors ? 'password' : ($addressErrors ? 'addresses' : ($profileErrors ? 'details' : 'orders'));
 @endphp
 
 @section('content')
@@ -36,6 +37,7 @@
                 <nav class="portal-nav" aria-label="Account">
                     <button type="button" class="portal-link" data-portal-tab="orders"><x-icon name="package" />Orders</button>
                     <button type="button" class="portal-link" data-portal-tab="loyalty"><x-icon name="zap" />Loyalty</button>
+                    <button type="button" class="portal-link" data-portal-tab="addresses"><x-icon name="map-pin" />Addresses</button>
                     <button type="button" class="portal-link" data-portal-tab="details"><x-icon name="user" />Your details</button>
                     <button type="button" class="portal-link" data-portal-tab="password"><x-icon name="lock" />Password</button>
                     <form action="{{ route('logout') }}" method="POST" class="portal-signout">@csrf<button type="submit" class="portal-link"><x-icon name="arrow-right" />Sign out</button></form>
@@ -121,6 +123,76 @@
                     </form>
                 </section>
 
+                <section class="auth-card" data-portal-panel="addresses">
+                    <h2 style="font-size:1.25rem;margin-bottom:0.25rem;">My addresses</h2>
+                    <p class="text-muted" style="font-size:14px;">Your defaults are picked automatically at checkout.</p>
+                    @foreach ($addresses as $a)
+                        <div class="summary-row" style="align-items:start;border-bottom:1px solid var(--border);padding:0.85rem 0;">
+                            <span>
+                                <strong>{{ $a->label }}</strong>
+                                @if ($a->is_default_delivery)<span class="status-pill" style="margin-left:.35rem;">Default delivery</span>@endif
+                                @if ($a->is_default_billing)<span class="status-pill" style="margin-left:.35rem;">Default billing</span>@endif
+                                <br><span class="text-muted">{{ $a->name }} · {{ $a->phone }}<br>{{ $a->line() }}</span>
+                            </span>
+                            <span style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
+                                @if (!$a->is_default_delivery)
+                                    <form method="POST" action="{{ route('account.addresses.default', $a->id) }}">@csrf<input type="hidden" name="type" value="delivery"><button type="submit" class="btn btn-ghost btn-sm">Deliver here</button></form>
+                                @endif
+                                @if (!$a->is_default_billing)
+                                    <form method="POST" action="{{ route('account.addresses.default', $a->id) }}">@csrf<input type="hidden" name="type" value="billing"><button type="submit" class="btn btn-ghost btn-sm">Bill here</button></form>
+                                @endif
+                                <button type="button" class="btn btn-ghost btn-sm" data-address-edit="{{ $a->id }}" data-update-url="{{ route('account.addresses.update', $a->id) }}">Edit</button>
+                                <form method="POST" action="{{ route('account.addresses.destroy', $a->id) }}" onsubmit="return confirm('Remove this address?')">@csrf @method('DELETE')<button type="submit" class="btn btn-ghost btn-sm">Remove</button></form>
+                            </span>
+                        </div>
+                        <script type="application/json" data-address-data="{{ $a->id }}">{!! json_encode($a->only(['id', 'label', 'name', 'phone', 'address', 'city', 'postcode', 'is_default_delivery', 'is_default_billing'])) !!}</script>
+                    @endforeach
+                    <h3 style="font-size:1rem;margin:1.25rem 0 0.75rem;" data-address-form-title>Add a new address</h3>
+                    <form method="POST" action="{{ route('account.addresses.store') }}" data-address-form>
+                        @csrf
+                        <input type="hidden" name="_edit_id" value="{{ old('_edit_id') }}">
+                        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                            <div class="form-group">
+                                <label for="ad-label">Label</label>
+                                <input id="ad-label" type="text" name="label" required maxlength="50" placeholder="Home, Work…" value="{{ old('label') }}" data-address-field="label">
+                            </div>
+                            <div class="form-group">
+                                <label for="ad-name">Full name</label>
+                                <input id="ad-name" type="text" name="name" required maxlength="100" value="{{ old('name', $user->name) }}" data-address-field="name">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="ad-phone">Phone</label>
+                            <input id="ad-phone" type="tel" name="phone" required maxlength="30" value="{{ old('phone', $user->phone) }}" data-address-field="phone">
+                        </div>
+                        <div class="form-group">
+                            <label for="ad-address">Street address</label>
+                            <input id="ad-address" type="text" name="address" required maxlength="500" value="{{ old('address') }}" data-address-field="address">
+                        </div>
+                        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                            <div class="form-group">
+                                <label for="ad-city">Town / City</label>
+                                <input id="ad-city" type="text" name="city" required maxlength="100" value="{{ old('city') }}" data-address-field="city">
+                            </div>
+                            <div class="form-group">
+                                <label for="ad-postcode">Postcode</label>
+                                <input id="ad-postcode" type="text" name="postcode" required maxlength="20" value="{{ old('postcode') }}" data-address-field="postcode">
+                            </div>
+                        </div>
+                        <div class="form-group" style="display:flex;gap:1rem;flex-wrap:wrap;">
+                            <label style="font-weight:400;"><input type="checkbox" name="is_default_delivery" value="1" @checked(old('is_default_delivery', $addresses->isEmpty())) data-address-field="is_default_delivery"> Default delivery</label>
+                            <label style="font-weight:400;"><input type="checkbox" name="is_default_billing" value="1" @checked(old('is_default_billing', $addresses->isEmpty())) data-address-field="is_default_billing"> Default billing</label>
+                        </div>
+                        @if ($errors->has('label'))
+                            <p style="color:#B91C1C;font-size:13px;">Please check the highlighted address fields.</p>
+                        @endif
+                        <div style="display:flex;gap:.5rem;">
+                            <button type="submit" class="btn btn-dark" data-address-submit>Save address</button>
+                            <button type="button" class="btn btn-ghost" data-address-cancel hidden>Cancel edit</button>
+                        </div>
+                    </form>
+                </section>
+
                 <section class="auth-card" data-portal-panel="password">
                     <h2 style="font-size:1.25rem;margin-bottom:1.25rem;">Change password</h2>
                     <form method="POST" action="{{ route('account.password') }}">
@@ -132,8 +204,8 @@
                         </div>
                         <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
                             <div class="form-group">
-                                <label for="pw-new">New password <span class="text-muted">(8+ characters)</span></label>
-                                <input id="pw-new" type="password" name="password" required autocomplete="new-password">
+                                <label for="pw-new">New password <span class="text-muted">(6 digits)</span></label>
+                                <input id="pw-new" type="password" name="password" required inputmode="numeric" maxlength="6" autocomplete="new-password">
                                 @error('password')<p style="color:#B91C1C;font-size:13px;margin-top:0.35rem;">{{ $message }}</p>@enderror
                             </div>
                             <div class="form-group">
@@ -156,7 +228,7 @@
         root._egfBound = true;
         var panels = root.querySelectorAll('[data-portal-panel]');
         var links = document.querySelectorAll('[data-portal-tab]');
-        var valid = ['orders', 'loyalty', 'details', 'password'];
+        var valid = ['orders', 'loyalty', 'addresses', 'details', 'password'];
 
         function show(name, push) {
             if (valid.indexOf(name) === -1) name = root.dataset.default || 'orders';
@@ -179,5 +251,55 @@
     }
     document.addEventListener('spa:loaded', egfPortalInit);
     egfPortalInit();
+    /* Address book add/edit — fills the shared form from the card's JSON. */
+    (function egfAddressForm() {
+        var form = document.querySelector('[data-address-form]');
+        if (!form || form._egfBound) return;
+        form._egfBound = true;
+        var storeAction = form.getAttribute('action');
+        var title = document.querySelector('[data-address-form-title]');
+        var submit = form.querySelector('[data-address-submit]');
+        var cancel = form.querySelector('[data-address-cancel]');
+        var editId = form.querySelector('input[name="_edit_id"]');
+        function field(name) { return form.querySelector('[data-address-field="' + name + '"]'); }
+        function reset() {
+            form.setAttribute('action', storeAction);
+            if (editId) editId.value = '';
+            if (title) title.textContent = 'Add a new address';
+            if (submit) submit.textContent = 'Save address';
+            if (cancel) cancel.hidden = true;
+        }
+        document.addEventListener('click', function (e) {
+            var btn = e.target.closest ? e.target.closest('[data-address-edit]') : null;
+            if (!btn) return;
+            var dataEl = document.querySelector('[data-address-data="' + btn.getAttribute('data-address-edit') + '"]');
+            if (!dataEl) return;
+            var d = JSON.parse(dataEl.textContent);
+            form.setAttribute('action', btn.getAttribute('data-update-url'));
+            if (editId) editId.value = d.id;
+            ['label', 'name', 'phone', 'address', 'city', 'postcode'].forEach(function (k) {
+                if (field(k)) field(k).value = d[k] || '';
+            });
+            if (field('is_default_delivery')) field('is_default_delivery').checked = !!d.is_default_delivery;
+            if (field('is_default_billing')) field('is_default_billing').checked = !!d.is_default_billing;
+            if (title) title.textContent = 'Edit address: ' + (d.label || '');
+            if (submit) submit.textContent = 'Update address';
+            if (cancel) cancel.hidden = false;
+            form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+        if (cancel) cancel.addEventListener('click', function () {
+            form.reset();
+            reset();
+        });
+        if (editId && editId.value) {
+            var btn = document.querySelector('[data-address-edit="' + editId.value + '"]');
+            if (btn) {
+                form.setAttribute('action', btn.getAttribute('data-update-url'));
+                if (title) title.textContent = 'Edit address';
+                if (submit) submit.textContent = 'Update address';
+                if (cancel) cancel.hidden = false;
+            }
+        }
+    })();
 </script>
 @endsection

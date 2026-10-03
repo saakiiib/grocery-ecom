@@ -62,6 +62,7 @@
         bagRemove: "{{ route('bag.remove') }}",
         checkout: "{{ route('checkout') }}",
         favToggle: "{{ route('favourites.toggle') }}",
+        reviewStore: "{{ route('reviews.store') }}",
         login: "{{ route('login') }}",
         product: "{{ url('/product') }}"
     };

@@ -15,7 +15,8 @@
                         <h4 class="card-title mb-0 flex-grow-1">Order {{ $order->number }}</h4>
                         @php $st = $order->status; @endphp
                         <span class="badge fs-6" style="background:{{ $st?->color ?? '#1A2E22' }};">{{ $st?->name ?? ucfirst($order->status_slug) }}</span>
-                        <button type="button" class="btn btn-soft-secondary btn-sm ms-2" onclick="window.print()">Print</button>
+                        <a href="{{ route('orders.invoice', $order->id) }}" class="btn btn-soft-primary btn-sm ms-2">Invoice</a>
+                        <a href="{{ route('orders.invoicePdf', $order->id) }}" class="btn btn-soft-secondary btn-sm ms-1">PDF</a>
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
@@ -36,24 +37,32 @@
                                 </tbody>
                                 <tfoot>
                                     <tr><th colspan="4">Subtotal</th><th class="text-end">£{{ number_format($order->subtotal, 2) }}</th></tr>
+                                    @if ($order->coupon_discount > 0)<tr><th colspan="4">Coupon {{ $order->coupon_code }}</th><th class="text-end">−£{{ number_format($order->coupon_discount, 2) }}</th></tr>@endif
                                     @if ($order->points_discount > 0)<tr><th colspan="4">Loyalty points ({{ $order->points_redeemed }})</th><th class="text-end">−£{{ number_format($order->points_discount, 2) }}</th></tr>@endif
                                     @if ($order->points_earned > 0)<tr><th colspan="4">Points earned</th><th class="text-end">+{{ $order->points_earned }}</th></tr>@endif
                                     <tr><th colspan="4">Delivery</th><th class="text-end">{{ $order->delivery_fee > 0 ? '£'.number_format($order->delivery_fee, 2) : 'Free' }}</th></tr>
+                                    @if ($order->vat_amount > 0)<tr><th colspan="4" class="fw-normal text-muted">Includes VAT @ {{ number_format($order->vat_percent, 2) }}%</th><th class="text-end fw-normal text-muted">£{{ number_format($order->vat_amount, 2) }}</th></tr>@endif
                                     <tr><th colspan="4">Total</th><th class="text-end">£{{ number_format($order->total, 2) }}</th></tr>
                                 </tfoot>
                             </table>
                         </div>
 
                         <div class="row mt-3">
-                            <div class="col-md-6">
-                                <h6>Deliver to</h6>
+                            <div class="col-md-4">
+                                <h6>Ship to</h6>
                                 <p class="mb-1"><strong>{{ $order->name }}</strong> · {{ $order->phone }}</p>
                                 <p class="mb-1">{{ $order->address }}, {{ $order->city }} {{ $order->postcode }}</p>
                                 <p class="mb-1">Slot: <strong>{{ $order->delivery_date ? $order->delivery_date->format('D j M Y') : '—' }}</strong> · {{ $order->delivery_slot_label }}</p>
                                 @if ($order->notes)<p class="mb-1 text-muted">Note: {{ $order->notes }}</p>@endif
                                 @if ($order->user)<p class="mb-0 text-muted">Account: {{ $order->user->name }} ({{ $order->user->email }})</p>@endif
                             </div>
-                            <div class="col-md-6">
+                            @php $billTo = $order->billTo(); @endphp
+                            <div class="col-md-4">
+                                <h6>Bill to</h6>
+                                <p class="mb-1"><strong>{{ $billTo['name'] }}</strong> · {{ $billTo['phone'] }}</p>
+                                <p class="mb-0">{{ $billTo['address'] }}, {{ $billTo['city'] }} {{ $billTo['postcode'] }}</p>
+                            </div>
+                            <div class="col-md-4">
                                 <h6>Payment</h6>
                                 <p class="mb-1">{{ $order->paymentLabel() }} · <span class="badge {{ $order->payment_status === 'paid' ? 'bg-success' : 'bg-warning text-dark' }}">{{ ucfirst($order->payment_status) }}</span></p>
                                 @if ($order->payment_reference)<p class="mb-0 text-muted"><small>Ref: {{ $order->payment_reference }}</small></p>@endif

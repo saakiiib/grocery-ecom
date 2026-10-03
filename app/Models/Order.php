@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Mail\OrderDelivered;
+use App\Mail\OrderStatusUpdated;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -20,6 +21,10 @@ class Order extends Model
             'subtotal' => 'decimal:2',
             'delivery_fee' => 'decimal:2',
             'total' => 'decimal:2',
+            'coupon_discount' => 'decimal:2',
+            'points_discount' => 'decimal:2',
+            'vat_percent' => 'decimal:2',
+            'vat_amount' => 'decimal:2',
         ];
     }
 
@@ -62,6 +67,18 @@ class Order extends Model
         };
     }
 
+    /** Billing snapshot, falling back to the delivery snapshot for legacy orders. */
+    public function billTo(): array
+    {
+        return [
+            'name' => $this->billing_name ?: $this->name,
+            'phone' => $this->billing_phone ?: $this->phone,
+            'address' => $this->billing_address ?: $this->address,
+            'city' => $this->billing_city ?: $this->city,
+            'postcode' => $this->billing_postcode ?: $this->postcode,
+        ];
+    }
+
     public function isPaid(): bool
     {
         return $this->payment_status === 'paid';
@@ -95,6 +112,9 @@ class Order extends Model
 
         if ($to->slug === 'delivered') {
             static::sendMail($this->receiptEmail(), new OrderDelivered($this));
+        } elseif (in_array($to->slug, ['packed', 'out_for_delivery', 'cancelled'], true)) {
+            // confirmed is covered by OrderPlaced; every other move gets its own update.
+            static::sendMail($this->receiptEmail(), new OrderStatusUpdated($this, $to->slug));
         }
 
         return $history;

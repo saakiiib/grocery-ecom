@@ -40,18 +40,31 @@
                 </div>
             @endauth
 
-            <div class="cart-layout" style="align-items:start;">
-                <form id="egf-checkout-form" class="auth-card" style="margin:0;">
-                    @csrf
-                    <h2 style="font-size:1.25rem;margin-bottom:1.25rem;">Where is it going?</h2>
+            <form id="egf-checkout-form" class="cart-layout" style="margin:0;align-items:start;">
+                @csrf
+                <div class="auth-card" style="margin:0;">
+                    <h2 style="font-size:1.25rem;margin-bottom:1.25rem;"><span class="co-step">1</span>Where is it going?</h2>
+                    @auth
+                        @if ($addresses->isNotEmpty())
+                            <div class="form-group">
+                                <label for="co-delivery-id">Deliver to (your address book)</label>
+                                <select id="co-delivery-id">
+                                    @foreach ($addresses as $a)
+                                        <option value="{{ $a->id }}" @selected($defaultDelivery && $defaultDelivery->id === $a->id)>{{ $a->label }} — {{ $a->line() }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <script type="application/json" id="co-address-book">@json($coAddressBook)</script>
+                        @endif
+                    @endauth
                     <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
                         <div class="form-group">
                             <label for="co-name">Full name</label>
-                            <input type="text" id="co-name" name="name" required maxlength="100" value="{{ old('name', $shopper->name ?? '') }}" autocomplete="name">
+                            <input type="text" id="co-name" name="name" required maxlength="100" value="{{ old('name', $defaultDelivery->name ?? $shopper->name ?? '') }}" autocomplete="name">
                         </div>
                         <div class="form-group">
                             <label for="co-phone">Phone</label>
-                            <input type="tel" id="co-phone" name="phone" required maxlength="30" value="{{ old('phone', $shopper->phone ?? '') }}" autocomplete="tel">
+                            <input type="tel" id="co-phone" name="phone" required maxlength="30" value="{{ old('phone', $defaultDelivery->phone ?? $shopper->phone ?? '') }}" autocomplete="tel">
                         </div>
                     </div>
                     <div class="form-group">
@@ -60,24 +73,74 @@
                     </div>
                     <div class="form-group">
                         <label for="co-address">Street address</label>
-                        <input type="text" id="co-address" name="address" required maxlength="500" value="{{ old('address', $shopper->address ?? '') }}" placeholder="Flat, street" autocomplete="street-address">
+                        <input type="text" id="co-address" name="address" required maxlength="500" value="{{ old('address', $defaultDelivery->address ?? $shopper->address ?? '') }}" placeholder="Flat, street" autocomplete="street-address">
                     </div>
                     <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
                         <div class="form-group">
                             <label for="co-city">Town / City</label>
-                            <input type="text" id="co-city" name="city" required maxlength="100" value="{{ old('city', $shopper->city ?? '') }}" autocomplete="address-level2">
+                            <input type="text" id="co-city" name="city" required maxlength="100" value="{{ old('city', $defaultDelivery->city ?? $shopper->city ?? '') }}" autocomplete="address-level2">
                         </div>
                         <div class="form-group">
                             <label for="co-postcode">Postcode</label>
-                            <input type="text" id="co-postcode" name="postcode" required maxlength="20" value="{{ old('postcode', $shopper->postcode ?? '') }}" placeholder="e.g. SW1A 1AA" autocomplete="postal-code">
+                            <input type="text" id="co-postcode" name="postcode" required maxlength="20" value="{{ old('postcode', $defaultDelivery->postcode ?? $shopper->postcode ?? '') }}" placeholder="e.g. SW1A 1AA" autocomplete="postal-code">
+                            <p class="text-muted" id="co-postcode-msg" style="font-size:13px;margin-top:0.35rem;display:none;"></p>
                         </div>
                     </div>
+                    @auth
+                        <div class="form-group" style="display:flex;gap:1rem;flex-wrap:wrap;align-items:center;">
+                            <label style="font-weight:400;"><input type="checkbox" id="co-save-address" value="1"> Save this delivery address to my book</label>
+                            <input type="text" id="co-save-label" maxlength="50" placeholder="Label, e.g. Work" style="max-width:200px;display:none;">
+                        </div>
+                    @endauth
                     <div class="form-group">
                         <label for="co-notes">Delivery notes <span class="text-muted">(optional)</span></label>
                         <input type="text" id="co-notes" name="notes" maxlength="1000" value="{{ old('notes') }}" placeholder="Gate code, leave with neighbour…">
                     </div>
 
-                    <h2 style="font-size:1.25rem;margin:1.5rem 0 1rem;">When should it arrive?</h2>
+                    <h2 style="font-size:1.25rem;margin:1.5rem 0 1rem;"><span class="co-step">2</span>Who is paying?</h2>
+                    <div class="form-group">
+                        <label style="font-weight:400;"><input type="checkbox" id="co-billing-same" checked> Billing address is the same as delivery</label>
+                    </div>
+                    <div id="co-billing-block" style="display:none;">
+                        @auth
+                            @if ($addresses->isNotEmpty())
+                                <div class="form-group">
+                                    <label for="co-billing-id">Bill to (your address book)</label>
+                                    <select id="co-billing-id">
+                                        @foreach ($addresses as $a)
+                                            <option value="{{ $a->id }}" @selected($defaultBilling && $defaultBilling->id === $a->id)>{{ $a->label }} — {{ $a->line() }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            @endif
+                        @endauth
+                        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                            <div class="form-group">
+                                <label for="co-bill-name">Billing name</label>
+                                <input type="text" id="co-bill-name" name="billing_name" maxlength="100" value="{{ old('billing_name', $defaultBilling->name ?? $defaultDelivery->name ?? $shopper->name ?? '') }}" autocomplete="name">
+                            </div>
+                            <div class="form-group">
+                                <label for="co-bill-phone">Billing phone</label>
+                                <input type="tel" id="co-bill-phone" name="billing_phone" maxlength="30" value="{{ old('billing_phone', $defaultBilling->phone ?? $defaultDelivery->phone ?? $shopper->phone ?? '') }}" autocomplete="tel">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="co-bill-address">Billing street address</label>
+                            <input type="text" id="co-bill-address" name="billing_address" maxlength="500" value="{{ old('billing_address', $defaultBilling->address ?? $defaultDelivery->address ?? $shopper->address ?? '') }}" autocomplete="street-address">
+                        </div>
+                        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                            <div class="form-group">
+                                <label for="co-bill-city">Billing town / City</label>
+                                <input type="text" id="co-bill-city" name="billing_city" maxlength="100" value="{{ old('billing_city', $defaultBilling->city ?? $defaultDelivery->city ?? $shopper->city ?? '') }}" autocomplete="address-level2">
+                            </div>
+                            <div class="form-group">
+                                <label for="co-bill-postcode">Billing postcode</label>
+                                <input type="text" id="co-bill-postcode" name="billing_postcode" maxlength="20" value="{{ old('billing_postcode', $defaultBilling->postcode ?? $defaultDelivery->postcode ?? $shopper->postcode ?? '') }}" autocomplete="postal-code">
+                            </div>
+                        </div>
+                    </div>
+
+                    <h2 style="font-size:1.25rem;margin:1.5rem 0 1rem;"><span class="co-step">3</span>When should it arrive?</h2>
                     <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
                         <div class="form-group">
                             <label for="co-date">Delivery day</label>
@@ -99,8 +162,38 @@
                         </div>
                     </div>
                     <p class="text-muted" style="font-size:13px;">Order before 8pm for next-day slots. Free delivery over £{{ number_format($freeOver, 2) }} · minimum order £{{ number_format($minOrder, 2) }}.</p>
+                </div>
 
-                    <h2 style="font-size:1.25rem;margin:1.5rem 0 1rem;">How would you like to pay?</h2>
+                <aside class="cart-summary">
+                    <h3>Your bag ({{ $bag['count'] }})</h3>
+                    @foreach ($bag['lines'] as $item)
+                        <div class="summary-row co-line" style="align-items:center;">
+                            <img class="co-thumb" src="{{ $item['image'] }}" alt="" loading="lazy" onerror="this.onerror=null;this.src='{{ url('placeholder.webp') }}'">
+                            <span style="flex:1;min-width:0;">{{ $item['qty'] }} × {{ $item['name'] }}<br><span class="text-muted">{{ $item['pack'] }}</span></span>
+                            <span>£{{ number_format($item['line_total'], 2) }}</span>
+                        </div>
+                    @endforeach
+                    <div class="summary-row"><span>Subtotal</span><span data-co-subtotal>£{{ number_format($bag['subtotal'], 2) }}</span></div>
+                    <div class="summary-row" data-co-coupon style="display:none;"><span>Coupon <strong data-co-coupon-code></strong> <button type="button" data-co-coupon-remove aria-label="Remove coupon" style="border:0;background:none;color:#B91C1C;cursor:pointer;font-size:14px;">×</button></span><span data-co-coupon-amount>−£0.00</span></div>
+                    <div class="summary-row" data-co-points style="display:none;"><span>Loyalty points</span><span>−£0.00</span></div>
+                    <div class="summary-row"><span>Delivery</span><span data-co-fee>Calculated…</span></div>
+                    <div class="summary-row total"><span>Total</span><span data-co-total>£{{ number_format($bag['subtotal'], 2) }}</span></div>
+
+                    <h3 style="margin-top:1.5rem;">Coupon code</h3>
+                    @auth
+                        <div class="coupon-box" id="co-coupon-box">
+                            <div class="coupon-row">
+                                <input type="text" id="co-coupon" placeholder="Enter code" autocomplete="off" aria-label="Coupon code">
+                                <button type="button" class="btn btn-dark btn-sm" id="co-coupon-apply">Apply</button>
+                            </div>
+                            <p class="coupon-msg" id="co-coupon-msg" style="display:none;"></p>
+                            <input type="hidden" id="co-coupon-code" value="">
+                        </div>
+                    @else
+                        <p class="text-muted" style="font-size:14px;"><a href="{{ route('login', ['redirect' => route('checkout')]) }}">Sign in</a> to use a coupon code.</p>
+                    @endauth
+
+                    <h3 style="margin-top:1.5rem;"><span class="co-step">4</span>Payment</h3>
                     @auth
                         @if ($pointsBalance >= $pointsMin)
                             <div class="pay-card" style="margin-bottom:0.7rem;cursor:default;" id="co-points-card">
@@ -115,41 +208,35 @@
                             </div>
                         @endif
                     @endauth
-                    <div class="form-group pay-grid" id="co-methods">
-                        <label class="pay-card">
+                    <div class="pay-tiles" id="co-methods">
+                        <label class="pay-tile">
                             <input type="radio" name="payment_method" value="cod" checked>
-                            <span class="pay-card-icon">
+                            <span class="pay-tile-icon">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>
                             </span>
-                            <span class="pay-card-text"><strong>Cash on delivery</strong><span class="text-muted">Pay at your door</span></span>
-                            <span class="pay-card-tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
-                            <span class="pay-card-flag">Most flexible</span>
+                            <strong>Cash</strong>
+                            <span class="text-muted">Pay at door</span>
+                            <span class="pay-tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
                         </label>
-                        <label class="pay-card @if (! $stripeOn) pay-card-off @endif">
+                        <label class="pay-tile @if (! $stripeOn) pay-tile-off @endif">
                             <input type="radio" name="payment_method" value="stripe" @disabled(! $stripeOn)>
-                            <span class="pay-card-icon">
+                            <span class="pay-tile-icon">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
                             </span>
-                            <span class="pay-card-text"><strong>Card now</strong><span class="text-muted">Visa · Mastercard · Amex</span></span>
-                            <span class="pay-card-tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
-                            @if ($stripeOn)
-                                <span class="pay-card-flag">Fast &amp; secure</span>
-                            @else
-                                <span class="pay-card-flag">Switching on soon</span>
-                            @endif
+                            <strong>Card</strong>
+                            <span class="text-muted">{{ $stripeOn ? 'Visa · MC · Amex' : 'Soon' }}</span>
+                            <span class="pay-tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
                         </label>
-                        <label class="pay-card pay-card-paypal @if (! $paypalOn) pay-card-off @endif">
+                        <label class="pay-tile @if (! $paypalOn) pay-tile-off @endif">
                             <input type="radio" name="payment_method" value="paypal" @disabled(! $paypalOn)>
-                            <span class="pay-card-icon paypal-mark"><em>Pay</em><strong>Pal</strong></span>
-                            <span class="pay-card-text"><strong>PayPal</strong><span class="text-muted">Buyer protection included</span></span>
-                            <span class="pay-card-tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
-                            @if (! $paypalOn)
-                                <span class="pay-card-flag">Switching on soon</span>
-                            @endif
+                            <span class="pay-tile-icon paypal-mark"><em>Pay</em><strong>Pal</strong></span>
+                            <strong>PayPal</strong>
+                            <span class="text-muted">{{ $paypalOn ? 'Protected' : 'Soon' }}</span>
+                            <span class="pay-tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
                         </label>
                     </div>
                     @if (! $stripeOn || ! $paypalOn)
-                        <p class="text-muted" style="font-size:13px;margin:-0.25rem 0 1rem;">Online payments go live as soon as the shop connects its card and PayPal accounts — cash on delivery works today.</p>
+                        <p class="text-muted" style="font-size:13px;margin:0.5rem 0 1rem;">Online payments go live as soon as the shop connects its card and PayPal accounts — cash on delivery works today.</p>
                     @endif
                     <div class="form-group" id="co-card-wrap" style="display:none;">
                         <label>Card details</label>
@@ -158,25 +245,14 @@
                     <div id="co-paypal-buttons" style="display:none;margin-bottom:1rem;"></div>
 
                     <div id="co-error" style="display:none;color:#B91C1C;font-size:14px;margin-bottom:1rem;"></div>
+                    <label class="privacy-check">
+                        <input type="checkbox" id="co-privacy">
+                        <span>I agree to the <a @spa href="{{ route('privacy') }}">privacy policy</a> and <a @spa href="{{ route('terms') }}">terms of service</a></span>
+                    </label>
                     <button type="submit" id="co-submit" class="btn btn-dark btn-block">Place order · <span data-co-total>£{{ number_format($bag['subtotal'], 2) }}</span></button>
-                    <p class="text-muted" style="font-size:13px;margin-top:0.75rem;">By placing this order you agree to our <a @spa href="{{ route('terms') }}">terms</a>. Prices are confirmed from our shelves before anything is charged.</p>
-                </form>
-
-                <aside class="cart-summary">
-                    <h3>Your bag ({{ $bag['count'] }})</h3>
-                    @foreach ($bag['lines'] as $item)
-                        <div class="summary-row" style="align-items:start;">
-                            <span>{{ $item['qty'] }} × {{ $item['name'] }}<br><span class="text-muted">{{ $item['pack'] }}</span></span>
-                            <span>£{{ number_format($item['line_total'], 2) }}</span>
-                        </div>
-                    @endforeach
-                    <div class="summary-row"><span>Subtotal</span><span data-co-subtotal>£{{ number_format($bag['subtotal'], 2) }}</span></div>
-                    <div class="summary-row" data-co-points style="display:none;"><span>Loyalty points</span><span>−£0.00</span></div>
-                    <div class="summary-row"><span>Delivery</span><span data-co-fee>Calculated…</span></div>
-                    <div class="summary-row total"><span>Total</span><span data-co-total>£{{ number_format($bag['subtotal'], 2) }}</span></div>
-                    <a @spa href="{{ route('bag') }}" class="btn btn-ghost btn-block" style="margin-top:1rem;">Back to bag</a>
+                    <a @spa href="{{ route('bag') }}" class="btn btn-ghost btn-block" style="margin-top:0.75rem;">Back to bag</a>
                 </aside>
-            </div>
+            </form>
         @endif
     </div>
 </main>
@@ -205,8 +281,90 @@
         var pointsInput = document.getElementById('co-points');
         var errBox = document.getElementById('co-error');
         var submitBtn = document.getElementById('co-submit');
+        var couponInput = document.getElementById('co-coupon');
+        var couponHidden = document.getElementById('co-coupon-code');
+        var couponMsg = document.getElementById('co-coupon-msg');
+        var couponDiscount = 0;
         var stripe = null;
         var card = null;
+
+        /* Address book: picking an entry fills the inputs; billing defaults to delivery. */
+        var bookEl = document.getElementById('co-address-book');
+        var book = {};
+        try { book = bookEl ? JSON.parse(bookEl.textContent) : {}; } catch (e) { book = {}; }
+        var deliverySel = document.getElementById('co-delivery-id');
+        var billingSame = document.getElementById('co-billing-same');
+        var billingBlock = document.getElementById('co-billing-block');
+        var billingSel = document.getElementById('co-billing-id');
+        var saveBox = document.getElementById('co-save-address');
+        var saveLabel = document.getElementById('co-save-label');
+        function fill(prefix, d) {
+            if (!d) return;
+            var map = { name: 'name', phone: 'phone', address: 'address', city: 'city', postcode: 'postcode' };
+            Object.keys(map).forEach(function (k) {
+                var el = document.getElementById(prefix + map[k]);
+                if (el && d[k] !== undefined) el.value = d[k];
+            });
+        }
+        function val(id) {
+            var el = document.getElementById(id);
+            return el ? el.value : '';
+        }
+        if (deliverySel) {
+            deliverySel.addEventListener('change', function () {
+                fill('co-', book[deliverySel.value]);
+                if (billingSame && billingSame.checked) syncBillingFromDelivery();
+            });
+        }
+        function syncBillingFromDelivery() {
+            ['name', 'phone', 'address', 'city', 'postcode'].forEach(function (k) {
+                var from = document.getElementById('co-' + k);
+                var to = document.getElementById('co-bill-' + k);
+                if (from && to) to.value = from.value;
+            });
+        }
+        if (billingSel) {
+            billingSel.addEventListener('change', function () { fill('co-bill-', book[billingSel.value]); });
+        }
+        if (billingSame && billingBlock) {
+            billingSame.addEventListener('change', function () {
+                billingBlock.style.display = billingSame.checked ? 'none' : '';
+                if (billingSame.checked) syncBillingFromDelivery();
+            });
+        }
+        if (saveBox && saveLabel) {
+            saveBox.addEventListener('change', function () {
+                saveLabel.style.display = saveBox.checked ? '' : 'none';
+            });
+        }
+
+        /* Live postcode eligibility — informational only, place() enforces. */
+        var postcodeEl = document.getElementById('co-postcode');
+        var postcodeMsg = document.getElementById('co-postcode-msg');
+        var postcodeTimer = null;
+        var postcodeOk = true;
+        if (postcodeEl && postcodeMsg) {
+            postcodeEl.addEventListener('input', function () {
+                postcodeMsg.style.display = 'none';
+                postcodeOk = true;
+                clearTimeout(postcodeTimer);
+                var code = postcodeEl.value.trim();
+                if (code.length < 3) return;
+                postcodeTimer = setTimeout(function () {
+                    post('{{ route('checkout.postcode') }}', { postcode: code }).then(function (json) {
+                        postcodeMsg.textContent = json.message || '';
+                        postcodeMsg.style.color = '#166534';
+                        postcodeMsg.style.display = '';
+                        postcodeOk = true;
+                    }).catch(function (err) {
+                        postcodeMsg.textContent = (err && err.message) || 'We could not check that postcode.';
+                        postcodeMsg.style.color = '#B91C1C';
+                        postcodeMsg.style.display = '';
+                        postcodeOk = false;
+                    });
+                }, 600);
+            });
+        }
 
         function money(n) { return '£' + Number(n).toFixed(2); }
         function showError(msg) {
@@ -226,14 +384,55 @@
         function paintTotals() {
             var fee = subtotal >= freeOver ? 0 : slotFee();
             var disc = pointsDiscount();
+            var total = Math.max(0, subtotal + fee - disc - couponDiscount);
             document.querySelectorAll('[data-co-fee]').forEach(function (el) { el.textContent = fee === 0 ? 'Free' : money(fee); });
-            document.querySelectorAll('[data-co-total]').forEach(function (el) { el.textContent = money(subtotal + fee - disc); });
+            document.querySelectorAll('[data-co-total]').forEach(function (el) { el.textContent = money(total); });
             var ptsRow = document.querySelector('[data-co-points]');
             if (ptsRow) {
                 ptsRow.style.display = disc > 0 ? '' : 'none';
                 ptsRow.querySelector('span:last-child').textContent = '−' + money(disc);
             }
+            var cpnRow = document.querySelector('[data-co-coupon]');
+            if (cpnRow) {
+                cpnRow.style.display = couponDiscount > 0 ? '' : 'none';
+                cpnRow.querySelector('[data-co-coupon-amount]').textContent = '−' + money(couponDiscount);
+                var codeEl = cpnRow.querySelector('[data-co-coupon-code]');
+                if (codeEl && couponHidden) codeEl.textContent = couponHidden.value;
+            }
         }
+        function couponMessage(text, ok) {
+            if (!couponMsg) return;
+            couponMsg.textContent = text;
+            couponMsg.style.display = text ? '' : 'none';
+            couponMsg.style.color = ok ? '#1A2E22' : '#B91C1C';
+        }
+        function clearCoupon() {
+            couponDiscount = 0;
+            if (couponHidden) couponHidden.value = '';
+            if (couponInput) couponInput.value = '';
+            couponMessage('', true);
+            paintTotals();
+        }
+        var applyBtn = document.getElementById('co-coupon-apply');
+        if (applyBtn && couponInput) {
+            applyBtn.addEventListener('click', function () {
+                var code = couponInput.value.trim();
+                if (!code) { couponMessage('Enter a coupon code first.', false); return; }
+                applyBtn.disabled = true;
+                post('{{ route('checkout.coupon') }}', { code: code }).then(function (json) {
+                    applyBtn.disabled = false;
+                    couponDiscount = parseFloat(json.discount) || 0;
+                    if (couponHidden) couponHidden.value = json.code || code.toUpperCase();
+                    couponMessage(json.message || 'Coupon applied.', true);
+                    paintTotals();
+                }).catch(function (err) {
+                    applyBtn.disabled = false;
+                    couponMessage((err && err.message) || 'That coupon did not work.', false);
+                });
+            });
+        }
+        var removeBtn = document.querySelector('[data-co-coupon-remove]');
+        if (removeBtn) removeBtn.addEventListener('click', clearCoupon);
         slotSel.addEventListener('change', paintTotals);
         if (pointsInput) pointsInput.addEventListener('input', paintTotals);
         paintTotals();
@@ -272,6 +471,7 @@
             });
         }
         function payload() {
+            if (billingSame && billingSame.checked) syncBillingFromDelivery();
             return {
                 name: document.getElementById('co-name').value,
                 phone: document.getElementById('co-phone').value,
@@ -279,11 +479,19 @@
                 address: document.getElementById('co-address').value,
                 city: document.getElementById('co-city').value,
                 postcode: document.getElementById('co-postcode').value,
+                billing_name: val('co-bill-name') || document.getElementById('co-name').value,
+                billing_phone: val('co-bill-phone') || document.getElementById('co-phone').value,
+                billing_address: val('co-bill-address') || document.getElementById('co-address').value,
+                billing_city: val('co-bill-city') || document.getElementById('co-city').value,
+                billing_postcode: val('co-bill-postcode') || document.getElementById('co-postcode').value,
+                save_address: saveBox && saveBox.checked ? 1 : 0,
+                save_label: saveLabel ? saveLabel.value : '',
                 notes: document.getElementById('co-notes').value,
                 delivery_date: document.getElementById('co-date').value,
                 delivery_slot_id: slotSel.value,
                 payment_method: method(),
-                points_redeem: pointsInput ? (parseInt(pointsInput.value, 10) || 0) : 0
+                points_redeem: pointsInput ? (parseInt(pointsInput.value, 10) || 0) : 0,
+                coupon_code: couponHidden ? couponHidden.value : ''
             };
         }
         function confirmAndGo(orderNumber, pm) {
@@ -331,6 +539,15 @@
         form.addEventListener('submit', function (e) {
             e.preventDefault();
             errBox.style.display = 'none';
+            if (typeof postcodeOk !== 'undefined' && !postcodeOk) {
+                showError(postcodeMsg && postcodeMsg.textContent ? postcodeMsg.textContent : 'Sorry — we don\'t deliver to that postcode yet.');
+                return;
+            }
+            var privacy = document.getElementById('co-privacy');
+            if (privacy && !privacy.checked) {
+                showError('Please agree to the privacy policy and terms first.');
+                return;
+            }
             submitBtn.disabled = true;
             var m = method();
             post('{{ route('checkout.place') }}', payload()).then(function (json) {

@@ -14,6 +14,7 @@ use App\Models\GalleryCategory;
 use App\Models\Order;
 use App\Models\PageSeo;
 use App\Models\Product;
+use App\Models\ProductReview;
 use App\Models\Setting;
 use App\Models\Slider;
 use App\Models\UserPoint;
@@ -32,6 +33,7 @@ class FrontendController extends Controller
         $this->seo('home');
 
         $products = Product::with(['category', 'images', 'variants.values.group'])
+            ->withReviewSummary()
             ->where('status', true)
             ->orderBy('sort_order')
             ->orderByDesc('id')
@@ -40,11 +42,12 @@ class FrontendController extends Controller
         if ($featured->isEmpty()) {
             $featured = $products->take(4)->values();
         }
-        $categories = Category::where('status', true)->orderBy('sort_order')->get();
+        $categories = Category::where('status', true)->orderBy('sort_order')->orderBy('id')->get();
 
         $productsJson = $products->map(fn ($p) => $this->productCard($p))->values();
         $featuredJson = $featured->map(fn ($p) => $this->productCard($p))->values();
         $featuredCards = $products->where('is_featured', true)->values()->map(fn ($p) => $this->productCard($p))->values();
+        // Homepage "Shop by category" shows parents only, in parent-scoped sort_order.
         $categoriesJson = $categories->whereNull('parent_id')->values()->map(function ($c) use ($products, $categories) {
             $ids = $this->categorySubtreeIds($categories, $c->id);
 
@@ -75,14 +78,16 @@ class FrontendController extends Controller
     {
         $this->seo('shop');
 
-        $categories = Category::where('status', true)->orderBy('sort_order')->get();
+        $categories = Category::where('status', true)->orderBy('sort_order')->orderBy('id')->get();
         $products = Product::with(['category', 'images', 'variants.values.group'])
+            ->withReviewSummary()
             ->where('status', true)
             ->orderBy('sort_order')
             ->orderByDesc('id')
             ->get();
 
-        // Parent/child tree for the shop pills. Parents render first, children as chips.
+        // Parent/child tree for the shop pills. Parents render in parent-scoped
+        // sort_order, children as chips in their own per-parent sort_order.
         $parents = $categories->whereNull('parent_id')->values();
 
         // Pretty paths: /shop/{category-slug} filters, /shop/offers shows offers.
@@ -248,6 +253,7 @@ class FrontendController extends Controller
         $this->seo(null, $seo['title'], $seo['description'], $seo['keywords'], $this->imgUrl($seo['image']));
 
         $related = Product::with('category')
+            ->withReviewSummary()
             ->where('status', true)
             ->where('id', '!=', $product->id)
             ->when($product->category_id, fn ($q) => $q->where('category_id', $product->category_id))
@@ -257,6 +263,7 @@ class FrontendController extends Controller
         if ($related->count() < 4) {
             $excludeIds = $related->pluck('id')->push($product->id)->values();
             $filler = Product::with('category')
+                ->withReviewSummary()
                 ->where('status', true)
                 ->whereNotIn('id', $excludeIds)
                 ->inRandomOrder()
@@ -266,6 +273,28 @@ class FrontendController extends Controller
         }
 
         $productJson = $this->productDetail($product);
+        $reviewStats = ProductReview::approved()->where('product_id', $product->id)
+            ->selectRaw('COUNT(*) as count, AVG(rating) as avg')
+            ->first();
+        $productJson['ratingAvg'] = $reviewStats && $reviewStats->count > 0 ? round((float) $reviewStats->avg, 1) : null;
+        $productJson['ratingCount'] = (int) ($reviewStats->count ?? 0);
+        $reviewsJson = ProductReview::approved()->with('user:id,name')
+            ->where('product_id', $product->id)
+            ->latest()
+            ->take(20)
+            ->get()
+            ->map(fn ($r) => [
+                'id' => $r->id,
+                'rating' => $r->rating,
+                'title' => $r->title,
+                'body' => $r->body,
+                'author' => $r->user?->name ?? 'Shopper',
+                'date' => $r->created_at->format('j M Y'),
+                'mine' => auth()->id() !== null && $r->user_id === auth()->id(),
+            ])->values();
+        $myReview = auth()->check()
+            ? ProductReview::where('product_id', $product->id)->where('user_id', auth()->id())->first()
+            : null;
         $optionsJson = [
             'config' => [],
             'finish' => [],
@@ -279,7 +308,7 @@ class FrontendController extends Controller
         $videoUrl = null;
         $videoEmbed = null;
 
-        return spa('frontend.details', compact('product', 'productJson', 'optionsJson', 'zonesJson', 'relatedJson', 'faqsJson', 'docsJson', 'videoUrl', 'videoEmbed'));
+        return spa('frontend.details', compact('product', 'productJson', 'optionsJson', 'zonesJson', 'relatedJson', 'faqsJson', 'docsJson', 'videoUrl', 'videoEmbed', 'reviewsJson', 'myReview'));
     }
 
     public function about()
@@ -374,8 +403,20 @@ class FrontendController extends Controller
         $pointsBalance = $shopper ? UserPoint::balance($shopper->id) : 0;
         $pointsValue = UserPoint::value();
         $pointsMin = UserPoint::minRedeem();
+        $addresses = collect();
+        $defaultDelivery = null;
+        $defaultBilling = null;
+        if ($shopper) {
+            $shopper->ensureAddressBook();
+            $addresses = $shopper->addresses()->get();
+            $defaultDelivery = $shopper->defaultDeliveryAddress();
+            $defaultBilling = $shopper->defaultBillingAddress();
+        }
+        $coAddressBook = $addresses->mapWithKeys(fn ($a) => [
+            $a->id => $a->only(['name', 'phone', 'address', 'city', 'postcode']),
+        ])->all();
 
-        return spa('frontend.checkout', compact('bag', 'slots', 'dates', 'minOrder', 'freeOver', 'stripeOn', 'paypalOn', 'paypalClient', 'shopper', 'pointsBalance', 'pointsValue', 'pointsMin'));
+        return spa('frontend.checkout', compact('bag', 'slots', 'dates', 'minOrder', 'freeOver', 'stripeOn', 'paypalOn', 'paypalClient', 'shopper', 'pointsBalance', 'pointsValue', 'pointsMin', 'addresses', 'defaultDelivery', 'defaultBilling', 'coAddressBook'));
     }
 
     /** Guest order tracking: order number + the phone given at checkout. */
@@ -507,6 +548,8 @@ class FrontendController extends Controller
             'savePct' => $savePct,
             'inStock' => $default ? (bool) $default->in_stock : false,
             'isFeatured' => (bool) $p->is_featured,
+            'ratingAvg' => $p->reviews_avg_rating !== null ? round((float) $p->reviews_avg_rating, 1) : null,
+            'ratingCount' => (int) ($p->reviews_count ?? 0),
             'favourited' => Favourite::isFavourited(auth()->id(), $p->id),
             'url' => route('product.show', $p->slug),
             'imgAbs' => $this->imgUrl($this->heroFor($p)),

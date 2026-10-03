@@ -25,7 +25,7 @@ class RegisterController extends Controller
             'name' => 'required|string|max:100',
             'email' => 'required|email|max:150|unique:users,email',
             'phone' => 'nullable|string|max:30|unique:users,phone',
-            'password' => 'required|string|min:8|confirmed',
+            'password' => 'required|digits:6|confirmed',
         ], [
             'name.required' => 'Please tell us your name',
             'email.unique' => 'An account with this email already exists — try signing in',

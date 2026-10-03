@@ -20,6 +20,7 @@ class FavouriteController extends Controller
     {
         $userId = auth()->id();
         $products = Product::with(['category', 'images', 'variants.values.group'])
+            ->withReviewSummary()
             ->where('status', true)
             ->whereIn('products.id', Favourite::idsFor($userId))
             ->orderByDesc('favourites.created_at')

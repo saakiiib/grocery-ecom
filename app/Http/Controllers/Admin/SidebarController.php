@@ -53,6 +53,13 @@ class SidebarController
             ],
             [
                 'type' => 'item',
+                'icon' => 'ri-star-line',
+                'label' => 'Reviews',
+                'route' => 'reviews.*',
+                'href' => route('reviews.index'),
+            ],
+            [
+                'type' => 'item',
                 'icon' => 'ri-shopping-bag-line',
                 'label' => 'Orders',
                 'route' => 'orders.*',
@@ -60,10 +67,24 @@ class SidebarController
             ],
             [
                 'type' => 'item',
+                'icon' => 'ri-coupon-line',
+                'label' => 'Coupons',
+                'route' => 'coupons.*',
+                'href' => route('coupons.index'),
+            ],
+            [
+                'type' => 'item',
                 'icon' => 'ri-time-line',
                 'label' => 'Delivery Slots',
                 'route' => 'delivery-slots.*',
                 'href' => route('delivery-slots.index'),
+            ],
+            [
+                'type' => 'item',
+                'icon' => 'ri-map-pin-line',
+                'label' => 'Delivery Zones',
+                'route' => 'delivery-zones.*',
+                'href' => route('delivery-zones.index'),
             ],
             [
                 'type' => 'item',
