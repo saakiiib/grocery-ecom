@@ -8,8 +8,8 @@
         return [
             'id' => $v['id'],
             'selling' => $v['selling'],
-            'old' => ($v['offer_price'] !== null && $v['offer_price'] < $v['mrp']) ? $v['mrp'] : null,
-            'save_pct' => ($v['offer_price'] !== null && $v['offer_price'] < $v['mrp'] && $v['mrp'] > 0)
+            'old' => ($v['selling'] < $v['mrp']) ? $v['mrp'] : null,
+            'save_pct' => ($v['selling'] < $v['mrp'] && $v['mrp'] > 0)
                 ? (int) round((($v['mrp'] - $v['selling']) / $v['mrp']) * 100) : null,
             'pack' => $pairs->pluck('label')->join(' / ') ?: ($v['sku'] ?? ''),
             'in_stock' => $v['in_stock'],
@@ -50,6 +50,13 @@
                     <button type="button" class="product-fav product-fav-inline {{ ($productJson['favourited'] ?? false) ? 'active' : '' }}" data-fav-toggle data-product-id="{{ $product->id }}" aria-label="Save to favourites" aria-pressed="{{ ($productJson['favourited'] ?? false) ? 'true' : 'false' }}"><x-icon name="heart" /></button>
                 </div>
                 @if ($product->tagline)<p class="desc">{{ $product->tagline }}</p>@endif
+                @if ($productJson['diets'])
+                    <p style="display:flex;gap:.4rem;flex-wrap:wrap;margin:0 0 .75rem;">
+                        @foreach ($productJson['diets'] as $diet)
+                            <span class="promo-tag">{{ $diet }}</span>
+                        @endforeach
+                    </p>
+                @endif
                 @if (($productJson['ratingCount'] ?? 0) > 0)
                     <p class="product-rating" style="margin:0 0 .75rem;">
                         <span class="stars">
@@ -108,6 +115,38 @@
                 </div>
 
                 <p class="text-muted" data-stock-note style="display:none;font-size:14px;">Currently out of stock — check back soon.</p>
+                @if ($productJson['bogoOffers'])
+                    <div class="bogo-panel">
+                        @foreach ($productJson['bogoOffers'] as $bo)
+                            <div><strong>{{ $bo['label'] }}</strong>@if ($bo['variant']) <span class="text-muted">· {{ $bo['variant'] }}</span>@endif</div>
+                        @endforeach
+                        <div class="text-muted" style="font-size:13px;margin-top:.25rem;">Free units appear in your bag automatically — no code needed.</div>
+                    </div>
+                @endif
+                @if ($productJson['flashOffers'])
+                    <div class="bogo-panel" style="border-color:#fecaca;background:#fef2f2;">
+                        @foreach ($productJson['flashOffers'] as $fo)
+                            <div><strong style="color:#b91c1c;">Flash £{{ number_format($fo['price'], 2) }}</strong>@if ($fo['variant']) <span class="text-muted">· {{ $fo['variant'] }}</span>@endif <span class="text-muted">· ends {{ $fo['ends'] }}</span></div>
+                        @endforeach
+                    </div>
+                @endif
+                @if ($productJson['bundleOffers'])
+                    <div class="bogo-panel" style="border-color:#bfdbfe;background:#eff6ff;">
+                        @foreach ($productJson['bundleOffers'] as $bo)
+                            <div><strong style="color:#1d4ed8;">{{ $bo['label'] }}</strong> <span class="text-muted">· {{ $bo['name'] }} — mix & match, cheapest group first</span></div>
+                            @if ($bo['others'])
+                                <div style="display:flex;gap:.6rem;margin-top:.6rem;flex-wrap:wrap;">
+                                    @foreach ($bo['others'] as $other)
+                                        <a @spa href="{{ $other['url'] }}" style="display:flex;gap:.5rem;align-items:center;border:1px solid #dbeafe;border-radius:10px;padding:.35rem .6rem .35rem .35rem;background:#fff;text-decoration:none;color:inherit;">
+                                            <img src="{{ $other['image'] }}" alt="{{ $other['name'] }}" loading="lazy" style="width:40px;height:40px;object-fit:cover;border-radius:8px;">
+                                            <span style="font-size:13px;"><strong>{{ $other['name'] }}</strong><br><span class="text-muted">{{ $other['price'] }}</span></span>
+                                        </a>
+                                    @endforeach
+                                </div>
+                            @endif
+                        @endforeach
+                    </div>
+                @endif
                 <script type="application/json" id="variant-data">@json($pickerVariants)</script>
                 <script type="application/json" id="variant-groups">@json(collect($groups)->map(fn ($g) => ['slug' => $g['slug']])->values())</script>
 
@@ -135,6 +174,30 @@
                             @foreach ($product->extraAttributes as $a)
                                 <dt style="font-weight:600;">{{ $a->label }}</dt>
                                 <dd style="margin:0;">{{ $a->value }}</dd>
+                            @endforeach
+                        </dl>
+                    </div>
+                @endif
+
+                @if ($productJson['origin'])
+                    <p class="text-muted" style="font-size:14px;margin-top:1rem;">Country of origin: <strong>{{ $productJson['origin'] }}</strong></p>
+                @endif
+
+                @if ($productJson['allergens'])
+                    <div style="margin-top:1rem;border:1px solid #fecaca;background:#fef2f2;border-radius:12px;padding:.8rem 1rem;font-size:14px;">
+                        <strong>Allergy advice:</strong> contains {{ implode(', ', $productJson['allergens']) }}.
+                    </div>
+                @endif
+
+                @if (collect($productJson['nutrition'])->filter(fn ($v) => $v !== null)->isNotEmpty())
+                    <div style="margin-top:1.25rem;">
+                        <h3 style="font-size:1rem;margin-bottom:.5rem;">Nutrition @if ($productJson['nutritionPer'])<span class="text-muted">({{ $productJson['nutritionPer'] }})</span>@endif</h3>
+                        <dl style="display:grid;grid-template-columns:auto 1fr;gap:.35rem 1rem;font-size:14px;">
+                            @foreach ($productJson['nutrition'] as $label => $value)
+                                @if ($value !== null)
+                                    <dt style="font-weight:600;">{{ $label }}</dt>
+                                    <dd style="margin:0;">{{ $label === 'Energy (kcal)' ? number_format($value, 0).' kcal' : number_format($value, 2).' g' }}</dd>
+                                @endif
                             @endforeach
                         </dl>
                     </div>

@@ -60,6 +60,27 @@
                         <div class="col-12"><label class="form-label">Hero Image</label><input type="file" class="form-control" name="hero_image" accept="image/*">
                             @if ($product->hero_image)<img src="{{ url($product->hero_image) }}" class="img-thumbnail mt-2" style="max-width:200px;">
                             <div class="mt-2"><button type="button" class="btn btn-sm btn-outline-danger manage-remove-file" data-field="hero_image">Remove image</button></div>@endif</div>
+                        <div class="col-12"><hr><h6>Diet, origin & nutrition <small class="text-muted">powers shop filters and the details page</small></h6></div>
+                        <div class="col-md-4"><label class="form-label">Country of origin</label><input type="text" class="form-control" name="origin_country" maxlength="100" value="{{ $product->origin_country }}" placeholder="e.g. United Kingdom"></div>
+                        <div class="col-md-8"><label class="form-label">Diet badges</label>
+                            <div class="d-flex gap-3 flex-wrap mt-1">
+                                @foreach (['is_vegetarian' => 'Vegetarian', 'is_vegan' => 'Vegan', 'is_halal' => 'Halal', 'is_organic' => 'Organic', 'is_gluten_free' => 'Gluten-free'] as $flag => $label)
+                                    <div class="form-check"><input type="checkbox" class="form-check-input" name="{{ $flag }}" value="1" @checked($product->$flag)><label class="form-check-label">{{ $label }}</label></div>
+                                @endforeach
+                            </div>
+                        </div>
+                        <div class="col-md-12"><label class="form-label">Contains allergens <small class="text-muted">shoppers can filter these out</small></label>
+                            <div class="d-flex gap-3 flex-wrap mt-1">
+                                @php $selAllergens = $product->allergens->pluck('id')->all(); @endphp
+                                @foreach ($allergens as $al)
+                                    <div class="form-check"><input type="checkbox" class="form-check-input" name="allergens[]" value="{{ $al->id }}" @checked(in_array($al->id, $selAllergens))><label class="form-check-label">{{ $al->name }}</label></div>
+                                @endforeach
+                            </div>
+                        </div>
+                        <div class="col-md-4"><label class="form-label">Nutrition per</label><input type="text" class="form-control" name="nutrition_per" maxlength="50" value="{{ $product->nutrition_per }}" placeholder="e.g. per 100g"></div>
+                        @foreach (['energy_kcal' => 'Energy (kcal)', 'fat_g' => 'Fat (g)', 'saturates_g' => 'Saturates (g)', 'carbs_g' => 'Carbs (g)', 'sugars_g' => 'Sugars (g)', 'fibre_g' => 'Fibre (g)', 'protein_g' => 'Protein (g)', 'salt_g' => 'Salt (g)'] as $col => $label)
+                            <div class="col-md-2"><label class="form-label">{{ $label }}</label><input type="number" class="form-control" name="{{ $col }}" step="0.01" min="0" value="{{ $product->$col }}"></div>
+                        @endforeach
                         <div class="col-12"><hr><h6>SEO (frontend meta tags)</h6></div>
                         <div class="col-md-6"><label class="form-label">Meta Title</label><input type="text" class="form-control" name="meta_title" value="{{ $product->meta_title }}"></div>
                         <div class="col-md-6"><label class="form-label">Meta Keywords</label><input type="text" class="form-control" name="meta_keywords" value="{{ $product->meta_keywords }}"></div>

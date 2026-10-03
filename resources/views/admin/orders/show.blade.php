@@ -27,7 +27,7 @@
                                 <tbody>
                                     @foreach ($order->items as $item)
                                         <tr @if ($item->status !== 'ok') class="table-light" @endif>
-                                            <td>{{ $item->product_name }}<br><small class="text-muted">{{ $item->variant_sku }}</small></td>
+                                            <td>{{ $item->product_name }}<br><small class="text-muted">{{ $item->variant_sku }}</small>@if ($item->promo_label)<br><span class="badge bg-success">{{ $item->promo_label }}{{ $item->free_qty > 0 ? ' · '.$item->free_qty.' free' : '' }}</span>@endif</td>
                                             <td>{{ $item->pack_label }}</td>
                                             <td>£{{ number_format($item->unit_price, 2) }}</td>
                                             <td>{{ $item->qty }}</td>

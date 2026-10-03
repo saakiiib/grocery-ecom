@@ -20,6 +20,8 @@ return new class extends Migration
             $table->boolean('status')->default(1);
             $table->string('image')->nullable();
             $table->text('address')->nullable();
+            $table->string('city')->nullable();
+            $table->string('postcode', 20)->nullable();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->rememberToken();

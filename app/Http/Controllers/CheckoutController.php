@@ -271,6 +271,8 @@ class CheckoutController extends Controller
                         'unit_price' => $line['price'],
                         'qty' => $line['qty'],
                         'line_total' => $line['line_total'],
+                        'promo_label' => $line['promo_label'] ?? null,
+                        'free_qty' => $line['free_qty'] ?? 0,
                     ]);
                 }
 

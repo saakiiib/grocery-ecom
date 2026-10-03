@@ -41,7 +41,9 @@
             </div>
             @foreach ($order->items as $item)
                 <div class="summary-row" style="align-items:start;">
-                    <span>{{ $item->qty }} × {{ $item->product_name }}@if ($item->status !== 'ok') <span class="status-pill">Unavailable — refunded</span>@endif<br><span class="text-muted">{{ $item->pack_label }}</span></span>
+                    <span>{{ $item->qty }} × {{ $item->product_name }}@if ($item->status !== 'ok') <span class="status-pill">Unavailable — refunded</span>@endif
+                        @if ($item->promo_label)<span class="promo-tag">{{ $item->promo_label }}</span>@endif
+                        <br><span class="text-muted">{{ $item->pack_label }}</span></span>
                     <span>£{{ number_format($item->line_total, 2) }}</span>
                 </div>
             @endforeach

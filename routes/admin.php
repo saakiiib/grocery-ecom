@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminProfileController;
+use App\Http\Controllers\Admin\BogoController;
+use App\Http\Controllers\Admin\BundleController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\CompanyDetailsController;
 use App\Http\Controllers\Admin\ContactController;
@@ -9,8 +11,10 @@ use App\Http\Controllers\Admin\DeliverySlotController;
 use App\Http\Controllers\Admin\DeliveryZoneController;
 use App\Http\Controllers\Admin\FaqCategoryController;
 use App\Http\Controllers\Admin\FaqController;
+use App\Http\Controllers\Admin\FlashSaleController;
 use App\Http\Controllers\Admin\GalleryCategoryController;
 use App\Http\Controllers\Admin\GalleryController;
+use App\Http\Controllers\Admin\OfferController;
 use App\Http\Controllers\Admin\OptionGroupController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\OrderStatusController;
@@ -128,6 +132,43 @@ Route::group(['prefix' => 'admin/', 'middleware' => ['auth', 'is_admin']], funct
     Route::post('/delivery-zones/update', [DeliveryZoneController::class, 'update'])->name('delivery-zones.update');
     Route::delete('/delivery-zones/{id}', [DeliveryZoneController::class, 'destroy'])->name('delivery-zones.delete');
     Route::post('/delivery-zones/toggle-status', [DeliveryZoneController::class, 'toggleStatus'])->name('delivery-zones.toggleStatus');
+
+    // Offers (parent campaigns — BOGO / flash / bundle items tuck underneath)
+    Route::get('/offers', [OfferController::class, 'index'])->name('offers.index');
+    Route::get('/offers/create', [OfferController::class, 'create'])->name('offers.create');
+    Route::post('/offers', [OfferController::class, 'store'])->name('offers.store');
+    Route::get('/offers/{id}/edit', [OfferController::class, 'edit'])->name('offers.edit');
+    Route::post('/offers/update', [OfferController::class, 'update'])->name('offers.update');
+    Route::delete('/offers/{id}', [OfferController::class, 'destroy'])->name('offers.delete');
+    Route::post('/offers/toggle-status', [OfferController::class, 'toggleStatus'])->name('offers.toggleStatus');
+
+    // BOGO offers (buy X get Y free — same item, auto-applied in the bag)
+    Route::get('/bogo', [BogoController::class, 'index'])->name('bogo.index');
+    Route::get('/bogo/create', [BogoController::class, 'create'])->name('bogo.create');
+    Route::post('/bogo', [BogoController::class, 'store'])->name('bogo.store');
+    Route::get('/bogo/{id}/edit', [BogoController::class, 'edit'])->name('bogo.edit');
+    Route::post('/bogo/update', [BogoController::class, 'update'])->name('bogo.update');
+    Route::delete('/bogo/{id}', [BogoController::class, 'destroy'])->name('bogo.delete');
+    Route::post('/bogo/toggle-status', [BogoController::class, 'toggleStatus'])->name('bogo.toggleStatus');
+
+    // Bundles (mix-and-match pools, cheapest lines group first)
+    Route::get('/bundles', [BundleController::class, 'index'])->name('bundles.index');
+    Route::get('/bundles/create', [BundleController::class, 'create'])->name('bundles.create');
+    Route::post('/bundles', [BundleController::class, 'store'])->name('bundles.store');
+    Route::get('/bundles/{id}/edit', [BundleController::class, 'edit'])->name('bundles.edit');
+    Route::post('/bundles/update', [BundleController::class, 'update'])->name('bundles.update');
+    Route::delete('/bundles/{id}', [BundleController::class, 'destroy'])->name('bundles.delete');
+    Route::post('/bundles/toggle-status', [BundleController::class, 'toggleStatus'])->name('bundles.toggleStatus');
+
+    // Flash sales (scheduled prices that beat the shelf price inside their window)
+    Route::get('/flash', [FlashSaleController::class, 'index'])->name('flash.index');
+    Route::get('/flash/create', [FlashSaleController::class, 'create'])->name('flash.create');
+    Route::post('/flash', [FlashSaleController::class, 'store'])->name('flash.store');
+    Route::get('/flash/{id}/edit', [FlashSaleController::class, 'edit'])->name('flash.edit');
+    Route::post('/flash/update', [FlashSaleController::class, 'update'])->name('flash.update');
+    Route::delete('/flash/{id}', [FlashSaleController::class, 'destroy'])->name('flash.delete');
+    Route::post('/flash/toggle-status', [FlashSaleController::class, 'toggleStatus'])->name('flash.toggleStatus');
+    Route::post('/flash/{id}/permanent', [FlashSaleController::class, 'makePermanent'])->name('flash.permanent');
 
     // Coupons (checkout discounts with expiry + usage caps)
     Route::get('/coupons', [CouponController::class, 'index'])->name('coupons.index');

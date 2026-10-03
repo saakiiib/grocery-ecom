@@ -2,6 +2,7 @@
 
 namespace App\Excel;
 
+use App\Models\Allergen;
 use App\Models\Category;
 use App\Models\OptionGroup;
 use App\Models\Product;
@@ -33,6 +34,22 @@ class ProductsExport
         'Featured',
         'Product Status',
         'Sort Order',
+        'Origin Country',
+        'Vegetarian',
+        'Vegan',
+        'Halal',
+        'Organic',
+        'Gluten-Free',
+        'Allergens',
+        'Nutrition Per',
+        'Energy (kcal)',
+        'Fat (g)',
+        'Saturates (g)',
+        'Carbs (g)',
+        'Sugars (g)',
+        'Fibre (g)',
+        'Protein (g)',
+        'Salt (g)',
         'Meta Title',
         'Meta Keywords',
         'Meta Description',
@@ -57,7 +74,7 @@ class ProductsExport
     {
         $groups = OptionGroup::with('values')->orderBy('sort_order')->get();
         $products = Product::with([
-            'category', 'extraAttributes', 'variants.values.group',
+            'category', 'extraAttributes', 'variants.values.group', 'allergens',
         ])->orderBy('sort_order')->orderByDesc('id')->get();
 
         $spreadsheet = new Spreadsheet;
@@ -127,6 +144,22 @@ class ProductsExport
             self::yesNo((bool) $p->is_featured),
             $p->status ? 'active' : 'disabled',
             $p->sort_order,
+            $p->origin_country,
+            self::yesNo((bool) $p->is_vegetarian),
+            self::yesNo((bool) $p->is_vegan),
+            self::yesNo((bool) $p->is_halal),
+            self::yesNo((bool) $p->is_organic),
+            self::yesNo((bool) $p->is_gluten_free),
+            $p->allergens->pluck('name')->join(', '),
+            $p->nutrition_per,
+            $p->energy_kcal !== null ? (float) $p->energy_kcal : null,
+            $p->fat_g !== null ? (float) $p->fat_g : null,
+            $p->saturates_g !== null ? (float) $p->saturates_g : null,
+            $p->carbs_g !== null ? (float) $p->carbs_g : null,
+            $p->sugars_g !== null ? (float) $p->sugars_g : null,
+            $p->fibre_g !== null ? (float) $p->fibre_g : null,
+            $p->protein_g !== null ? (float) $p->protein_g : null,
+            $p->salt_g !== null ? (float) $p->salt_g : null,
             $p->meta_title,
             $p->meta_keywords,
             $p->meta_description,
@@ -208,6 +241,14 @@ class ProductsExport
             $r++;
         }
 
+        $sheet->fromArray([['Allergens (fixed list)']], null, 'B3');
+        $sheet->getStyle('B3')->getFont()->setBold(true);
+        $r = 4;
+        foreach (Allergen::orderBy('sort_order')->pluck('name')->all() as $a) {
+            $sheet->setCellValue("B{$r}", $a);
+            $r++;
+        }
+
         $col = 3;
         foreach ($groups as $g) {
             $cell = fn ($r) => Coordinate::stringFromColumnIndex($col).$r;
@@ -249,6 +290,8 @@ class ProductsExport
             ['- MRP is required and must be ≥ 0. Offer Price must be empty or ≤ MRP.'],
             ['- Default: mark the card-price row. If several are marked, the first wins; if none, the first row wins.'],
             ['- Images are filenames/paths (upload a ZIP separately) or full URLs — stored as written.'],
+            ['- Allergens: comma-separated exact names from the Reference sheet (Milk, Nuts…). Unknown names are rejected — allergens are a fixed list.'],
+            ['- Nutrition columns are optional numbers; blank means "not stated". Origin Country is free text.'],
             ['- "Disable missing variants" (checkbox at import): variants in the shop but absent from the sheet are set to disabled. Off by default.'],
             [''],
             ['IMAGES (BULK)'],

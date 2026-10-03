@@ -28,6 +28,8 @@
         'min_price' => $minPrice,
         'max_price' => $maxPrice,
         'only_offers' => $onlyOffers ? 1 : null,
+        'diet' => $diets !== [] ? $diets : null,
+        'free_from' => $freeFrom !== [] ? $freeFrom : null,
     ]);
     $clearOffersParams = array_filter([
         'category' => $activeCategorySlug,
@@ -35,7 +37,10 @@
         'sort' => $sort !== 'featured' ? $sort : null,
         'min_price' => $minPrice,
         'max_price' => $maxPrice,
+        'diet' => $diets !== [] ? $diets : null,
+        'free_from' => $freeFrom !== [] ? $freeFrom : null,
     ]);
+    $dietLabels = ['vegetarian' => 'Vegetarian', 'vegan' => 'Vegan', 'halal' => 'Halal', 'organic' => 'Organic', 'gluten_free' => 'Gluten-free'];
     $chipKids = $activeParent
         ? $categories->where('parent_id', $activeParent->id)->values()
         : collect();
@@ -81,6 +86,19 @@
             </div>
         @endif
 
+        <div class="child-chips" style="margin-bottom:1rem;">
+            @foreach ($dietLabels as $key => $label)
+                @php $toggled = in_array($key, $diets) ? array_values(array_diff($diets, [$key])) : array_merge($diets, [$key]); @endphp
+                <a @spa href="{{ $shopUrl(array_merge($keepParams, ['diet' => $toggled !== [] ? $toggled : null])) }}"
+                    class="child-chip {{ in_array($key, $diets) ? 'active' : '' }}">{{ $label }}</a>
+            @endforeach
+            @foreach ($freeFrom as $ff)
+                @php $cleared = array_values(array_diff($freeFrom, [$ff])); @endphp
+                <a @spa href="{{ $shopUrl(array_merge($keepParams, ['free_from' => $cleared !== [] ? $cleared : null])) }}"
+                    class="child-chip active">No {{ $ff }} ×</a>
+            @endforeach
+        </div>
+
         <form method="GET" action="{{ $formAction }}" class="shop-tools">
             @if ($activeCategorySlug && ! $categoryPath)
                 <input type="hidden" name="category" value="{{ $activeCategorySlug }}">
@@ -88,6 +106,9 @@
             @if ($onlyOffers && ! $offersPath)
                 <input type="hidden" name="only_offers" value="1">
             @endif
+            @foreach ($diets as $d)
+                <input type="hidden" name="diet[]" value="{{ $d }}">
+            @endforeach
             <div class="shop-search">
                 <input type="search" name="q" value="{{ $search }}" placeholder="Search the market" aria-label="Search" data-shop-search>
                 <button type="submit" class="btn btn-dark btn-sm">Go</button>
@@ -111,6 +132,12 @@
             @endif
             <div class="flex items-center gap-2">
                 <span class="text-muted" style="font-size:13px;">{{ $total > $perPage ? "Showing $shown of $total" : "$total product" . ($total === 1 ? '' : 's') }}</span>
+                <select name="free_from[]" multiple aria-label="Free from allergens" title="Free from allergens" style="max-width:150px;">
+                    <option value="">Free from…</option>
+                    @foreach ($allergens as $al)
+                        <option value="{{ $al->slug }}" @selected(in_array($al->slug, $freeFrom))>No {{ $al->name }}</option>
+                    @endforeach
+                </select>
                 <select class="sort-select" name="sort" aria-label="Sort" data-shop-sort>
                     <option value="featured" @selected($sort === 'featured')>Featured</option>
                     <option value="price_asc" @selected($sort === 'price_asc')>Price: low to high</option>

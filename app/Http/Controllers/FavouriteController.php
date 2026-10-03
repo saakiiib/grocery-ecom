@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BundleOffer;
 use App\Models\Favourite;
 use App\Models\Product;
 use Illuminate\Http\JsonResponse;
@@ -93,6 +94,6 @@ class FavouriteController extends Controller
     {
         $controller = app(FrontendController::class);
 
-        return $controller->productCard($product);
+        return $controller->productCard($product, BundleOffer::coverMap());
     }
 }

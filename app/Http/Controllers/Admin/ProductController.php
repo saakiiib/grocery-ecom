@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Allergen;
 use App\Models\Category;
 use App\Models\OptionGroup;
 use App\Models\Product;
@@ -128,6 +129,18 @@ class ProductController extends Controller
             'category_id' => 'required|exists:categories,id',
             'hero_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
             'meta_image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'origin_country' => 'nullable|string|max:100',
+            'nutrition_per' => 'nullable|string|max:50',
+            'energy_kcal' => 'nullable|numeric|min:0',
+            'fat_g' => 'nullable|numeric|min:0',
+            'saturates_g' => 'nullable|numeric|min:0',
+            'carbs_g' => 'nullable|numeric|min:0',
+            'sugars_g' => 'nullable|numeric|min:0',
+            'fibre_g' => 'nullable|numeric|min:0',
+            'protein_g' => 'nullable|numeric|min:0',
+            'salt_g' => 'nullable|numeric|min:0',
+            'allergens' => 'nullable|array',
+            'allergens.*' => 'integer|exists:allergens,id',
         ], [
             'category_id.required' => 'Category is required — every product must belong to a category',
         ]);
@@ -135,7 +148,13 @@ class ProductController extends Controller
         $product->fill($request->only([
             'category_id', 'name', 'tagline', 'highlights', 'description',
             'meta_title', 'meta_description', 'meta_keywords',
+            'origin_country', 'nutrition_per',
+            'energy_kcal', 'fat_g', 'saturates_g', 'carbs_g',
+            'sugars_g', 'fibre_g', 'protein_g', 'salt_g',
         ]));
+        foreach (['is_vegetarian', 'is_vegan', 'is_halal', 'is_organic', 'is_gluten_free'] as $flag) {
+            $product->$flag = $request->boolean($flag);
+        }
         // Slug follows the latest name.
         $product->slug = $this->uniqueSlug($request->name, Product::class, $product->id);
         if ($request->has('is_featured')) {
@@ -153,6 +172,8 @@ class ProductController extends Controller
 
         $product->save();
 
+        $product->allergens()->sync($request->input('allergens', []));
+
         return response()->json(['message' => 'Product updated successfully']);
     }
 
@@ -163,8 +184,9 @@ class ProductController extends Controller
             ->findOrFail($id);
         $categories = Category::where('status', 1)->orderBy('sort_order')->get(['id', 'name']);
         $allGroups = OptionGroup::with('values')->where('status', true)->orderBy('sort_order')->get();
+        $allergens = Allergen::orderBy('sort_order')->get(['id', 'name']);
 
-        return view('admin.products.manage', compact('product', 'categories', 'allGroups'));
+        return view('admin.products.manage', compact('product', 'categories', 'allGroups', 'allergens'));
     }
 
     /** Replace-all sync of the free-form extra details rows. */

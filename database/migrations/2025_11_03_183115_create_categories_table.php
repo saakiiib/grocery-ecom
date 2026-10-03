@@ -16,6 +16,11 @@ return new class extends Migration
             $table->string('name')->nullable();
             $table->string('slug')->nullable();
             $table->text('description')->nullable();
+            $table->string('meta_title')->nullable();
+            $table->text('meta_description')->nullable();
+            $table->string('meta_keywords')->nullable();
+            $table->string('meta_image')->nullable();
+            $table->string('video_url')->nullable();
             $table->string('image')->nullable();
             $table->foreignId('parent_id')->nullable()->constrained('categories')->onDelete('cascade'); // foreign key
             $table->boolean('status')->default(1); // 1 = active, 0 = inactive

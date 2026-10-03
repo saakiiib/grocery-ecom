@@ -30,6 +30,7 @@
                             <div>
                                 <div class="cart-item-name">{{ $item['name'] }}</div>
                                 @if ($item['pack'])<div class="cart-item-meta">{{ $item['pack'] }}</div>@endif
+                                @if ($item['promo_label'])<div><span class="promo-tag">{{ $item['promo_label'] }}{{ ($item['free_qty'] ?? 0) > 0 ? ' · '.$item['free_qty'].' free' : '' }}</span></div>@endif
                                 @if ($item['available'])
                                     <div class="cart-item-price">£{{ number_format($item['price'], 2) }}</div>
                                 @else
@@ -54,6 +55,8 @@
             <aside class="cart-summary">
                 <h3>Order summary</h3>
                 <div class="summary-row"><span>Subtotal</span><span data-summary-subtotal>£{{ number_format($bag['subtotal'], 2) }}</span></div>
+                <div class="summary-row" data-summary-bogo @if (($bag['bogo_discount'] ?? 0) <= 0) style="display:none;" @endif><span>BOGO savings</span><span data-summary-bogo-amount>−£{{ number_format($bag['bogo_discount'] ?? 0, 2) }}</span></div>
+                <div class="summary-row" data-summary-bundle @if (($bag['bundle_discount'] ?? 0) <= 0) style="display:none;" @endif><span>Bundle savings</span><span data-summary-bundle-amount>−£{{ number_format($bag['bundle_discount'] ?? 0, 2) }}</span></div>
                 <div class="summary-row"><span>Delivery</span><span>Calculated at checkout</span></div>
                 <div class="summary-row total"><span>Total</span><span data-summary-total>£{{ number_format($bag['subtotal'], 2) }}</span></div>
                 <a @spa href="{{ route('checkout') }}" class="btn btn-dark btn-block" style="margin-top:1.25rem;">Proceed to checkout</a>

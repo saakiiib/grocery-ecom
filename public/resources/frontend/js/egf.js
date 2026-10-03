@@ -273,6 +273,7 @@
         '<a data-spa href="' + link + '"><img src="' + img + '" alt="' + item.name + '" loading="lazy"></a>' +
         '<div><div class="cart-item-name">' + item.name + '</div>' +
         (item.pack ? '<div class="cart-item-meta">' + item.pack + '</div>' : '') +
+        (item.promo_label ? '<div><span class="promo-tag">' + item.promo_label + (item.free_qty ? ' · ' + item.free_qty + ' free' : '') + '</span></div>' : '') +
         (item.available
           ? '<div class="cart-item-price">' + formatPrice(item.price) + '</div>'
           : '<div class="cart-item-meta" style="color:#B91C1C">No longer available</div>') +
@@ -320,9 +321,19 @@
   function updateBagSummary(data) {
     var sub = document.querySelector('[data-summary-subtotal]');
     var tot = document.querySelector('[data-summary-total]');
+    var bogoRow = document.querySelector('[data-summary-bogo]');
+    var bogoAmt = document.querySelector('[data-summary-bogo-amount]');
+    var bundleRow = document.querySelector('[data-summary-bundle]');
+    var bundleAmt = document.querySelector('[data-summary-bundle-amount]');
     var t = data ? data.subtotal || 0 : 0;
+    var save = data ? data.bogo_discount || 0 : 0;
+    var bsave = data ? data.bundle_discount || 0 : 0;
     if (sub) sub.textContent = formatPrice(t);
     if (tot) tot.textContent = formatPrice(t);
+    if (bogoRow) bogoRow.style.display = save > 0 ? '' : 'none';
+    if (bogoAmt) bogoAmt.textContent = '−' + formatPrice(save);
+    if (bundleRow) bundleRow.style.display = bsave > 0 ? '' : 'none';
+    if (bundleAmt) bundleAmt.textContent = '−' + formatPrice(bsave);
   }
 
   /* ---------------- Hero slider ---------------- */

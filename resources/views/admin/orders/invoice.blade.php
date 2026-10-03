@@ -82,6 +82,7 @@
                 <tr>
                     <td>{{ $item->qty }}</td>
                     <td>{{ $item->product_name }}@if ($item->status !== 'ok') (unavailable — refunded)@endif
+                        @if ($item->promo_label)<br><span class="muted">{{ $item->promo_label }}{{ $item->free_qty > 0 ? ' · '.$item->free_qty.' free' : '' }}</span>@endif
                         @if ($item->pack_label)<br><span class="muted">{{ $item->pack_label }}</span>@endif</td>
                     <td class="num">£{{ number_format($item->unit_price, 2) }}</td>
                     <td class="num">£{{ number_format($item->line_total, 2) }}</td>

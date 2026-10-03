@@ -73,6 +73,18 @@ class SidebarController
                 'href' => route('coupons.index'),
             ],
             [
+                'type' => 'group',
+                'icon' => 'ri-discount-percent-line',
+                'label' => 'Promotions',
+                'id' => 'sidebarPromotions',
+                'children' => [
+                    ['label' => 'Offers', 'route' => 'offers.*', 'href' => route('offers.index')],
+                    ['label' => 'BOGO', 'route' => 'bogo.*', 'href' => route('bogo.index')],
+                    ['label' => 'Flash Sales', 'route' => 'flash.*', 'href' => route('flash.index')],
+                    ['label' => 'Bundles', 'route' => 'bundles.*', 'href' => route('bundles.index')],
+                ],
+            ],
+            [
                 'type' => 'item',
                 'icon' => 'ri-time-line',
                 'label' => 'Delivery Slots',

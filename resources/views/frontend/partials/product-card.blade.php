@@ -3,7 +3,13 @@
 @endphp
 <article class="product-card" data-card>
     <a @spa href="{{ $p['url'] }}" class="product-img-wrap">
-        @if ($p['savePct'])
+        @if ($p['bogo'])
+            <span class="product-badge badge-bogo">{{ $p['bogo']['label'] }}</span>
+        @elseif ($p['bundle'])
+            <span class="product-badge badge-bundle">{{ $p['bundle']['label'] }}</span>
+        @elseif ($p['flashEnds'])
+            <span class="product-badge badge-flash">Flash · ends {{ $p['flashEnds'] }}</span>
+        @elseif ($p['savePct'])
             <span class="product-badge badge-sale">Save {{ $p['savePct'] }}%</span>
         @elseif ($p['isFeatured'])
             <span class="product-badge badge-bestseller">Bestseller</span>
@@ -14,6 +20,13 @@
     <div class="product-body">
         <span class="product-meta">{{ $p['category'] }}</span>
         <a @spa href="{{ $p['url'] }}" class="product-name">{{ $p['name'] }}</a>
+        @if ($p['diets'])
+            <div class="product-diets">
+                @foreach ($p['diets'] as $diet)
+                    <span class="diet-tag">{{ $diet }}</span>
+                @endforeach
+            </div>
+        @endif
         @if (($p['ratingCount'] ?? 0) > 0)
             <span class="product-rating">
                 <span class="stars">

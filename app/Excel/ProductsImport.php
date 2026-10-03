@@ -2,6 +2,7 @@
 
 namespace App\Excel;
 
+use App\Models\Allergen;
 use App\Models\Category;
 use App\Models\OptionGroup;
 use App\Models\OptionValue;
@@ -232,8 +233,43 @@ class ProductsImport
             $inStock = self::bool($get('In Stock') === '' || $get('In Stock') === null ? 'yes' : $get('In Stock'), 'In Stock');
             $isDefault = self::bool($get('Default'), 'Default');
             $variantStatus = self::status($get('Variant Status') === '' || $get('Variant Status') === null ? 'active' : $get('Variant Status'), 'Variant Status');
+            $diets = [];
+            foreach (['Vegetarian' => 'vegetarian', 'Vegan' => 'vegan', 'Halal' => 'halal', 'Organic' => 'organic', 'Gluten-Free' => 'gluten_free'] as $header => $key) {
+                $diets[$key] = self::bool($get($header), $header);
+            }
         } catch (\InvalidArgumentException $e) {
             return ['error' => $e->getMessage()];
+        }
+
+        $nutrition = [];
+        foreach (['Energy (kcal)' => 'energy', 'Fat (g)' => 'fat', 'Saturates (g)' => 'saturates', 'Carbs (g)' => 'carbs', 'Sugars (g)' => 'sugars', 'Fibre (g)' => 'fibre', 'Protein (g)' => 'protein', 'Salt (g)' => 'salt'] as $header => $key) {
+            $raw = $get($header);
+            if ($raw === '' || $raw === null) {
+                $nutrition[$key] = null;
+
+                continue;
+            }
+            if (! is_numeric($raw) || (float) $raw < 0) {
+                return ['error' => "{$header} '{$raw}' must be a number ≥ 0."];
+            }
+            $nutrition[$key] = (float) $raw;
+        }
+
+        $allergenIds = [];
+        $allergenCell = $get('Allergens');
+        if ($allergenCell !== '' && $allergenCell !== null) {
+            foreach (preg_split('/[,;\n]/', $allergenCell) as $name) {
+                $name = trim($name);
+                if ($name === '') {
+                    continue;
+                }
+                $found = Allergen::whereRaw('LOWER(name) = ?', [mb_strtolower($name)])->first();
+                if (! $found) {
+                    return ['error' => "Allergen '{$name}' is not on the fixed list — see the Reference sheet."];
+                }
+                $allergenIds[] = $found->id;
+            }
+            $allergenIds = array_values(array_unique($allergenIds));
         }
 
         $sort = $get('Sort Order');
@@ -318,6 +354,11 @@ class ProductsImport
             'variant_source' => $variantImage,
             'is_featured' => $featured,
             'product_status' => $productStatus,
+            'origin_country' => $get('Origin Country') ?: null,
+            'diets' => $diets,
+            'nutrition_per' => $get('Nutrition Per') ?: null,
+            'nutrition' => $nutrition,
+            'allergen_ids' => $allergenIds,
             'sort_order' => $sort === '' || $sort === null ? null : (int) $sort,
             'meta_title' => $get('Meta Title') ?: null,
             'meta_keywords' => $get('Meta Keywords') ?: null,
@@ -367,7 +408,7 @@ class ProductsImport
             $byKey[$key][] = $r;
         }
         $conflicts = [];
-        $fields = ['product_name', 'category', 'tagline', 'hero_image'];
+        $fields = ['product_name', 'category', 'tagline', 'hero_image', 'origin_country', 'nutrition_per'];
         foreach ($byKey as $key => $group) {
             if (count($group) < 2) {
                 continue;
@@ -379,6 +420,22 @@ class ProductsImport
                     $conflicts[] = "Rows for '{$first['product_name']}' disagree on {$f} — keep product columns identical across its rows.";
                     break;
                 }
+            }
+            foreach (['diets', 'nutrition'] as $f) {
+                $vals = array_unique(array_map(fn ($r) => json_encode($r[$f] ?? []), $group));
+                if (count($vals) > 1) {
+                    $conflicts[] = "Rows for '{$first['product_name']}' disagree on {$f} — keep product columns identical across its rows.";
+                    break;
+                }
+            }
+            $allergenSets = array_unique(array_map(function ($r) {
+                $ids = $r['allergen_ids'] ?? [];
+                sort($ids);
+
+                return implode(',', $ids);
+            }, $group));
+            if (count($allergenSets) > 1) {
+                $conflicts[] = "Rows for '{$first['product_name']}' disagree on allergens — keep product columns identical across its rows.";
             }
             // Same SKU twice in the sheet.
             $skus = array_filter(array_map(fn ($r) => $r['sku'], $group));
@@ -512,6 +569,24 @@ class ProductsImport
 
                 // Product: first row of each product writes product-level fields.
                 $pkey = $r['product_id'] ?? 'n:'.mb_strtolower($r['product_name']);
+                $dietCols = [
+                    'is_vegetarian' => $r['diets']['vegetarian'] ?? false,
+                    'is_vegan' => $r['diets']['vegan'] ?? false,
+                    'is_halal' => $r['diets']['halal'] ?? false,
+                    'is_organic' => $r['diets']['organic'] ?? false,
+                    'is_gluten_free' => $r['diets']['gluten_free'] ?? false,
+                ];
+                $nutritionCols = [
+                    'nutrition_per' => $r['nutrition_per'],
+                    'energy_kcal' => $r['nutrition']['energy'],
+                    'fat_g' => $r['nutrition']['fat'],
+                    'saturates_g' => $r['nutrition']['saturates'],
+                    'carbs_g' => $r['nutrition']['carbs'],
+                    'sugars_g' => $r['nutrition']['sugars'],
+                    'fibre_g' => $r['nutrition']['fibre'],
+                    'protein_g' => $r['nutrition']['protein'],
+                    'salt_g' => $r['nutrition']['salt'],
+                ];
                 if (! isset($touchedProducts[$pkey])) {
                     if ($r['product_id']) {
                         $product = Product::findOrFail($r['product_id']);
@@ -524,6 +599,9 @@ class ProductsImport
                             'hero_image' => $r['hero_image'],
                             'is_featured' => $r['is_featured'],
                             'status' => $r['product_status'],
+                            'origin_country' => $r['origin_country'],
+                            ...$dietCols,
+                            ...$nutritionCols,
                             'meta_title' => $r['meta_title'],
                             'meta_keywords' => $r['meta_keywords'],
                             'meta_description' => $r['meta_description'],
@@ -541,6 +619,9 @@ class ProductsImport
                             'hero_image' => $r['hero_image'],
                             'is_featured' => $r['is_featured'],
                             'status' => $r['product_status'],
+                            'origin_country' => $r['origin_country'],
+                            ...$dietCols,
+                            ...$nutritionCols,
                             'sort_order' => $r['sort_order'] ?? (int) (Product::max('sort_order') ?? 0) + 1,
                             'meta_title' => $r['meta_title'],
                             'meta_keywords' => $r['meta_keywords'],
@@ -553,6 +634,7 @@ class ProductsImport
                     foreach (array_values($r['extras']) as $i => $ex) {
                         $product->extraAttributes()->create([...$ex, 'sort_order' => $i]);
                     }
+                    $product->allergens()->sync($r['allergen_ids'] ?? []);
                     $touchedProducts[$pkey] = $product->id;
                 }
                 $productId = $touchedProducts[$pkey];

@@ -23,6 +23,7 @@
     @foreach ($order->items as $item)
         <tr>
             <td>{{ $item->qty }} × {{ $item->product_name }}@if ($item->status !== 'ok') (unavailable — refunded)@endif
+                @if ($item->promo_label)<br><span style="color:#166534;font-size:12px;">{{ $item->promo_label }}{{ $item->free_qty > 0 ? ' · '.$item->free_qty.' free' : '' }}</span>@endif
                 @if ($item->pack_label)<br><span style="color:#6B7280;font-size:12px;">{{ $item->pack_label }}</span>@endif</td>
             <td align="right">£{{ number_format($item->line_total, 2) }}</td>
         </tr>

@@ -15,6 +15,9 @@ class Product extends Model
         'category_id', 'name', 'slug', 'tagline', 'highlights', 'description',
         'hero_image', 'is_featured', 'status', 'sort_order',
         'meta_title', 'meta_description', 'meta_keywords', 'meta_image',
+        'origin_country', 'is_vegetarian', 'is_vegan', 'is_halal', 'is_organic', 'is_gluten_free',
+        'nutrition_per', 'energy_kcal', 'fat_g', 'saturates_g', 'carbs_g',
+        'sugars_g', 'fibre_g', 'protein_g', 'salt_g',
     ];
 
     protected function casts(): array
@@ -23,6 +26,11 @@ class Product extends Model
             'is_featured' => 'boolean',
             'status' => 'boolean',
             'sort_order' => 'integer',
+            'is_vegetarian' => 'boolean',
+            'is_vegan' => 'boolean',
+            'is_halal' => 'boolean',
+            'is_organic' => 'boolean',
+            'is_gluten_free' => 'boolean',
         ];
     }
 
@@ -50,6 +58,37 @@ class Product extends Model
     public function extraAttributes(): HasMany
     {
         return $this->hasMany(ProductAttribute::class)->orderBy('sort_order');
+    }
+
+    /** Structured allergen flags (the 14 UK regulated allergens). */
+    public function allergens(): BelongsToMany
+    {
+        return $this->belongsToMany(Allergen::class)->orderByPivot('id');
+    }
+
+    /** Diet badges with at least one flag set. */
+    public function dietBadges(): array
+    {
+        $badges = [];
+        foreach (['is_vegetarian' => 'Vegetarian', 'is_vegan' => 'Vegan', 'is_halal' => 'Halal', 'is_organic' => 'Organic', 'is_gluten_free' => 'Gluten-free'] as $flag => $label) {
+            if ($this->$flag) {
+                $badges[] = $label;
+            }
+        }
+
+        return $badges;
+    }
+
+    /** True when any nutrition row is filled in. */
+    public function hasNutrition(): bool
+    {
+        foreach (['energy_kcal', 'fat_g', 'saturates_g', 'carbs_g', 'sugars_g', 'fibre_g', 'protein_g', 'salt_g'] as $col) {
+            if ($this->$col !== null) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /** Shopper reviews for this product (newest first). */

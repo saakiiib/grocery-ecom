@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Allergen;
 use App\Models\Category;
 use App\Models\DeliverySlot;
 use App\Models\Faq;
@@ -22,6 +23,7 @@ class GroceryDemoSeeder extends Seeder
 {
     public function run(): void
     {
+        Allergen::seedDefaults();
         $this->seedGroceryCatalog();
         $this->seedGrocerySliders();
         $this->seedOrderStatuses();

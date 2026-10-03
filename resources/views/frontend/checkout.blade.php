@@ -177,11 +177,13 @@
                     @foreach ($bag['lines'] as $item)
                         <div class="summary-row co-line" style="align-items:center;">
                             <img class="co-thumb" src="{{ $item['image'] }}" alt="" loading="lazy" onerror="this.onerror=null;this.src='{{ url('placeholder.webp') }}'">
-                            <span style="flex:1;min-width:0;">{{ $item['qty'] }} × {{ $item['name'] }}<br><span class="text-muted">{{ $item['pack'] }}</span></span>
+                            <span style="flex:1;min-width:0;">{{ $item['qty'] }} × {{ $item['name'] }}@if ($item['promo_label']) <span class="promo-tag">{{ $item['promo_label'] }}</span>@endif<br><span class="text-muted">{{ $item['pack'] }}</span></span>
                             <span>£{{ number_format($item['line_total'], 2) }}</span>
                         </div>
                     @endforeach
                     <div class="summary-row"><span>Subtotal</span><span data-co-subtotal>£{{ number_format($bag['subtotal'], 2) }}</span></div>
+                    @if (($bag['bogo_discount'] ?? 0) > 0)<div class="summary-row"><span>BOGO savings</span><span>−£{{ number_format($bag['bogo_discount'], 2) }}</span></div>@endif
+                    @if (($bag['bundle_discount'] ?? 0) > 0)<div class="summary-row"><span>Bundle savings</span><span>−£{{ number_format($bag['bundle_discount'], 2) }}</span></div>@endif
                     <div class="summary-row" data-co-coupon style="display:none;"><span>Coupon <strong data-co-coupon-code></strong> <button type="button" data-co-coupon-remove aria-label="Remove coupon" style="border:0;background:none;color:#B91C1C;cursor:pointer;font-size:14px;">×</button></span><span data-co-coupon-amount>−£0.00</span></div>
                     <div class="summary-row" data-co-points style="display:none;"><span>Loyalty points</span><span>−£0.00</span></div>
                     <div class="summary-row"><span>Delivery</span><span data-co-fee>Calculated…</span></div>

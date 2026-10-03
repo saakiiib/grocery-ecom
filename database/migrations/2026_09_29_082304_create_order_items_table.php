@@ -22,6 +22,9 @@ return new class extends Migration
             $table->decimal('unit_price', 10, 2)->default(0);
             $table->unsignedInteger('qty')->default(1);
             $table->decimal('line_total', 10, 2)->default(0);
+            $table->string('status', 20)->default('ok');
+            $table->string('promo_label', 120)->nullable();
+            $table->unsignedInteger('free_qty')->default(0);
             $table->timestamps();
         });
     }
