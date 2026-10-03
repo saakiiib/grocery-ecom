@@ -58,7 +58,7 @@
                                             <td><a href="{{ route('orders.show', $order->id) }}"><strong>{{ $order->number }}</strong></a></td>
                                             <td>{{ $order->name }}</td>
                                             <td>£{{ number_format($order->total, 2) }}</td>
-                                            <td>{{ $order->paymentLabel() }} · {{ ucfirst($order->payment_status) }}</td>
+                                            <td>{{ $order->paymentLabel() }} · {{ $order->paymentStatusLabel() }}</td>
                                             <td><span class="badge" style="background:{{ $order->status?->color ?? '#1A2E22' }};">{{ $order->status?->name ?? ucfirst($order->status_slug) }}</span></td>
                                             <td>{{ $order->created_at->format('d M, h:i A') }}</td>
                                         </tr>

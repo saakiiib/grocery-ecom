@@ -21,7 +21,7 @@
             <h2 style="font-size:1.25rem;margin-bottom:1rem;">What you ordered</h2>
             @foreach ($order->items as $item)
                 <div class="summary-row" style="align-items:start;">
-                    <span>{{ $item->qty }} × {{ $item->product_name }}<br><span class="text-muted">{{ $item->pack_label }}</span></span>
+                    <span>{{ $item->qty }} × {{ $item->product_name }}@if ($item->status !== 'ok') <span class="status-pill">Unavailable — refunded</span>@endif<br><span class="text-muted">{{ $item->pack_label }}</span></span>
                     <span>£{{ number_format($item->line_total, 2) }}</span>
                 </div>
             @endforeach
@@ -31,7 +31,7 @@
             <div class="summary-row"><span>Delivery</span><span>{{ $order->delivery_fee > 0 ? '£'.number_format($order->delivery_fee, 2) : 'Free' }}</span></div>
             @if ($order->vat_amount > 0)<div class="summary-row"><span class="text-muted">Includes VAT @ {{ number_format($order->vat_percent, 2) }}%</span><span class="text-muted">£{{ number_format($order->vat_amount, 2) }}</span></div>@endif
             <div class="summary-row total"><span>Total</span><span>£{{ number_format($order->total, 2) }}</span></div>
-            <div class="summary-row"><span>Payment</span><span>{{ $order->paymentLabel() }} · {{ ucfirst($order->payment_status) }}</span></div>
+            <div class="summary-row"><span>Payment</span><span>{{ $order->paymentLabel() }} · {{ $order->paymentStatusLabel() }}</span></div>
         </div>
 
         @include('frontend.partials.order-journey')

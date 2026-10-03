@@ -37,6 +37,7 @@ function zonePayload(int $slotId, string $postcode): array
         'address' => '1 Market Street', 'city' => 'Leeds', 'postcode' => $postcode,
         'billing_name' => 'Shopper Name', 'billing_phone' => '07123456789',
         'billing_address' => '1 Market Street', 'billing_city' => 'Leeds', 'billing_postcode' => $postcode,
+        'substitution' => 'call',
         'delivery_date' => array_key_first(DeliverySlot::bookableDates()),
         'delivery_slot_id' => $slotId,
         'payment_method' => 'cod',

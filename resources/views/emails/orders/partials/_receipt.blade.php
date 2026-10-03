@@ -22,7 +22,8 @@
 <table role="presentation" width="100%" cellpadding="6" cellspacing="0" style="border-top:1px solid #E5E7EB;font-size:14px;">
     @foreach ($order->items as $item)
         <tr>
-            <td>{{ $item->qty }} × {{ $item->product_name }}@if ($item->pack_label)<br><span style="color:#6B7280;font-size:12px;">{{ $item->pack_label }}</span>@endif</td>
+            <td>{{ $item->qty }} × {{ $item->product_name }}@if ($item->status !== 'ok') (unavailable — refunded)@endif
+                @if ($item->pack_label)<br><span style="color:#6B7280;font-size:12px;">{{ $item->pack_label }}</span>@endif</td>
             <td align="right">£{{ number_format($item->line_total, 2) }}</td>
         </tr>
     @endforeach
@@ -36,6 +37,9 @@
         <tr><td>Loyalty points ({{ $order->points_redeemed }})</td><td align="right">−£{{ number_format($order->points_discount, 2) }}</td></tr>
     @endif
     <tr><td>Delivery</td><td align="right">{{ $order->delivery_fee > 0 ? '£'.number_format($order->delivery_fee, 2) : 'Free' }}</td></tr>
+    @if ($order->refunded_amount > 0)
+        <tr><td>Refunded</td><td align="right">−£{{ number_format($order->refunded_amount, 2) }}</td></tr>
+    @endif
     @if ($order->vat_amount > 0)
         <tr><td style="color:#6B7280;">Includes VAT @ {{ number_format($order->vat_percent, 2) }}%</td><td align="right" style="color:#6B7280;">£{{ number_format($order->vat_amount, 2) }}</td></tr>
     @endif

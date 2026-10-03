@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\Controller;
 use App\Models\CompanyDetails;
 use App\Models\Order;
@@ -126,5 +127,99 @@ class OrderController extends Controller
             'status',
             $changed ? 'Order moved to '.$changed->toStatus()->name.'.' : 'Order is already '.($order->status?->name ?? $order->status_slug).'.'
         );
+    }
+
+    /**
+     * Partial or full online refund. Gateway first, ledger second —
+     * a refused gateway leaves the order untouched.
+     */
+    public function refund(Request $request, int $id): RedirectResponse
+    {
+        $order = Order::findOrFail($id);
+        $max = $order->refundableAmount();
+
+        $data = $request->validate([
+            'amount' => 'required|numeric|min:0.01|max:'.$max,
+            'reason' => 'nullable|string|max:255',
+        ], [
+            'amount.max' => 'Only £'.number_format($max, 2).' is left to refund on this order.',
+        ]);
+
+        if ($max <= 0) {
+            return redirect()->route('orders.show', $order->id)->with('error', 'There is nothing to refund on this order.');
+        }
+
+        try {
+            $gatewayId = $order->payment_method === 'stripe'
+                ? CheckoutController::stripeRefund($order, (float) $data['amount'])
+                : CheckoutController::paypalRefund($order, (float) $data['amount']);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return redirect()->route('orders.show', $order->id)->with('error', 'The payment gateway refused the refund — nothing was recorded. ('.$e->getMessage().')');
+        }
+
+        $refunded = round((float) $order->refunded_amount + (float) $data['amount'], 2);
+        $order->refunded_amount = $refunded;
+        $order->payment_status = $refunded >= (float) $order->total ? 'refunded' : 'partially_refunded';
+        $order->save();
+
+        $order->histories()->create([
+            'from_slug' => $order->status_slug,
+            'to_slug' => $order->status_slug,
+            'changed_by' => auth()->id(),
+            'note' => 'Refunded £'.number_format($data['amount'], 2).' via '.$order->paymentLabel().(($data['reason'] ?? null) ? ' — '.$data['reason'] : '').' (ref '.$gatewayId.').',
+        ]);
+
+        return redirect()->route('orders.show', $order->id)->with('status', '£'.number_format($data['amount'], 2).' refunded to the shopper.');
+    }
+
+    /**
+     * Packing flow: an item is out of stock. It is marked unavailable and its
+     * line value goes back to the shopper (gateway when money moved online).
+     */
+    public function markUnavailable(Request $request, int $orderId, int $itemId): RedirectResponse
+    {
+        $order = Order::with('items')->findOrFail($orderId);
+        $item = $order->items()->findOrFail($itemId);
+
+        if (in_array($order->status_slug, ['delivered', 'cancelled'], true)) {
+            return redirect()->route('orders.show', $order->id)->with('error', 'That order is already '.$order->status_slug.' — lines can no longer change.');
+        }
+        if ($item->status !== 'ok') {
+            return redirect()->route('orders.show', $order->id)->with('error', 'That line is already marked unavailable.');
+        }
+
+        $amount = min((float) $item->line_total, $order->refundableAmount());
+        $gatewayId = null;
+        if ($amount > 0) {
+            try {
+                $gatewayId = $order->payment_method === 'stripe'
+                    ? CheckoutController::stripeRefund($order, $amount)
+                    : CheckoutController::paypalRefund($order, $amount);
+            } catch (\Throwable $e) {
+                report($e);
+
+                return redirect()->route('orders.show', $order->id)->with('error', 'The payment gateway refused the line refund — nothing was recorded. ('.$e->getMessage().')');
+            }
+            $refunded = round((float) $order->refunded_amount + $amount, 2);
+            $order->refunded_amount = $refunded;
+            $order->payment_status = $refunded >= (float) $order->total ? 'refunded' : 'partially_refunded';
+            $order->save();
+        }
+
+        $item->status = 'unavailable';
+        $item->save();
+
+        $order->histories()->create([
+            'from_slug' => $order->status_slug,
+            'to_slug' => $order->status_slug,
+            'changed_by' => auth()->id(),
+            'note' => $item->qty.' × '.$item->product_name.' unavailable'
+                .($amount > 0 ? ' — £'.number_format($amount, 2).' refunded via '.$order->paymentLabel().($gatewayId ? ' (ref '.$gatewayId.')' : '') : ' — nothing left to refund')
+                .'.',
+        ]);
+
+        return redirect()->route('orders.show', $order->id)->with('status', $item->product_name.' marked unavailable'.($amount > 0 ? ' — £'.number_format($amount, 2).' refunded.' : '.'));
     }
 }

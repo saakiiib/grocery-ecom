@@ -51,6 +51,7 @@ function addrPayload(int $slotId, array $over = []): array
         'address' => '1 Market Street', 'city' => 'Leeds', 'postcode' => 'LS1 1AA',
         'billing_name' => 'Billing Name', 'billing_phone' => '07987654321',
         'billing_address' => '9 Bill Road', 'billing_city' => 'York', 'billing_postcode' => 'YO1 1AA',
+        'substitution' => 'refund',
         'delivery_date' => array_key_first(DeliverySlot::bookableDates()),
         'delivery_slot_id' => $slotId,
         'payment_method' => 'cod',

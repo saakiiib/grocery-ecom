@@ -141,6 +141,7 @@ class CheckoutController extends Controller
             'billing_postcode' => 'required|string|max:20',
             'save_address' => 'nullable|boolean',
             'save_label' => 'nullable|string|max:50',
+            'substitution' => 'required|in:substitute,refund,call',
             'notes' => 'nullable|string|max:1000',
             'delivery_date' => 'required|date_format:Y-m-d',
             'delivery_slot_id' => 'required|integer',
@@ -229,6 +230,7 @@ class CheckoutController extends Controller
                     'billing_city' => $data['billing_city'],
                     'billing_postcode' => $data['billing_postcode'],
                     'notes' => $data['notes'] ?? null,
+                    'substitution_preference' => $data['substitution'],
                     'delivery_date' => $data['delivery_date'],
                     'delivery_slot_id' => $priced['slot']->id,
                     'delivery_slot_label' => $priced['slot']->label(),
@@ -539,6 +541,35 @@ class CheckoutController extends Controller
         return $res->ok() && $res->json('status') === 'succeeded';
     }
 
+    /**
+     * Refund a paid Stripe order (partial allowed). Returns the Stripe refund id.
+     *
+     * @throws \RuntimeException when the gateway refuses.
+     */
+    public static function stripeRefund(Order $order, float $amount): string
+    {
+        if (! static::stripeConfigured()) {
+            throw new \RuntimeException('Card payments are not configured.');
+        }
+        if (! $order->payment_reference) {
+            throw new \RuntimeException('No Stripe payment reference on this order.');
+        }
+
+        $res = Http::asForm()
+            ->withBasicAuth(static::stripeSecret(), '')
+            ->post('https://api.stripe.com/v1/refunds', [
+                'payment_intent' => $order->payment_reference,
+                'amount' => (int) round($amount * 100),
+                'metadata[order_number]' => $order->number,
+            ]);
+
+        if ($res->failed() || ! $res->json('id')) {
+            throw new \RuntimeException('Stripe refund failed: '.$res->body());
+        }
+
+        return $res->json('id');
+    }
+
     /* ---------------- PayPal (raw REST — no SDK dependency) ---------------- */
 
     private static function paypalToken(): string
@@ -598,5 +629,34 @@ class CheckoutController extends Controller
         }
 
         return $completed;
+    }
+
+    /**
+     * Refund a captured PayPal payment (partial allowed). Returns the PayPal refund id.
+     *
+     * @throws \RuntimeException when the gateway refuses.
+     */
+    public static function paypalRefund(Order $order, float $amount): string
+    {
+        if (! static::paypalConfigured()) {
+            throw new \RuntimeException('PayPal is not configured.');
+        }
+        if (! $order->payment_reference) {
+            throw new \RuntimeException('No PayPal capture reference on this order.');
+        }
+
+        $res = Http::withToken(static::paypalToken())
+            ->post(static::paypalBaseUrl().'/v2/payments/captures/'.$order->payment_reference.'/refund', [
+                'amount' => [
+                    'currency_code' => 'GBP',
+                    'value' => number_format($amount, 2, '.', ''),
+                ],
+            ]);
+
+        if ($res->failed() || ! $res->json('id')) {
+            throw new \RuntimeException('PayPal refund failed: '.$res->body());
+        }
+
+        return $res->json('id');
     }
 }

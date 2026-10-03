@@ -51,7 +51,7 @@
             <td style="text-align:right;">
                 <div class="title">Invoice</div>
                 <div class="muted">{{ $order->created_at->format('F j, Y') }}</div>
-                <div class="amount-due"><strong>AMOUNT DUE: £{{ number_format($order->payment_status === 'paid' ? 0 : $order->total, 2) }}</strong><br><span class="muted">{{ ucfirst($order->payment_status) }} · {{ $order->paymentLabel() }}</span></div>
+                <div class="amount-due"><strong>AMOUNT DUE: £{{ number_format($order->isPaid() ? 0 : $order->total, 2) }}</strong><br><span class="muted">{{ $order->paymentStatusLabel() }} · {{ $order->paymentLabel() }}</span></div>
             </td>
         </tr>
     </table>
@@ -81,7 +81,8 @@
             @foreach ($order->items as $item)
                 <tr>
                     <td>{{ $item->qty }}</td>
-                    <td>{{ $item->product_name }}@if ($item->pack_label)<br><span class="muted">{{ $item->pack_label }}</span>@endif</td>
+                    <td>{{ $item->product_name }}@if ($item->status !== 'ok') (unavailable — refunded)@endif
+                        @if ($item->pack_label)<br><span class="muted">{{ $item->pack_label }}</span>@endif</td>
                     <td class="num">£{{ number_format($item->unit_price, 2) }}</td>
                     <td class="num">£{{ number_format($item->line_total, 2) }}</td>
                 </tr>
@@ -98,6 +99,9 @@
         @endif
         @if ($order->vat_amount > 0)
             <tr><td class="muted">Includes VAT @ {{ number_format($order->vat_percent, 2) }}%</td><td class="num muted">£{{ number_format($order->vat_amount, 2) }}</td></tr>
+        @endif
+        @if ($order->refunded_amount > 0)
+            <tr><td>Refunded</td><td class="num">−£{{ number_format($order->refunded_amount, 2) }}</td></tr>
         @endif
         <tr><td>Shipping</td><td class="num">{{ $order->delivery_fee > 0 ? '£'.number_format($order->delivery_fee, 2) : 'Free' }}</td></tr>
         <tr class="grand"><td>Order Total</td><td class="num">£{{ number_format($order->total, 2) }}</td></tr>

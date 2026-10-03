@@ -108,6 +108,8 @@ Route::group(['prefix' => 'admin/', 'middleware' => ['auth', 'is_admin']], funct
     Route::get('/orders/{id}/invoice', [OrderController::class, 'invoice'])->name('orders.invoice');
     Route::get('/orders/{id}/invoice-pdf', [OrderController::class, 'invoicePdf'])->name('orders.invoicePdf');
     Route::post('/orders/{id}/status', [OrderController::class, 'updateStatus'])->name('orders.updateStatus');
+    Route::post('/orders/{id}/refund', [OrderController::class, 'refund'])->name('orders.refund');
+    Route::post('/orders/{orderId}/items/{itemId}/unavailable', [OrderController::class, 'markUnavailable'])->name('orders.items.unavailable');
 
     // Delivery slots (checkout time windows + fees)
     Route::get('/delivery-slots', [DeliverySlotController::class, 'index'])->name('delivery-slots.index');

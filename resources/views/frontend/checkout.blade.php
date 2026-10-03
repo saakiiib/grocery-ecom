@@ -96,6 +96,14 @@
                         <label for="co-notes">Delivery notes <span class="text-muted">(optional)</span></label>
                         <input type="text" id="co-notes" name="notes" maxlength="1000" value="{{ old('notes') }}" placeholder="Gate code, leave with neighbour…">
                     </div>
+                    <div class="form-group">
+                        <label>If something is unavailable</label>
+                        <div style="display:grid;gap:.4rem;font-size:14px;">
+                            <label style="font-weight:400;"><input type="radio" name="substitution" value="substitute" checked> Substitute it with something similar</label>
+                            <label style="font-weight:400;"><input type="radio" name="substitution" value="refund"> Remove it and refund me</label>
+                            <label style="font-weight:400;"><input type="radio" name="substitution" value="call"> Call me first</label>
+                        </div>
+                    </div>
 
                     <h2 style="font-size:1.25rem;margin:1.5rem 0 1rem;"><span class="co-step">2</span>Who is paying?</h2>
                     <div class="form-group">
@@ -472,6 +480,7 @@
         }
         function payload() {
             if (billingSame && billingSame.checked) syncBillingFromDelivery();
+            var sub = form.querySelector('input[name="substitution"]:checked');
             return {
                 name: document.getElementById('co-name').value,
                 phone: document.getElementById('co-phone').value,
@@ -486,6 +495,7 @@
                 billing_postcode: val('co-bill-postcode') || document.getElementById('co-postcode').value,
                 save_address: saveBox && saveBox.checked ? 1 : 0,
                 save_label: saveLabel ? saveLabel.value : '',
+                substitution: sub ? sub.value : 'substitute',
                 notes: document.getElementById('co-notes').value,
                 delivery_date: document.getElementById('co-date').value,
                 delivery_slot_id: slotSel.value,

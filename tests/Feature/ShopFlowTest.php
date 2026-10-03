@@ -88,6 +88,7 @@ function checkoutPayload(int $slotId, string $method = 'cod'): array
         'address' => '1 Market Street', 'city' => 'Leeds', 'postcode' => 'LS1 1AA',
         'billing_name' => 'Shopper Name', 'billing_phone' => '07123456789',
         'billing_address' => '1 Market Street', 'billing_city' => 'Leeds', 'billing_postcode' => 'LS1 1AA',
+        'substitution' => 'substitute',
         'delivery_date' => array_key_first($dates),
         'delivery_slot_id' => $slotId,
         'payment_method' => $method,

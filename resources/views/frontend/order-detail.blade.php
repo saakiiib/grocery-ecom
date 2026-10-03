@@ -6,7 +6,7 @@
     <div class="page-hero">
         <div class="container">
             <h1>{{ $order->number }}</h1>
-            <p>Placed {{ $order->created_at->format('l j F, H:i') }} · {{ $order->paymentLabel() }} · {{ ucfirst($order->payment_status) }}</p>
+            <p>Placed {{ $order->created_at->format('l j F, H:i') }} · {{ $order->paymentLabel() }} · {{ $order->paymentStatusLabel() }}</p>
         </div>
     </div>
     <div class="container" style="padding-bottom:4rem;max-width:760px;">
@@ -41,7 +41,7 @@
             </div>
             @foreach ($order->items as $item)
                 <div class="summary-row" style="align-items:start;">
-                    <span>{{ $item->qty }} × {{ $item->product_name }}<br><span class="text-muted">{{ $item->pack_label }}</span></span>
+                    <span>{{ $item->qty }} × {{ $item->product_name }}@if ($item->status !== 'ok') <span class="status-pill">Unavailable — refunded</span>@endif<br><span class="text-muted">{{ $item->pack_label }}</span></span>
                     <span>£{{ number_format($item->line_total, 2) }}</span>
                 </div>
             @endforeach
@@ -55,6 +55,7 @@
             @php $billTo = $order->billTo(); @endphp
             <p class="text-muted">Delivering to {{ $order->address }}, {{ $order->city }} {{ $order->postcode }} · {{ $order->phone }}</p>
             <p class="text-muted">Billing to {{ $billTo['name'] }}, {{ $billTo['address'] }}, {{ $billTo['city'] }} {{ $billTo['postcode'] }} · {{ $billTo['phone'] }}</p>
+            <p class="text-muted">If unavailable: {{ $order->substitutionLabel() }}</p>
         </div>
 
         @include('frontend.partials.order-journey')

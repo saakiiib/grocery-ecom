@@ -25,6 +25,7 @@ class Order extends Model
             'points_discount' => 'decimal:2',
             'vat_percent' => 'decimal:2',
             'vat_amount' => 'decimal:2',
+            'refunded_amount' => 'decimal:2',
         ];
     }
 
@@ -81,7 +82,40 @@ class Order extends Model
 
     public function isPaid(): bool
     {
-        return $this->payment_status === 'paid';
+        return in_array($this->payment_status, ['paid', 'partially_refunded'], true);
+    }
+
+    public function paymentStatusLabel(): string
+    {
+        return match ($this->payment_status) {
+            'paid' => 'Paid',
+            'partially_refunded' => 'Partially refunded',
+            'refunded' => 'Refunded',
+            default => 'Unpaid',
+        };
+    }
+
+    public function substitutionLabel(): string
+    {
+        return match ($this->substitution_preference) {
+            'substitute' => 'Substitute with a similar item',
+            'refund' => 'Remove it and refund me',
+            'call' => 'Call me first',
+            default => '—',
+        };
+    }
+
+    /** Still refundable online: paid online orders minus what was already refunded. */
+    public function refundableAmount(): float
+    {
+        if (! in_array($this->payment_status, ['paid', 'partially_refunded'], true)) {
+            return 0.0;
+        }
+        if (! in_array($this->payment_method, ['stripe', 'paypal'], true)) {
+            return 0.0;
+        }
+
+        return max(0.0, round((float) $this->total - (float) $this->refunded_amount, 2));
     }
 
     /**
