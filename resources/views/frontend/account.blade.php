@@ -145,7 +145,7 @@
                                 <form method="POST" action="{{ route('account.addresses.destroy', $a->id) }}" onsubmit="return confirm('Remove this address?')">@csrf @method('DELETE')<button type="submit" class="btn btn-ghost btn-sm">Remove</button></form>
                             </span>
                         </div>
-                        <script type="application/json" data-address-data="{{ $a->id }}">{!! json_encode($a->only(['id', 'label', 'name', 'phone', 'address', 'city', 'postcode', 'is_default_delivery', 'is_default_billing'])) !!}</script>
+                        <script type="application/json" data-address-data="{{ $a->id }}">{!! json_encode($a->only(['id', 'label', 'name', 'phone', 'address', 'city', 'postcode', 'is_default_delivery', 'is_default_billing']), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
                     @endforeach
                     <h3 style="font-size:1rem;margin:1.25rem 0 0.75rem;" data-address-form-title>Add a new address</h3>
                     <form method="POST" action="{{ route('account.addresses.store') }}" data-address-form>

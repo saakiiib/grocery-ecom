@@ -50,10 +50,11 @@ class FrontendController extends Controller
         $categories = Category::where('status', true)->orderBy('sort_order')->orderBy('id')->get();
 
         $bundleCover = BundleOffer::coverMap();
-        $productsJson = $products->map(fn ($p) => $this->productCard($p, $bundleCover))->values();
-        $featuredJson = $featured->map(fn ($p) => $this->productCard($p, $bundleCover))->values();
-        $featuredCards = $products->where('is_featured', true)->values()->map(fn ($p) => $this->productCard($p, $bundleCover))->values();
         $flashMap = FlashSale::liveMap();
+        $bogoLive = BogoOffer::liveAll();
+        $productsJson = $products->map(fn ($p) => $this->productCard($p, $bundleCover, $flashMap, $bogoLive))->values();
+        $featuredJson = $featured->map(fn ($p) => $this->productCard($p, $bundleCover, $flashMap, $bogoLive))->values();
+        $featuredCards = $products->where('is_featured', true)->values()->map(fn ($p) => $this->productCard($p, $bundleCover, $flashMap, $bogoLive))->values();
         // Homepage "Shop by category" shows parents only, in parent-scoped sort_order.
         $categoriesJson = $categories->whereNull('parent_id')->values()->map(function ($c) use ($products, $categories) {
             $ids = $this->categorySubtreeIds($categories, $c->id);
@@ -66,7 +67,7 @@ class FrontendController extends Controller
             ];
         })->values();
         $offerCards = $products->filter(fn ($p) => $this->hasDeal($p, $flashMap))
-            ->take(4)->values()->map(fn ($p) => $this->productCard($p, $bundleCover))->values();
+            ->take(4)->values()->map(fn ($p) => $this->productCard($p, $bundleCover, $flashMap, $bogoLive))->values();
         $faqsJson = $this->faqsJson();
         $faqCatsJson = $this->faqCatsJson();
         $galleryJson = $this->galleryJson(8);
@@ -172,6 +173,7 @@ class FrontendController extends Controller
         // Cheapest-variant price per product — drives the slider bounds and the filter.
         $flashMap = FlashSale::liveMap();
         $bundleCover = BundleOffer::coverMap();
+        $bogoLive = BogoOffer::liveAll();
         $withFloors = $products
             ->when($descendantIds, fn ($c) => $c->filter(fn ($p) => in_array($p->category_id, $descendantIds, true))->values())
             ->when($onlyOffers, fn ($c) => $c->filter(fn ($p) => $this->hasDeal($p, $flashMap))->values())
@@ -213,7 +215,7 @@ class FrontendController extends Controller
                     return true;
                 })->values();
             })
-            ->map(fn ($row) => $this->productCard($row['product'], $bundleCover))
+            ->map(fn ($row) => $this->productCard($row['product'], $bundleCover, $flashMap, $bogoLive))
             ->values();
 
         $cards = match ($sort) {
@@ -289,7 +291,8 @@ class FrontendController extends Controller
             $related = $related->concat($filler)->values();
         }
 
-        $productJson = $this->productDetail($product, BundleOffer::coverMap());
+        $relMaps = [BundleOffer::coverMap(), FlashSale::liveMap(), BogoOffer::liveAll()];
+        $productJson = $this->productDetail($product, ...$relMaps);
         $reviewStats = ProductReview::approved()->where('product_id', $product->id)
             ->selectRaw('COUNT(*) as count, AVG(rating) as avg')
             ->first();
@@ -319,7 +322,7 @@ class FrontendController extends Controller
             'upgrade' => [],
         ];
         $zonesJson = collect();
-        $relatedJson = $related->map(fn ($p) => $this->productCard($p, BundleOffer::coverMap()))->values();
+        $relatedJson = $related->map(fn ($p) => $this->productCard($p, ...$relMaps))->values();
         $faqsJson = $this->faqsJson(4);
         $docsJson = collect();
         $videoUrl = null;
@@ -349,7 +352,7 @@ class FrontendController extends Controller
             'email' => 'required|email|max:255',
             'topic' => 'nullable|string|max:255',
             'postcode' => 'nullable|string|max:50',
-            'message' => 'required|string',
+            'message' => 'required|string|max:5000',
         ]);
 
         Contact::create([
@@ -454,12 +457,14 @@ class FrontendController extends Controller
         ]);
 
         $number = strtoupper(trim($data['number']));
-        $phone = preg_replace('/[\s\-()]/', '', $data['phone']);
+        // Normalize UK mobiles: strip separators, treat +44 as a leading 0.
+        $normalizePhone = fn ($p) => preg_replace('/^\+44/', '0', (string) preg_replace('/[\s\-()]/', '', $p));
+        $phone = $normalizePhone($data['phone']);
 
         $order = Order::with(['items', 'histories', 'status'])
             ->where('number', $number)
             ->get()
-            ->first(fn ($o) => preg_replace('/[\s\-()]/', '', (string) $o->phone) === $phone);
+            ->first(fn ($o) => $normalizePhone($o->phone) === $phone);
 
         if (! $order) {
             return spa('frontend.track', ['order' => null])->withErrors([
@@ -563,7 +568,7 @@ class FrontendController extends Controller
     }
 
     /** Card shape used by shop grid, featured rail, offers rail, related. */
-    public function productCard(Product $p, ?array $bundleCover = null): array
+    public function productCard(Product $p, ?array $bundleCover = null, ?array $flashMap = null, $bogoLive = null): array
     {
         $gallery = $p->relationLoaded('images')
             ? $p->images->map(fn ($i) => $this->imgUrl($i->image))->values()->all()
@@ -571,7 +576,7 @@ class FrontendController extends Controller
 
         $default = $p->defaultVariant();
         $selling = $default?->sellingPrice();
-        $flashMap = FlashSale::liveMap();
+        $flashMap = $flashMap ?? FlashSale::liveMap();
         $flash = $default ? FlashSale::priceFor($default->id, $p->id, $flashMap) : null;
         if ($flash && $flash['price'] < $selling) {
             $selling = $flash['price'];
@@ -582,7 +587,7 @@ class FrontendController extends Controller
         $savePct = ($default && $selling !== null && $mrp && $selling < $mrp)
             ? (int) round((($mrp - $selling) / $mrp) * 100)
             : null;
-        $bogo = $default ? BogoOffer::forVariant($default->id, $p->id) : null;
+        $bogo = $default ? BogoOffer::matchIn($bogoLive ?? BogoOffer::liveAll(), $default->id, $p->id) : null;
         $cover = $bundleCover ?? BundleOffer::coverMap();
         $bundle = $default ? ($cover[$default->id] ?? null) : null;
 
@@ -648,12 +653,12 @@ class FrontendController extends Controller
     }
 
     /** Full shape for the details page JS. */
-    private function productDetail(Product $p, ?array $bundleCover = null): array
+    private function productDetail(Product $p, ?array $bundleCover = null, ?array $flashMap = null, $bogoLive = null): array
     {
-        $flashMap = FlashSale::liveMap();
+        $flashMap = $flashMap ?? FlashSale::liveMap();
 
         return [
-            ...$this->productCard($p, $bundleCover),
+            ...$this->productCard($p, $bundleCover, $flashMap, $bogoLive),
             'description' => $p->description,
             'highlights' => $p->highlightList(),
             'extraAttributes' => $p->extraAttributes->map(fn ($a) => [
@@ -699,7 +704,7 @@ class FrontendController extends Controller
                     ])->values()->all(),
                 ];
             })->values()->all(),
-            'bogoOffers' => BogoOffer::liveAll()->where('product_id', $p->id)->map(fn ($o) => [
+            'bogoOffers' => collect($bogoLive ?? BogoOffer::liveAll())->where('product_id', $p->id)->map(fn ($o) => [
                 'buy' => $o->buy_qty,
                 'free' => $o->free_qty,
                 'label' => $o->label(),
@@ -707,7 +712,7 @@ class FrontendController extends Controller
                     ? ($p->variants->firstWhere('id', $o->product_variant_id)?->combinationLabel() ?? '')
                     : 'All packs',
             ])->values()->all(),
-            'flashOffers' => FlashSale::liveAll()->where('product_id', $p->id)->map(fn ($s) => [
+            'flashOffers' => collect(FlashSale::liveAll())->where('product_id', $p->id)->map(fn ($s) => [
                 'price' => (float) $s->promo_price,
                 'ends' => $s->ends_at->format('D j M, H:i'),
                 'variant' => $s->product_variant_id

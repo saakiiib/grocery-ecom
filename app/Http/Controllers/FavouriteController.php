@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BogoOffer;
 use App\Models\BundleOffer;
 use App\Models\Favourite;
+use App\Models\FlashSale;
 use App\Models\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -30,7 +32,8 @@ class FavouriteController extends Controller
             ->select('products.*')
             ->get();
 
-        $cards = $products->map(fn ($p) => $this->card($p))->values();
+        $maps = [BundleOffer::coverMap(), FlashSale::liveMap(), BogoOffer::liveAll()];
+        $cards = $products->map(fn ($p) => $this->card($p, $maps))->values();
 
         return spa('frontend.favourites', compact('cards'));
     }
@@ -90,10 +93,10 @@ class FavouriteController extends Controller
         return redirect()->route('bag')->with('bag_notice', $message);
     }
 
-    private function card(Product $product): array
+    private function card(Product $product, array $maps = []): array
     {
         $controller = app(FrontendController::class);
 
-        return $controller->productCard($product, BundleOffer::coverMap());
+        return $controller->productCard($product, $maps[0] ?? null, $maps[1] ?? null, $maps[2] ?? null);
     }
 }

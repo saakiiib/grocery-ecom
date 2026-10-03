@@ -27,7 +27,7 @@ class SidebarController
                 'type' => 'item',
                 'icon' => 'ri-folder-line',
                 'label' => 'Category',
-                'route' => '*category*',
+                'route' => 'allcategory',
                 'href' => route('allcategory'),
             ],
             [
@@ -44,7 +44,7 @@ class SidebarController
                 'id' => 'sidebarContent',
                 'children' => [
                     ['label' => 'Sliders', 'route' => 'slider.*', 'href' => route('slider.index')],
-                    ['label' => 'Testimonials', 'route' => 'testimonial.index', 'href' => route('testimonial.index')],
+                    ['label' => 'Testimonials', 'route' => 'testimonial.*', 'href' => route('testimonial.index')],
                     ['label' => 'FAQ Categories', 'route' => 'faq-categories.*', 'href' => route('faq-categories.index')],
                     ['label' => 'FAQs', 'route' => 'faqs.*', 'href' => route('faqs.index')],
                     ['label' => 'Gallery Categories', 'route' => 'gallery-categories.*', 'href' => route('gallery-categories.index')],

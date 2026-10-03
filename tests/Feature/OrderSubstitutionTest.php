@@ -61,7 +61,7 @@ test('checkout stores the substitution preference', function () {
     session()->put('bag', [$variant->id => 2]);
 
     $payload = [
-        'name' => 'N', 'phone' => '07', 'address' => '1 M St', 'city' => 'Leeds', 'postcode' => 'LS1 1AA',
+        'name' => 'N', 'phone' => '07', 'email' => 'sub-guest@example.com', 'address' => '1 M St', 'city' => 'Leeds', 'postcode' => 'LS1 1AA',
         'billing_name' => 'N', 'billing_phone' => '07', 'billing_address' => '1 M St', 'billing_city' => 'Leeds', 'billing_postcode' => 'LS1 1AA',
         'delivery_date' => array_key_first(DeliverySlot::bookableDates()),
         'delivery_slot_id' => $slot->id, 'payment_method' => 'cod', 'privacy' => true,

@@ -16,6 +16,7 @@ class LoginController extends Controller
     public function __construct()
     {
         $this->middleware('guest')->except('logout');
+        $this->middleware('throttle:5,1')->only('login');
     }
 
     public function showLoginForm()
@@ -25,55 +26,36 @@ class LoginController extends Controller
 
     public function login(Request $request)
     {
-        $input = $request->all();
-        $field = filter_var($input['login'], FILTER_VALIDATE_EMAIL) ? 'email' : 'phone';
-
         $rules = [
-            'login' => 'required|string',
+            'login' => 'required|string|min:7|max:100',
             'password' => 'required',
         ];
         $messages = [
             'login.required' => 'Email or phone is required',
             'password.required' => 'Password is required',
         ];
-
-        if ($field === 'phone') {
-            $rules['login'] = 'required|string|digits:11';
-            $messages['login.digits'] = 'Phone must be 11 digits';
-        } else {
-            $rules['login'] = 'required|email';
-            $messages['login.email'] = 'Please enter a valid email';
-        }
-
         $this->validate($request, $rules, $messages);
+
+        $input = $request->only(['login', 'password', 'redirect']);
+        $field = filter_var($input['login'], FILTER_VALIDATE_EMAIL) ? 'email' : 'phone';
 
         $user = User::where($field, $input['login'])->first();
 
-        if ($user) {
-            if ($user->status == 1) {
-                if (auth()->attempt(['email' => $user->email, 'password' => $input['password']])) {
-                    if ($request->has('redirect')) {
-                        return redirect($request->redirect);
-                    }
-                    if (auth()->user()->user_type == '1') {
-                        return redirect()->route('admin.dashboard');
-                    } elseif (auth()->user()->user_type == '0') {
-                        return redirect()->route('home');
-                    }
-                } else {
-                    return redirect()->back()
-                        ->withInput($request->only('login'))
-                        ->withErrors(['password' => 'Password is incorrect']);
-                }
-            } else {
-                return redirect()->back()
-                    ->withInput($request->only('login'))
-                    ->withErrors(['login' => 'Your account is inactive']);
-            }
-        } else {
+        // One message for every failure: no account / inactive / wrong password oracle.
+        if (! $user || $user->status != 1 || ! auth()->attempt(['email' => $user->email, 'password' => $input['password']])) {
             return redirect()->back()
                 ->withInput($request->only('login'))
-                ->withErrors(['login' => 'Email or password is incorrect']);
+                ->withErrors(['login' => 'These credentials do not match our records.']);
         }
+
+        $redirect = $request->input('redirect');
+        if ($redirect && str_starts_with($redirect, '/') && ! str_starts_with($redirect, '//')) {
+            return redirect($redirect);
+        }
+        if (auth()->user()->user_type == '1') {
+            return redirect()->route('admin.dashboard');
+        }
+
+        return redirect()->route('home');
     }
 }

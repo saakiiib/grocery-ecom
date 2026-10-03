@@ -159,10 +159,12 @@ test('delivered still sends only the delivered mail', function () {
     Mail::fake();
     $order = addrPlaceOrder($this, $f);
 
+    $order->changeStatus('packed', $f['admin']->id);
+    $order->changeStatus('out_for_delivery', $f['admin']->id);
     $order->changeStatus('delivered', $f['admin']->id);
 
     Mail::assertSent(OrderDelivered::class, 1);
-    Mail::assertSent(OrderStatusUpdated::class, 0);
+    Mail::assertSent(OrderStatusUpdated::class, 2);
 });
 
 test('admin can view and download the invoice', function () {

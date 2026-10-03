@@ -60,7 +60,7 @@ class ProductExcelController extends Controller
     {
         $request->validate([
             'file' => 'required|file|mimes:xlsx,xls,csv|max:10240',
-            'images' => 'nullable|file|mimes:zip|max:102400',
+            'images' => 'nullable|file|mimes:zip|max:20480',
         ]);
 
         $token = Str::random(32);

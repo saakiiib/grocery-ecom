@@ -122,6 +122,9 @@ class AccountController extends Controller
         if ($order->isPaid() || in_array($order->status_slug, ['cancelled', 'delivered'], true)) {
             return response()->json(['message' => 'That order does not need payment.'], 422);
         }
+        if ((float) $order->refunded_amount > 0) {
+            return response()->json(['message' => 'That order has a refund on it — please contact us before paying again.'], 422);
+        }
         if ($order->payment_method === 'cod') {
             return response()->json(['message' => 'That order is cash on delivery — nothing to pay online.'], 422);
         }
@@ -130,6 +133,14 @@ class AccountController extends Controller
             if ($order->payment_method === 'stripe') {
                 if (! CheckoutController::stripeConfigured()) {
                     return response()->json(['message' => 'Card payment is not available right now.'], 422);
+                }
+                // Retiring the previous uncaptured intent so holds never pile up.
+                if ($order->payment_reference && str_starts_with($order->payment_reference, 'pi_')) {
+                    try {
+                        CheckoutController::stripeCancelIntent($order->payment_reference);
+                    } catch (\Throwable $e) {
+                        report($e);
+                    }
                 }
                 $intent = CheckoutController::stripeIntent($order);
                 $order->payment_reference = $intent['id'];

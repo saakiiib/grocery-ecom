@@ -116,3 +116,19 @@ test('a refused gateway leaves the order untouched', function () {
     expect($order->fresh()->refunded_amount)->toBe('0.00')
         ->and($order->fresh()->payment_status)->toBe('paid');
 });
+
+test('refunds recompute the vat slice of the remainder', function () {
+    $f = refundFixtures();
+    $admin = $f['admin'];
+    $order = refundPaidOrder('stripe', 120.00);
+    $order->update(['vat_percent' => 20, 'vat_amount' => 20.00]);
+    Setting::put('stripe_secret', 'sk_test_123');
+    Setting::put('stripe_publishable', 'pk_test_123');
+
+    Http::fake(['*api.stripe.com/*' => Http::response(['id' => 're_vat'], 200)]);
+
+    $this->actingAs($admin)->post(route('orders.refund', $order->id), ['amount' => 20.00])->assertRedirect();
+
+    // £100 left at 20% inclusive → £16.67 VAT.
+    expect((float) $order->fresh()->vat_amount)->toBe(16.67);
+});

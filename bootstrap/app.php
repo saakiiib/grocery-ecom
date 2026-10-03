@@ -17,6 +17,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->use([
 
         ]);
+        // Gateway webhooks carry their own signatures, not a session cookie.
+        $middleware->validateCsrfTokens(except: [
+            'webhooks/*',
+        ]);
         $middleware->alias([
             'is_admin' => IsAdmin::class,
             'is_user' => IsUser::class,

@@ -106,7 +106,7 @@ test('checkout snapshots bundle labels', function () {
 
     session()->put('bag', [$f['v1']->id => 1, $f['v2']->id => 1, $f['v3']->id => 1]);
     $redirect = $this->postJson(route('checkout.place'), [
-        'name' => 'N', 'phone' => '07', 'address' => '1 M St', 'city' => 'Leeds', 'postcode' => 'LS1 1AA',
+        'name' => 'N', 'phone' => '07', 'email' => 'bun-guest@example.com', 'address' => '1 M St', 'city' => 'Leeds', 'postcode' => 'LS1 1AA',
         'billing_name' => 'N', 'billing_phone' => '07', 'billing_address' => '1 M St', 'billing_city' => 'Leeds', 'billing_postcode' => 'LS1 1AA',
         'substitution' => 'substitute',
         'delivery_date' => array_key_first(DeliverySlot::bookableDates()),

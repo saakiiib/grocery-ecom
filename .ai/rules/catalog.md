@@ -56,6 +56,24 @@ Copied from an OriginSpaces showcase app and converted to grocery. Product price
 - `delivery_zones` (name/is_active/sort) + `delivery_zone_postcodes` (zone FK, normalized uppercase prefix, unique per zone). Empty table = deliver everywhere; any rows = enforce.
 - `DeliveryZone::matching($postcode)` (case/space-insensitive, longest prefix wins, active only — iterate rows, never `pluck` keyed by zone id or multi-prefix zones collapse) and `serves()` gate. `place()` rejects outside zones with 422; `POST checkout/postcode` gives the live check (informational only). Admin CRUD + toggle under Delivery Zones; checkout JS debounces postcode input and blocks submit on known-bad.
 
+## Webhooks (2026-10-03, safety net beside sync confirm)
+- `POST /webhooks/stripe|paypal` (CSRF-exempt in `bootstrap/app.php`, no throttle — gateways retry). Sync `paymentConfirm` stays instant; webhooks catch closed tabs and delayed captures.
+- Stripe: HMAC `t.payload` check + 5-min tolerance; `payment_intent.succeeded` → confirm (by PI id, else metadata order number), `payment_failed` → cancel untouched `new` orders; secrets via `STRIPE_WEBHOOK_SECRET` → settings.
+- PayPal: `verify-webhook-signature` API + capture re-fetch (`COMPLETED` only) before confirming; `DENIED` cancels untouched orders; webhook ID via `PAYPAL_WEBHOOK_ID` → settings. Secrets editable in Shop Settings (endpoint URLs shown there).
+- `WebhookController::confirmPaid` is idempotent (paid → 200, cancelled/delivered → no-op, method mismatch → false, mails only on `new` → `confirmed`).
+- Tests: `Http::fake(array)` APPENDS stubs — never re-fake overlapping URLs in one test; split tests instead.
+
+## Recheck hardening (2026-10-03)
+
+- Lifecycle is a matrix: `Order::allowedTransitions()` (`new→confirmed/cancelled`, `confirmed→packed/cancelled`, `packed→out/cancelled`, `out→delivered/cancelled`, finals never move); `changeStatus()` throws `LogicException` on illegal moves, admin `updateStatus` shows a friendly error first.
+- Bag clears only on real success (COD confirmed, Stripe/PayPal intent created) — gateway failures keep the bag.
+- Refunds run in `DB::transaction` with 255-capped history notes; full/partial compares in rounded minor units; `refreshVat()` recomputes the VAT slice of the unrefunded remainder on every refund.
+- Admin cannot cancel paid online orders before refunding; retry-pay is refused on refunded orders; `pay()` cancels the previous uncaptured Stripe intent (best effort).
+- Coupons: usage counts skip cancelled orders; `place()` re-checks under `lockForUpdate`.
+- Guests must leave an email (receipts need somewhere to go); checkout backfill never steals another account's phone.
+- Auth: single login error message, on-site redirects only, `throttle:5,1` login/register; throttles on contact/reviews/coupon/payment-confirm/retry-pay. SVG uploads blocked (`image` rule). Embedded JSON uses hex-escaped `json_encode`; storefront JS escapes names/packs/promos/queries via `esc()`.
+- `productCard($p, $bundleCover, $flashMap, $bogoLive)` — all listing callers precompute and thread the three maps (never per-card promo queries).
+
 ## Refunds (2026-10-03)
 
 - `orders.refunded_amount` cumulative; `payment_status` gains `partially_refunded`/`refunded` (`isPaid()` covers paid + partial; `paymentStatusLabel()` for display — never `ucfirst(payment_status)`).
@@ -72,7 +90,7 @@ Copied from an OriginSpaces showcase app and converted to grocery. Product price
 - `bogo_offers` (product FK, nullable variant FK = all packs, buy_qty/free_qty, starts/ends, status/sort); `order_items.promo_label/free_qty` snapshot at `place()`.
 - Engine lives in `BagController::detailed()` (single `liveAll()` per cycle, `matchIn()` per line; variant-specific beats product-wide; free units = floor(qty/(buy+free))×free) — never in the browser; subtotal already reduced so `priceBag`/coupons/points/VAT all see promo prices. `productCard` adds `bogo{buy,free,label}`, details adds `bogoOffers[]`.
 - Admin BOGO page (product select2 → variant dropdown via `product-variants.list`, buy/free, optional window) + sidebar item. Storefront: card `badge-bogo`, details `bogo-panel`, bag/checkout `promo-tag` + savings rows (server blade + `egf.js renderBagPage/updateBagSummary`).
-- Blade: `!empty()` inside directives miscompiles — use plain truthiness (`@if ($x)`); one directive per line.
+- Blade: `!empty()` inside directives miscompiles — use plain truthiness (`@if ($x)`); one directive per line; `@json()` with nested array args miscompiles — use `{!! json_encode($x, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT) !!}` for embedded JSON.
 
 ## Flash sales (2026-10-03, scheduled layer over offer_price)
 

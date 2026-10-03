@@ -9,6 +9,7 @@ use App\Http\Controllers\FavouriteController;
 use App\Http\Controllers\FrontendController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\WebhookController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -51,16 +52,18 @@ Route::post('/bag/update', [BagController::class, 'update'])->name('bag.update')
 Route::post('/bag/remove', [BagController::class, 'remove'])->name('bag.remove');
 Route::get('/bag/data', [BagController::class, 'show'])->name('bag.data');
 Route::post('/checkout/place', [CheckoutController::class, 'place'])->name('checkout.place');
-Route::post('/checkout/coupon', [CheckoutController::class, 'coupon'])->name('checkout.coupon');
+Route::post('/checkout/coupon', [CheckoutController::class, 'coupon'])->middleware('throttle:20,1')->name('checkout.coupon');
 Route::post('/checkout/postcode', [CheckoutController::class, 'postcode'])->name('checkout.postcode');
-Route::post('/checkout/payment-confirm', [CheckoutController::class, 'paymentConfirm'])->name('checkout.payment-confirm');
+Route::post('/checkout/payment-confirm', [CheckoutController::class, 'paymentConfirm'])->middleware('throttle:30,1')->name('checkout.payment-confirm');
+Route::post('/webhooks/stripe', [WebhookController::class, 'stripe'])->name('webhooks.stripe');
+Route::post('/webhooks/paypal', [WebhookController::class, 'paypal'])->name('webhooks.paypal');
 Route::post('/checkout/cancel', [CheckoutController::class, 'cancel'])->name('checkout.cancel');
 Route::get('/order/success/{number}', [CheckoutController::class, 'success'])->name('order.success');
 Route::get('/checkout', [FrontendController::class, 'checkout'])->name('checkout');
 Route::get('/account', [AccountController::class, 'index'])->name('account');
 Route::get('/account/orders/{number}', [AccountController::class, 'show'])->name('account.order');
 Route::post('/account/orders/{number}/reorder', [AccountController::class, 'reorder'])->name('account.reorder');
-Route::post('/account/orders/{number}/pay', [AccountController::class, 'pay'])->name('account.pay');
+Route::post('/account/orders/{number}/pay', [AccountController::class, 'pay'])->middleware('throttle:30,1')->name('account.pay');
 Route::post('/account/orders/{number}/cancel', [AccountController::class, 'cancel'])->name('account.cancel');
 Route::post('/account/profile', [AccountController::class, 'profile'])->name('account.profile');
 Route::post('/account/password', [AccountController::class, 'password'])->name('account.password');
@@ -71,7 +74,7 @@ Route::delete('/account/addresses/{id}', [AddressController::class, 'destroy'])-
 Route::get('/favourites', [FavouriteController::class, 'index'])->name('favourites');
 Route::post('/favourites/toggle', [FavouriteController::class, 'toggle'])->name('favourites.toggle');
 Route::post('/favourites/move-all', [FavouriteController::class, 'moveAll'])->name('favourites.move-all');
-Route::post('/reviews', [ReviewController::class, 'store'])->name('reviews.store');
+Route::post('/reviews', [ReviewController::class, 'store'])->middleware('throttle:20,1')->name('reviews.store');
 Route::delete('/reviews/{id}', [ReviewController::class, 'destroy'])->name('reviews.destroy');
 Route::get('/faq', [FrontendController::class, 'faq'])->name('faq');
 Route::get('/track', [FrontendController::class, 'track'])->name('track');
@@ -79,7 +82,7 @@ Route::post('/track', [FrontendController::class, 'trackLookup'])->middleware('t
 Route::get('/loyalty', [FrontendController::class, 'loyalty'])->name('loyalty');
 Route::get('/delivery', [FrontendController::class, 'delivery'])->name('delivery');
 Route::get('/contact', [FrontendController::class, 'contact'])->name('contact');
-Route::post('/contact', [FrontendController::class, 'contactStore'])->name('contact.store');
+Route::post('/contact', [FrontendController::class, 'contactStore'])->middleware('throttle:10,1')->name('contact.store');
 
 // Static Pages
 Route::get('/privacy-policy', [FrontendController::class, 'privacy'])->name('privacy');

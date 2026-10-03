@@ -118,9 +118,42 @@ class Order extends Model
         return max(0.0, round((float) $this->total - (float) $this->refunded_amount, 2));
     }
 
+    /** VAT follows the unrefunded remainder (prices are VAT-inclusive). */
+    public function refreshVat(): void
+    {
+        $rate = (float) $this->vat_percent;
+        $this->vat_amount = $rate > 0
+            ? round(max(0, (float) $this->total - (float) $this->refunded_amount) * $rate / (100 + $rate), 2)
+            : 0.0;
+    }
+
+    /**
+     * Allowed lifecycle moves. Final statuses (delivered, cancelled) never move.
+     *
+     * @return array<string, string[]>
+     */
+    public static function allowedTransitions(): array
+    {
+        return [
+            'new' => ['confirmed', 'cancelled'],
+            'confirmed' => ['packed', 'cancelled'],
+            'packed' => ['out_for_delivery', 'cancelled'],
+            'out_for_delivery' => ['delivered', 'cancelled'],
+            'delivered' => [],
+            'cancelled' => [],
+        ];
+    }
+
+    public function canTransitionTo(string $toSlug): bool
+    {
+        return in_array($toSlug, static::allowedTransitions()[$this->status_slug] ?? [], true);
+    }
+
     /**
      * Move the order to a new status, recording history. Returns the history row,
      * or null when the status did not change.
+     *
+     * @throws \LogicException on illegal moves (final states, skips, resurrections).
      */
     public function changeStatus(string $toSlug, ?int $changedBy = null, ?string $note = null): ?OrderStatusHistory
     {
@@ -128,6 +161,9 @@ class Order extends Model
 
         if ($this->status_slug === $to->slug) {
             return null;
+        }
+        if (! $this->canTransitionTo($to->slug)) {
+            throw new \LogicException('Order '.$this->number.' cannot move from '.$this->status_slug.' to '.$to->slug.'.');
         }
 
         $from = $this->status_slug;
@@ -181,10 +217,11 @@ class Order extends Model
     public function settlePoints(string $toSlug): void
     {
         if ($toSlug === 'delivered' && $this->user_id && $this->points_earned === 0) {
-            $earned = (int) floor(max(0, (float) $this->subtotal - (float) $this->points_discount) * UserPoint::perPound());
+            $earned = (int) floor(max(0, (float) $this->subtotal - (float) $this->points_discount - (float) $this->coupon_discount) * UserPoint::perPound());
             if ($earned > 0) {
                 $this->points()->create([
                     'user_id' => $this->user_id,
+                    'order_id' => $this->id,
                     'points' => $earned,
                     'type' => UserPoint::EARN,
                     'description' => 'Earned on '.$this->number,
@@ -198,6 +235,7 @@ class Order extends Model
             && ! $this->points()->where('type', UserPoint::REVERSAL)->exists()) {
             $this->points()->create([
                 'user_id' => $this->user_id,
+                'order_id' => $this->id,
                 'points' => $this->points_redeemed,
                 'type' => UserPoint::REVERSAL,
                 'description' => 'Refunded from cancelled '.$this->number,

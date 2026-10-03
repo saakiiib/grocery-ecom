@@ -59,8 +59,13 @@
                                     <label class="form-label">Secret key <small class="text-muted">(fallback — .env wins)</small></label>
                                     <input type="password" name="stripe_secret" class="form-control" maxlength="255" value="{{ old('stripe_secret', $settings['stripe_secret']) }}" placeholder="sk_test_…" autocomplete="new-password">
                                 </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Webhook signing secret <small class="text-muted">(fallback — .env STRIPE_WEBHOOK_SECRET wins)</small></label>
+                                    <input type="password" name="stripe_webhook_secret" class="form-control" maxlength="255" value="{{ old('stripe_webhook_secret', $settings['stripe_webhook_secret']) }}" placeholder="whsec_…" autocomplete="new-password">
+                                </div>
                             </div>
                             <p class="text-muted mb-4"><small>Recommended: put <code>STRIPE_PUBLISHABLE</code> / <code>STRIPE_SECRET</code> in <code>.env</code>. These fields are only used when <code>.env</code> is empty.</small></p>
+                            <p class="text-muted mb-4"><small>Webhook endpoint: <code>{{ url('/webhooks/stripe') }}</code> — paste it into the Stripe Dashboard → Developers → Webhooks, then copy the signing secret here.</small></p>
 
                             <h6 class="mb-3">PayPal
                                 @if ($sources['paypal'])
@@ -85,8 +90,13 @@
                                         <option value="live" {{ old('paypal_mode', $settings['paypal_mode']) === 'live' ? 'selected' : '' }}>Live</option>
                                     </select>
                                 </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Webhook ID <small class="text-muted">(fallback — .env PAYPAL_WEBHOOK_ID wins)</small></label>
+                                    <input type="text" name="paypal_webhook_id" class="form-control" maxlength="255" value="{{ old('paypal_webhook_id', $settings['paypal_webhook_id']) }}">
+                                </div>
                             </div>
                             <p class="text-muted mb-4"><small>Recommended: put <code>PAYPAL_CLIENT_ID</code> / <code>PAYPAL_SECRET</code> / <code>PAYPAL_MODE</code> in <code>.env</code>. These fields are only used when <code>.env</code> is empty.</small></p>
+                            <p class="text-muted mb-4"><small>Webhook endpoint: <code>{{ url('/webhooks/paypal') }}</code> — subscribe it to Payment Capture Completed / Denied in the PayPal Developer Dashboard, then copy the webhook ID here.</small></p>
 
                             <button type="submit" class="btn btn-primary">Save settings</button>
                             <p class="text-muted mt-2 mb-0"><small>Leave a gateway's keys empty and that button simply never appears at checkout — the shop keeps selling on cash on delivery.</small></p>

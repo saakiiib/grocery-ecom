@@ -68,8 +68,8 @@
                         </div>
                     </div>
                     <div class="form-group">
-                        <label for="co-email">Email <span class="text-muted">(for your receipt)</span></label>
-                        <input type="email" id="co-email" name="email" maxlength="255" value="{{ old('email', $shopper->email ?? '') }}" placeholder="you@example.com" autocomplete="email">
+                        <label for="co-email">Email @auth<span class="text-muted">(for your receipt)</span>@else<span class="text-danger">*</span>@endauth</label>
+                        <input type="email" id="co-email" name="email" maxlength="255" @guest required @endguest value="{{ old('email', $shopper->email ?? '') }}" placeholder="you@example.com" autocomplete="email">
                     </div>
                     <div class="form-group">
                         <label for="co-address">Street address</label>

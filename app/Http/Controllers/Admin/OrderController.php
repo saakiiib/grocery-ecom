@@ -10,6 +10,7 @@ use App\Models\OrderStatus;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
 
 class OrderController extends Controller
@@ -121,6 +122,13 @@ class OrderController extends Controller
             'note' => 'nullable|string|max:255',
         ]);
 
+        if ($data['status'] === 'cancelled' && $order->refundableAmount() > 0) {
+            return redirect()->route('orders.show', $order->id)->with('error', 'This order still has £'.number_format($order->refundableAmount(), 2).' of online money on it — issue the refund first, then cancel.');
+        }
+        if ($data['status'] !== $order->status_slug && ! $order->canTransitionTo($data['status'])) {
+            return redirect()->route('orders.show', $order->id)->with('error', 'An order cannot move from '.$order->status_slug.' to '.$data['status'].'. Final orders never move.');
+        }
+
         $changed = $order->changeStatus($data['status'], auth()->id(), $data['note'] ?? null);
 
         return redirect()->route('orders.show', $order->id)->with(
@@ -161,15 +169,19 @@ class OrderController extends Controller
 
         $refunded = round((float) $order->refunded_amount + (float) $data['amount'], 2);
         $order->refunded_amount = $refunded;
-        $order->payment_status = $refunded >= (float) $order->total ? 'refunded' : 'partially_refunded';
-        $order->save();
+        $order->payment_status = round($refunded - (float) $order->total, 2) >= 0 ? 'refunded' : 'partially_refunded';
+        $order->refreshVat();
 
-        $order->histories()->create([
-            'from_slug' => $order->status_slug,
-            'to_slug' => $order->status_slug,
-            'changed_by' => auth()->id(),
-            'note' => 'Refunded £'.number_format($data['amount'], 2).' via '.$order->paymentLabel().(($data['reason'] ?? null) ? ' — '.$data['reason'] : '').' (ref '.$gatewayId.').',
-        ]);
+        $note = 'Refunded £'.number_format($data['amount'], 2).' via '.$order->paymentLabel().(($data['reason'] ?? null) ? ' — '.$data['reason'] : '').' (ref '.$gatewayId.').';
+        DB::transaction(function () use ($order, $note) {
+            $order->save();
+            $order->histories()->create([
+                'from_slug' => $order->status_slug,
+                'to_slug' => $order->status_slug,
+                'changed_by' => auth()->id(),
+                'note' => mb_substr($note, 0, 255),
+            ]);
+        });
 
         return redirect()->route('orders.show', $order->id)->with('status', '£'.number_format($data['amount'], 2).' refunded to the shopper.');
     }
@@ -204,21 +216,26 @@ class OrderController extends Controller
             }
             $refunded = round((float) $order->refunded_amount + $amount, 2);
             $order->refunded_amount = $refunded;
-            $order->payment_status = $refunded >= (float) $order->total ? 'refunded' : 'partially_refunded';
-            $order->save();
+            $order->payment_status = round($refunded - (float) $order->total, 2) >= 0 ? 'refunded' : 'partially_refunded';
+            $order->refreshVat();
         }
 
-        $item->status = 'unavailable';
-        $item->save();
-
-        $order->histories()->create([
-            'from_slug' => $order->status_slug,
-            'to_slug' => $order->status_slug,
-            'changed_by' => auth()->id(),
-            'note' => $item->qty.' × '.$item->product_name.' unavailable'
-                .($amount > 0 ? ' — £'.number_format($amount, 2).' refunded via '.$order->paymentLabel().($gatewayId ? ' (ref '.$gatewayId.')' : '') : ' — nothing left to refund')
-                .'.',
-        ]);
+        $note = $item->qty.' × '.$item->product_name.' unavailable'
+            .($amount > 0 ? ' — £'.number_format($amount, 2).' refunded via '.$order->paymentLabel().($gatewayId ? ' (ref '.$gatewayId.')' : '') : ' — nothing left to refund')
+            .'.';
+        DB::transaction(function () use ($order, $item, $note) {
+            if ($order->isDirty()) {
+                $order->save();
+            }
+            $item->status = 'unavailable';
+            $item->save();
+            $order->histories()->create([
+                'from_slug' => $order->status_slug,
+                'to_slug' => $order->status_slug,
+                'changed_by' => auth()->id(),
+                'note' => mb_substr($note, 0, 255),
+            ]);
+        });
 
         return redirect()->route('orders.show', $order->id)->with('status', $item->product_name.' marked unavailable'.($amount > 0 ? ' — £'.number_format($amount, 2).' refunded.' : '.'));
     }

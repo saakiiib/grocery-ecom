@@ -33,7 +33,7 @@ function zoneFixtures(): array
 function zonePayload(int $slotId, string $postcode): array
 {
     return [
-        'name' => 'Shopper Name', 'phone' => '07123456789',
+        'name' => 'Shopper Name', 'phone' => '07123456789', 'email' => 'zone-guest@example.com',
         'address' => '1 Market Street', 'city' => 'Leeds', 'postcode' => $postcode,
         'billing_name' => 'Shopper Name', 'billing_phone' => '07123456789',
         'billing_address' => '1 Market Street', 'billing_city' => 'Leeds', 'billing_postcode' => $postcode,

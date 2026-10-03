@@ -11,6 +11,7 @@ use App\Models\Order;
 use App\Models\OrderStatus;
 use App\Models\ProductVariant;
 use App\Models\Setting;
+use App\Models\User;
 use App\Models\UserPoint;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -55,6 +56,17 @@ class CheckoutController extends Controller
     public static function paypalMode(): string
     {
         return config('services.paypal.mode') ?: Setting::get('paypal_mode', 'sandbox');
+    }
+
+    /** Webhook secrets resolve the same way as gateway keys: .env first, settings fallback. */
+    public static function stripeWebhookSecret(): ?string
+    {
+        return config('services.stripe.webhook_secret') ?: Setting::get('stripe_webhook_secret') ?: null;
+    }
+
+    public static function paypalWebhookId(): ?string
+    {
+        return config('services.paypal.webhook_id') ?: Setting::get('paypal_webhook_id') ?: null;
     }
 
     /** Where each gateway's live credentials come from: '.env', 'settings', or null. */
@@ -130,7 +142,8 @@ class CheckoutController extends Controller
         $data = $request->validate([
             'name' => 'required|string|max:100',
             'phone' => 'required|string|max:30',
-            'email' => 'nullable|email|max:255',
+            // Guests must leave an email — otherwise no receipt can reach them.
+            'email' => [auth()->check() ? 'nullable' : 'required', 'email', 'max:255'],
             'address' => 'required|string|max:500',
             'city' => 'required|string|max:100',
             'postcode' => 'required|string|max:20',
@@ -195,7 +208,8 @@ class CheckoutController extends Controller
             $order = DB::transaction(function () use ($data, $priced, $pointsRedeem, $pointsDiscount) {
                 $status = OrderStatus::where('slug', 'new')->where('is_active', true)->firstOrFail();
 
-                // Coupon — revalidated server-side, shoppers only.
+                // Coupon — revalidated server-side, shoppers only. Row-locked so
+                // concurrent checkouts cannot over-redeem a limited coupon.
                 $coupon = null;
                 $couponDiscount = 0.0;
                 if (! empty($data['coupon_code'])) {
@@ -203,6 +217,7 @@ class CheckoutController extends Controller
                     if (! $coupon) {
                         throw new CouponRejected('That coupon does not exist.');
                     }
+                    $coupon = Coupon::where('id', $coupon->id)->lockForUpdate()->firstOrFail();
                     $check = $coupon->checkFor(auth()->id(), $priced['subtotal']);
                     if (! $check['ok']) {
                         throw new CouponRejected($check['message']);
@@ -255,6 +270,7 @@ class CheckoutController extends Controller
                 if ($pointsRedeem > 0) {
                     $order->points()->create([
                         'user_id' => $order->user_id,
+                        'order_id' => $order->id,
                         'points' => -$pointsRedeem,
                         'type' => UserPoint::REDEEM,
                         'description' => 'Spent on '.$order->number,
@@ -283,14 +299,21 @@ class CheckoutController extends Controller
                     'note' => 'Order placed ('.$order->paymentLabel().').',
                 ]);
 
-                // Remember the shopper's details for next time.
+                // Remember the shopper's details for next time (never overwrite,
+                // and never steal a phone number that belongs to another account).
                 if ($order->user_id) {
-                    $order->user->update([
-                        'phone' => $order->user->phone ?? $order->phone,
-                        'address' => $order->user->address ?? $order->address,
-                        'city' => $order->user->city ?? $order->city,
-                        'postcode' => $order->user->postcode ?? $order->postcode,
-                    ]);
+                    $profile = ['address' => $order->address, 'city' => $order->city, 'postcode' => $order->postcode];
+                    foreach (['address', 'city', 'postcode'] as $field) {
+                        if ($order->user->$field) {
+                            unset($profile[$field]);
+                        }
+                    }
+                    if (! $order->user->phone && ! User::where('phone', $order->phone)->where('id', '!=', $order->user_id)->exists()) {
+                        $profile['phone'] = $order->phone;
+                    }
+                    if ($profile !== []) {
+                        $order->user->update($profile);
+                    }
                     if (! empty($data['save_address'])) {
                         $exists = $order->user->addresses()
                             ->where('address', $order->address)
@@ -321,12 +344,12 @@ class CheckoutController extends Controller
             return response()->json(['message' => 'We could not place your order — please try again.'], 500);
         }
 
-        BagController::clear();
         session(['last_order_id' => $order->id]);
 
         if ($data['payment_method'] === 'cod') {
             $order->changeStatus('confirmed', auth()->id(), 'Cash on delivery — pay the driver.');
             Order::sendMail($order->receiptEmail(), new OrderPlaced($order));
+            BagController::clear();
 
             return response()->json([
                 'ok' => true,
@@ -345,6 +368,7 @@ class CheckoutController extends Controller
             }
             $order->payment_reference = $intent['id'];
             $order->save();
+            BagController::clear();
 
             return response()->json([
                 'ok' => true,
@@ -365,6 +389,7 @@ class CheckoutController extends Controller
         }
         $order->payment_reference = $ppOrderId;
         $order->save();
+        BagController::clear();
 
         return response()->json([
             'ok' => true,
@@ -572,7 +597,32 @@ class CheckoutController extends Controller
         return $res->json('id');
     }
 
+    /**
+     * Cancel a previous uncaptured Stripe intent (pay retry). Best effort —
+     * a failure here must never block the fresh intent.
+     */
+    public static function stripeCancelIntent(string $intentId): void
+    {
+        if (! static::stripeConfigured()) {
+            return;
+        }
+
+        $res = Http::asForm()
+            ->withBasicAuth(static::stripeSecret(), '')
+            ->post('https://api.stripe.com/v1/payment_intents/'.$intentId.'/cancel');
+
+        if ($res->failed()) {
+            throw new \RuntimeException('Stripe cancel failed: '.$res->body());
+        }
+    }
+
     /* ---------------- PayPal (raw REST — no SDK dependency) ---------------- */
+
+    /** Public alias for webhook verification (same token endpoint). */
+    public static function paypalTokenForWebhook(): string
+    {
+        return static::paypalToken();
+    }
 
     private static function paypalToken(): string
     {

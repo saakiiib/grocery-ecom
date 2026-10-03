@@ -51,7 +51,7 @@ return new class extends Migration
             $table->longText('about_us')->nullable();
             $table->longText('bank_info')->nullable();
             $table->longText('email_bank_info')->nullable();
-            $table->integer('vat_percent')->nullable();
+            $table->decimal('vat_percent', 5, 2)->nullable();
             $table->string('currency')->nullable();
             $table->string('company_reg_number')->nullable();
             $table->string('account_number')->nullable();

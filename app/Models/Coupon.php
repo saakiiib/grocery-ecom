@@ -24,14 +24,15 @@ class Coupon extends Model
         return $this->hasMany(Order::class);
     }
 
+    /** Cancelled orders give the coupon back — they never consumed it. */
     public function usesCount(): int
     {
-        return $this->orders()->count();
+        return $this->orders()->where('status_slug', '!=', 'cancelled')->count();
     }
 
     public function usesCountFor(int $userId): int
     {
-        return $this->orders()->where('user_id', $userId)->count();
+        return $this->orders()->where('user_id', $userId)->where('status_slug', '!=', 'cancelled')->count();
     }
 
     /**

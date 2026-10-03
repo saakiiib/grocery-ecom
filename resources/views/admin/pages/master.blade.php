@@ -11,7 +11,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta content="" name="description" />
     <meta content="" name="author" />
-    <link href="{{ asset('uploads/company/' . $company->fav_icon) }}" rel="icon">
+    <link href="{{ $company->fav_icon ? asset('uploads/company/' . $company->fav_icon) : asset('favicon.ico') }}" rel="icon">
 
     <!-- Layout config Js -->
     <script src="{{ asset('resources/backend/js/layout.js') }}"></script>

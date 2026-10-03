@@ -12,6 +12,7 @@ class RegisterController extends Controller
     public function __construct()
     {
         $this->middleware('guest');
+        $this->middleware('throttle:5,1')->only('register');
     }
 
     public function showRegistrationForm()
@@ -45,8 +46,10 @@ class RegisterController extends Controller
         auth()->login($user);
 
         // Your bag lives in the session, so it comes with you automatically.
-        if ($request->filled('redirect')) {
-            return redirect($request->redirect);
+        // Redirects stay on this shop: absolute URLs are never trusted.
+        $redirect = $request->input('redirect');
+        if (is_string($redirect) && str_starts_with($redirect, '/') && ! str_starts_with($redirect, '//')) {
+            return redirect($redirect);
         }
 
         return redirect()->route('account');

@@ -17,6 +17,13 @@
     return '£' + Number(n).toFixed(2);
   }
 
+  /* Escape admin/shopper text before innerHTML (names, packs, promo labels, queries). */
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
   /* ---------------- Bag (server session — prices always come from the DB) ---------------- */
   function csrf() {
     var meta = document.querySelector('meta[name="csrf-token"]');
@@ -270,10 +277,10 @@
       var img = item.image || placeholderImg();
       var link = item.slug ? r.product + '/' + item.slug : r.shop;
       var row = '<div class="cart-item" data-key="' + item.variant_id + '">' +
-        '<a data-spa href="' + link + '"><img src="' + img + '" alt="' + item.name + '" loading="lazy"></a>' +
-        '<div><div class="cart-item-name">' + item.name + '</div>' +
-        (item.pack ? '<div class="cart-item-meta">' + item.pack + '</div>' : '') +
-        (item.promo_label ? '<div><span class="promo-tag">' + item.promo_label + (item.free_qty ? ' · ' + item.free_qty + ' free' : '') + '</span></div>' : '') +
+        '<a data-spa href="' + link + '"><img src="' + img + '" alt="' + esc(item.name) + '" loading="lazy"></a>' +
+        '<div><div class="cart-item-name">' + esc(item.name) + '</div>' +
+        (item.pack ? '<div class="cart-item-meta">' + esc(item.pack) + '</div>' : '') +
+        (item.promo_label ? '<div><span class="promo-tag">' + esc(item.promo_label) + (item.free_qty ? ' · ' + item.free_qty + ' free' : '') + '</span></div>' : '') +
         (item.available
           ? '<div class="cart-item-price">' + formatPrice(item.price) + '</div>'
           : '<div class="cart-item-meta" style="color:#B91C1C">No longer available</div>') +
@@ -481,11 +488,11 @@
     /* data-spa here is the sanctioned JS-runtime exception (Blade @spa can't compile JS-built markup). */
     return '<article class="product-card" data-card>' +
       '<a data-spa href="' + r.product + '/' + p.slug + '" class="product-img-wrap">' +
-      '<img src="' + p.img + '" alt="' + p.name + '" loading="lazy"></a>' +
-      '<div class="product-body"><span class="product-meta">' + p.cat + '</span>' +
-      '<a data-spa href="' + r.product + '/' + p.slug + '" class="product-name">' + p.name + '</a>' +
+      '<img src="' + p.img + '" alt="' + esc(p.name) + '" loading="lazy"></a>' +
+      '<div class="product-body"><span class="product-meta">' + esc(p.cat) + '</span>' +
+      '<a data-spa href="' + r.product + '/' + p.slug + '" class="product-name">' + esc(p.name) + '</a>' +
       '<div class="product-price-row"><span class="product-price">' + formatPrice(p.price) + '</span></div>' +
-      (p.pack ? '<div><span class="product-meta">' + p.pack + '</span></div>' : '') +
+      (p.pack ? '<div><span class="product-meta">' + esc(p.pack) + '</span></div>' : '') +
       '</div></article>';
   }
 
@@ -505,7 +512,7 @@
       count.textContent = list.length + ' result' + (list.length === 1 ? '' : 's') + ' for "' + q.trim() + '"';
     }
     if (!list.length) {
-      results.innerHTML = '<div class="search-empty"><h3>Nothing matched "' + q.trim() + '"</h3>' +
+      results.innerHTML = '<div class="search-empty"><h3>Nothing matched "' + esc(q.trim()) + '"</h3>' +
         '<p>Try a different word, or <a href="' + routes().shop + '">browse all groceries</a>.</p></div>';
       return;
     }

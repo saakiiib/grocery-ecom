@@ -84,7 +84,7 @@ function checkoutPayload(int $slotId, string $method = 'cod'): array
     $dates = DeliverySlot::bookableDates();
 
     return [
-        'name' => 'Shopper Name', 'phone' => '07123456789',
+        'name' => 'Shopper Name', 'phone' => '07123456789', 'email' => 'shopper@example.com',
         'address' => '1 Market Street', 'city' => 'Leeds', 'postcode' => 'LS1 1AA',
         'billing_name' => 'Shopper Name', 'billing_phone' => '07123456789',
         'billing_address' => '1 Market Street', 'billing_city' => 'Leeds', 'billing_postcode' => 'LS1 1AA',
@@ -181,9 +181,11 @@ test('order emails go out on placement and delivery', function () {
     $order = Order::firstOrFail();
     Mail::assertSent(OrderPlaced::class, fn ($mail) => $mail->hasTo('guest@example.com'));
 
-    // Guest without any email stays silent.
+    // Guest without any email is sent back — receipts need somewhere to go.
     $this->postJson(route('bag.add'), ['variant_id' => $f['a']->id, 'qty' => 2])->assertOk();
-    $this->postJson(route('checkout.place'), checkoutPayload($slot->id))->assertOk();
+    $payload = checkoutPayload($slot->id);
+    unset($payload['email']);
+    $this->postJson(route('checkout.place'), $payload)->assertStatus(422)->assertJsonValidationErrors('email');
     Mail::assertSent(OrderPlaced::class, 1);
 
     // Delivered triggers the thank-you mail (points note included when earned).
