@@ -23,6 +23,10 @@ class ShopSettingsController extends Controller
         'paypal_secret' => 'PayPal secret',
         'paypal_webhook_id' => 'PayPal webhook ID',
         'paypal_mode' => 'PayPal mode (sandbox/live)',
+        'messenger_url' => 'Facebook Messenger chat link',
+        'hygiene_rating' => 'Food hygiene rating (0–5)',
+        'google_rating' => 'Google rating (e.g. 4.8)',
+        'google_reviews_url' => 'Google reviews link',
     ];
 
     public function edit()
@@ -54,6 +58,10 @@ class ShopSettingsController extends Controller
             'paypal_secret' => 'nullable|string|max:255',
             'paypal_webhook_id' => 'nullable|string|max:255',
             'paypal_mode' => 'required|in:sandbox,live',
+            'messenger_url' => 'nullable|url|max:255',
+            'hygiene_rating' => 'nullable|string|max:10',
+            'google_rating' => 'nullable|string|max:10',
+            'google_reviews_url' => 'nullable|url|max:255',
         ]);
 
         foreach ($data as $key => $value) {

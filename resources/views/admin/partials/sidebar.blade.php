@@ -1,6 +1,6 @@
 <div class="app-menu navbar-menu">
     <div class="navbar-brand-box">
-        <a href="{{ route('admin.dashboard') }}" class="logo logo-dark">
+        <a href="{{ route('home') }}" class="logo logo-dark">
             <span class="logo-sm">
                 <img src="{{ $company->company_logo ? asset('uploads/company/' . $company->company_logo) : asset('placeholder.webp') }}" alt="" height="40">
             </span>
@@ -8,7 +8,7 @@
                 <img src="{{ $company->company_logo ? asset('uploads/company/' . $company->company_logo) : asset('placeholder.webp') }}" alt="" height="40">
             </span>
         </a>
-        <a href="{{ route('admin.dashboard') }}" class="logo logo-light">
+        <a href="{{ route('home') }}" class="logo logo-light">
             <span class="logo-sm">
                 <img src="{{ $company->company_logo ? asset('uploads/company/' . $company->company_logo) : asset('placeholder.webp') }}" alt="" height="40">
             </span>

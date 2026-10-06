@@ -7,13 +7,15 @@
     $socials = [
         ['facebook', $company->facebook, 'Facebook'],
         ['instagram', $company->instagram, 'Instagram'],
-        ['twitter', $company->twitter, 'Twitter'],
+        ['twitter', $company->twitter, 'X'],
         ['linkedin', $company->linkedin, 'LinkedIn'],
         ['youtube', $company->youtube, 'YouTube'],
         ['music', $company->tiktok, 'TikTok'],
         ['message-circle', $company->whatsapp ? 'https://wa.me/' . preg_replace('/\D/', '', $company->whatsapp) : null, 'WhatsApp'],
     ];
     $hasSocials = collect($socials)->contains(fn ($s) => ! empty($s[1]));
+    $appStore = $company->google_appstore_link ?? null;
+    $playStore = $company->google_play_link ?? null;
 @endphp
 <footer class="site-footer">
     <div class="container">
@@ -34,6 +36,15 @@
                                 <a href="{{ $url }}" target="_blank" rel="noopener" aria-label="{{ $label }}" title="{{ $label }}"><x-icon name="{{ $icon }}" /></a>
                             @endif
                         @endforeach
+                    </div>
+                @endif
+                @if ($appStore || $playStore)
+                    <div class="app-badges">
+                        <p>Get our app</p>
+                        <div>
+                            @if ($appStore)<a href="{{ $appStore }}" target="_blank" rel="noopener" class="app-btn"><x-icon name="apple" /> App Store</a>@endif
+                            @if ($playStore)<a href="{{ $playStore }}" target="_blank" rel="noopener" class="app-btn"><x-icon name="play" /> Google Play</a>@endif
+                        </div>
                     </div>
                 @endif
             </div>

@@ -49,6 +49,7 @@ class CompanyDetailsController extends Controller
             'footer_link' => 'nullable|string|max:255',
             'currency' => 'nullable|string|max:10',
             'google_map' => 'nullable|string',
+            'opening_time' => 'nullable|string|max:255',
             'company_reg_number' => 'nullable|string',
             'vat_number' => 'nullable|string',
             'fav_icon' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',

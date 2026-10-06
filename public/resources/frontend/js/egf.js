@@ -436,6 +436,92 @@
     go(0);
   }
 
+  /* ---------------- Testimonials slider ---------------- */
+  function initTmnSlider() {
+    var slider = document.querySelector('[data-tmn-slider]');
+    if (!slider || slider._egfBound) return;
+    slider._egfBound = true;
+    var slides = [].slice.call(slider.querySelectorAll('.tmn-slide'));
+    var dots = [].slice.call(slider.querySelectorAll('.tmn-dot'));
+    if (slides.length < 2) return;
+    var index = 0;
+    var timer = null;
+    var DURATION = 5000;
+
+    function go(next) {
+      index = (next + slides.length) % slides.length;
+      slides.forEach(function (s, i) { s.classList.toggle('active', i === index); });
+      dots.forEach(function (d, i) { d.classList.toggle('active', i === index); });
+      restart();
+    }
+    function restart() {
+      clearInterval(timer);
+      timer = setInterval(function () { go(index + 1); }, DURATION);
+    }
+    function pause() { clearInterval(timer); timer = null; }
+
+    var next = slider.querySelector('.tmn-arrow.next');
+    var prev = slider.querySelector('.tmn-arrow.prev');
+    if (next) next.addEventListener('click', function () { go(index + 1); });
+    if (prev) prev.addEventListener('click', function () { go(index - 1); });
+    dots.forEach(function (d, i) { d.addEventListener('click', function () { go(i); }); });
+    slider.addEventListener('mouseenter', pause);
+    slider.addEventListener('mouseleave', restart);
+    slider._egfPause = pause;
+    slider._egfResume = restart;
+    if (!window._egfTmnVisBound) {
+      window._egfTmnVisBound = true;
+      document.addEventListener('visibilitychange', function () {
+        document.querySelectorAll('[data-tmn-slider]').forEach(function (n) {
+          if (document.hidden) { if (n._egfPause) n._egfPause(); }
+          else if (n._egfResume) { n._egfResume(); }
+        });
+      });
+    }
+    var startX = null;
+    slider.addEventListener('touchstart', function (e) { startX = e.touches[0].clientX; pause(); }, { passive: true });
+    slider.addEventListener('touchend', function (e) {
+      if (startX === null) return;
+      var dx = e.changedTouches[0].clientX - startX;
+      if (Math.abs(dx) > 45) { go(index + (dx < 0 ? 1 : -1)); } else { restart(); }
+      startX = null;
+    });
+
+    go(0);
+  }
+
+  /* ---------------- FAQ category tabs ---------------- */
+  function initFaqTabs() {
+    var bars = document.querySelectorAll('[data-faq-tabs]');
+    for (var i = 0; i < bars.length; i++) {
+      (function (bar) {
+        if (bar._egfBound) return;
+        bar._egfBound = true;
+        var tabs = bar.querySelectorAll('[data-faq-tab]');
+        var scope = bar.parentElement;
+        for (var j = 0; j < tabs.length; j++) {
+          tabs[j].addEventListener('click', function () {
+            var idx = this.getAttribute('data-faq-tab');
+            for (var k = 0; k < tabs.length; k++) {
+              tabs[k].classList.toggle('active', tabs[k] === this);
+            }
+            var panels = scope.querySelectorAll('[data-faq-panel]');
+            for (var m = 0; m < panels.length; m++) {
+              (function (panel) {
+                var show = panel.getAttribute('data-faq-panel') === idx;
+                panel.classList.toggle('is-hidden', !show);
+                if (show) {
+                  var first = panel.querySelector('details.faq-item');
+                  if (first) first.open = true;
+                }
+              })(panels[m]);
+            }
+          });
+        }
+      })(bars[i]);
+    }
+  }
+
   /* ---------------- Search overlay (server catalog) ---------------- */
   var searchEl = null;
 
@@ -941,6 +1027,8 @@
     initFavToggles();
     renderBagPage();
     initHeroSlider();
+    initTmnSlider();
+    initFaqTabs();
     initSearchTriggers();
     initStickyHeader();
     initReveal();

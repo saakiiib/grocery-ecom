@@ -98,6 +98,29 @@
                             <p class="text-muted mb-4"><small>Recommended: put <code>PAYPAL_CLIENT_ID</code> / <code>PAYPAL_SECRET</code> / <code>PAYPAL_MODE</code> in <code>.env</code>. These fields are only used when <code>.env</code> is empty.</small></p>
                             <p class="text-muted mb-4"><small>Webhook endpoint: <code>{{ url('/webhooks/paypal') }}</code> — subscribe it to Payment Capture Completed / Denied in the PayPal Developer Dashboard, then copy the webhook ID here.</small></p>
 
+                            <h6 class="mb-3">Ratings &amp; chat</h6>
+                            <div class="row g-3 mb-2">
+                                <div class="col-md-6">
+                                    <label class="form-label">Messenger chat link</label>
+                                    <input type="url" name="messenger_url" class="form-control" maxlength="255" value="{{ old('messenger_url', $settings['messenger_url']) }}" placeholder="https://m.me/yourpage">
+                                    <small class="text-muted">Shows as a floating chat button. Leave empty to hide it.</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Google reviews link</label>
+                                    <input type="url" name="google_reviews_url" class="form-control" maxlength="255" value="{{ old('google_reviews_url', $settings['google_reviews_url']) }}" placeholder="https://g.page/…">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Food hygiene rating</label>
+                                    <input type="text" name="hygiene_rating" class="form-control" maxlength="10" value="{{ old('hygiene_rating', $settings['hygiene_rating']) }}" placeholder="5">
+                                    <small class="text-muted">Shown as “Food Hygiene Rating: X/5”. Leave empty to hide.</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Google rating</label>
+                                    <input type="text" name="google_rating" class="form-control" maxlength="10" value="{{ old('google_rating', $settings['google_rating']) }}" placeholder="4.8">
+                                </div>
+                            </div>
+                            <p class="text-muted mb-4"><small>Empty ratings stay hidden on the homepage until you fill them in.</small></p>
+
                             <button type="submit" class="btn btn-primary">Save settings</button>
                             <p class="text-muted mt-2 mb-0"><small>Leave a gateway's keys empty and that button simply never appears at checkout — the shop keeps selling on cash on delivery.</small></p>
                         </form>

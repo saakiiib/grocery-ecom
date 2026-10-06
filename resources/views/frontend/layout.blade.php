@@ -30,6 +30,10 @@
 
 @include('frontend.footer')
 
+@include('frontend.partials.floating-contact')
+
+@include('frontend.partials.floating-bag')
+
 @include('frontend.partials.cookie-banner')
 
 @php

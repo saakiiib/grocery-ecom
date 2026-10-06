@@ -22,6 +22,7 @@ use App\Models\ProductReview;
 use App\Models\ProductVariant;
 use App\Models\Setting;
 use App\Models\Slider;
+use App\Models\Testimonial;
 use App\Models\UserPoint;
 use Illuminate\Http\Request;
 use OpenGraph;
@@ -55,13 +56,14 @@ class FrontendController extends Controller
         $productsJson = $products->map(fn ($p) => $this->productCard($p, $bundleCover, $flashMap, $bogoLive))->values();
         $featuredJson = $featured->map(fn ($p) => $this->productCard($p, $bundleCover, $flashMap, $bogoLive))->values();
         $featuredCards = $products->where('is_featured', true)->values()->map(fn ($p) => $this->productCard($p, $bundleCover, $flashMap, $bogoLive))->values();
-        // Homepage "Shop by category" shows parents only, in parent-scoped sort_order.
-        $categoriesJson = $categories->whereNull('parent_id')->values()->map(function ($c) use ($products, $categories) {
+        // Homepage "Shop by category" shows top 10 parents, in parent-scoped sort_order.
+        $categoriesJson = $categories->whereNull('parent_id')->take(10)->values()->map(function ($c) use ($products, $categories) {
             $ids = $this->categorySubtreeIds($categories, $c->id);
 
             return [
                 'name' => $c->name,
                 'slug' => $c->slug,
+                'description' => $c->description,
                 'image' => $c->image ? url($c->image) : asset('placeholder.webp'),
                 'count' => $products->whereIn('category_id', $ids)->count(),
             ];
@@ -70,8 +72,12 @@ class FrontendController extends Controller
             ->take(4)->values()->map(fn ($p) => $this->productCard($p, $bundleCover, $flashMap, $bogoLive))->values();
         $faqsJson = $this->faqsJson();
         $faqCatsJson = $this->faqCatsJson();
-        $galleryJson = $this->galleryJson(8);
+        $galleryJson = $this->galleryJson();
         $galleryCatsJson = $this->galleryCatsJson();
+        $testimonialsJson = Testimonial::where('is_active', true)->orderBy('sort_order')->orderBy('id')
+            ->get(['name', 'image', 'designation', 'review'])
+            ->map(fn ($t) => [...$t->toArray(), 'image' => $t->image ? url($t->image) : null])
+            ->values();
         $filesJson = collect();
         $zonesJson = collect();
         $slidersJson = Slider::where('is_active', true)->orderBy('sort_order')->orderBy('id')
@@ -79,7 +85,7 @@ class FrontendController extends Controller
             ->map(fn ($s) => [...$s->toArray(), 'image' => $s->image ? url($s->image) : url('placeholder.webp')])
             ->values();
 
-        return spa('frontend.index', compact('productsJson', 'featuredJson', 'featuredCards', 'categoriesJson', 'offerCards', 'faqsJson', 'faqCatsJson', 'galleryJson', 'galleryCatsJson', 'filesJson', 'zonesJson', 'slidersJson'));
+        return spa('frontend.index', compact('productsJson', 'featuredJson', 'featuredCards', 'categoriesJson', 'offerCards', 'faqsJson', 'faqCatsJson', 'galleryJson', 'galleryCatsJson', 'testimonialsJson', 'filesJson', 'zonesJson', 'slidersJson'));
     }
 
     public function shop(Request $request, ?string $category = null)

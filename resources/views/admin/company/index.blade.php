@@ -120,6 +120,15 @@
                                             id="address1" name="address1" value="{{ $data->address1 }}">
                                     </div>
                                 </div>
+
+                                <div class="col-12">
+                                    <div class="form-group">
+                                        <label>{{ 'Opening hours' }}</label>
+                                        <input type="text" class="form-control @error('opening_time') is-invalid @enderror"
+                                            id="opening_time" name="opening_time" value="{{ $data->opening_time }}"
+                                            placeholder="Mon–Sat 9am–9pm, Sun 10am–6pm">
+                                    </div>
+                                </div>
                                 <div class="col-4 d-none">
                                     <div class="form-group">
                                         <label>{{ 'Opening Cash Balance' }}</label>
@@ -213,7 +222,7 @@
                                     </div>
                                 </div>
 
-                                <div class="col-4 d-none">
+                                <div class="col-4">
                                     <div class="form-group">
                                         <label>{{ 'App Store Link' }}</label>
                                         <input type="url"
@@ -223,7 +232,7 @@
                                     </div>
                                 </div>
 
-                                <div class="col-4 d-none">
+                                <div class="col-4">
                                     <div class="form-group">
                                         <label>{{ 'Google Play Store Link' }}</label>
                                         <input type="url"
@@ -349,8 +358,6 @@
                                                 <img src="{{ asset('uploads/company/' . $data->fav_icon) }}"
                                                     alt="Current favicon" width="32" height="32"
                                                     class="img-thumbnail">
-                                                <a href="{{ asset('uploads/company/' . $data->fav_icon) }}"
-                                                    target="_blank" class="small">View current file</a>
                                                 <div class="form-check ms-2">
                                                     <input type="checkbox" class="form-check-input"
                                                         id="remove_fav_icon" name="remove_fav_icon" value="1">
@@ -384,8 +391,6 @@
                                             <div class="mt-2 d-flex align-items-center gap-2">
                                                 <img src="{{ asset('uploads/company/' . $data->company_logo) }}"
                                                     alt="Current company logo" width="100" class="img-thumbnail">
-                                                <a href="{{ asset('uploads/company/' . $data->company_logo) }}"
-                                                    target="_blank" class="small">View current file</a>
                                                 <div class="form-check ms-2">
                                                     <input type="checkbox" class="form-check-input"
                                                         id="remove_company_logo" name="remove_company_logo"
@@ -419,8 +424,6 @@
                                             <div class="mt-2 d-flex align-items-center gap-2">
                                                 <img src="{{ asset('uploads/company/' . $data->footer_logo) }}"
                                                     alt="Current footer logo" width="100" class="img-thumbnail">
-                                                <a href="{{ asset('uploads/company/' . $data->footer_logo) }}"
-                                                    target="_blank" class="small">View current file</a>
                                                 <div class="form-check ms-2">
                                                     <input type="checkbox" class="form-check-input"
                                                         id="remove_footer_logo" name="remove_footer_logo"
@@ -469,8 +472,6 @@
                                             onchange="previewImage(event, '#meta_image_preview')">
                                         @if (!empty($data->meta_image))
                                             <div class="mt-2 d-flex align-items-center gap-2">
-                                                <a href="{{ asset('uploads/company/' . $data->meta_image) }}"
-                                                    target="_blank" class="small">View current file</a>
                                                 <div class="form-check ms-2">
                                                     <input type="checkbox" class="form-check-input"
                                                         id="remove_meta_image" name="remove_meta_image"

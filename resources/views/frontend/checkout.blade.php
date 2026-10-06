@@ -87,9 +87,9 @@
                         </div>
                     </div>
                     @auth
-                        <div class="form-group" style="display:flex;gap:1rem;flex-wrap:wrap;align-items:center;">
-                            <label style="font-weight:400;"><input type="checkbox" id="co-save-address" value="1"> Save this delivery address to my book</label>
-                            <input type="text" id="co-save-label" maxlength="50" placeholder="Label, e.g. Work" style="max-width:200px;display:none;">
+                        <div class="form-group">
+                            <label class="pick-row is-inline"><input type="checkbox" id="co-save-address" value="1"> <span class="pick-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> <span>Save this delivery address to my book</span></label>
+                            <input type="text" id="co-save-label" maxlength="50" placeholder="Label, e.g. Work" style="max-width:200px;display:none;margin-top:0.5rem;">
                         </div>
                     @endauth
                     <div class="form-group">
@@ -98,16 +98,16 @@
                     </div>
                     <div class="form-group">
                         <label>If something is unavailable</label>
-                        <div style="display:grid;gap:.4rem;font-size:14px;">
-                            <label style="font-weight:400;"><input type="radio" name="substitution" value="substitute" checked> Substitute it with something similar</label>
-                            <label style="font-weight:400;"><input type="radio" name="substitution" value="refund"> Remove it and refund me</label>
-                            <label style="font-weight:400;"><input type="radio" name="substitution" value="call"> Call me first</label>
+                        <div class="pick-grid cols-3">
+                            <label class="pick-row is-inline"><input type="radio" name="substitution" value="substitute" checked> <span class="pick-box"></span> <span>Substitute it with something similar</span></label>
+                            <label class="pick-row is-inline"><input type="radio" name="substitution" value="refund"> <span class="pick-box"></span> <span>Remove it and refund me</span></label>
+                            <label class="pick-row is-inline"><input type="radio" name="substitution" value="call"> <span class="pick-box"></span> <span>Call me first</span></label>
                         </div>
                     </div>
 
                     <h2 style="font-size:1.25rem;margin:1.5rem 0 1rem;"><span class="co-step">2</span>Who is paying?</h2>
                     <div class="form-group">
-                        <label style="font-weight:400;"><input type="checkbox" id="co-billing-same" checked> Billing address is the same as delivery</label>
+                        <label class="pick-row is-inline"><input type="checkbox" id="co-billing-same" checked> <span class="pick-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> <span>Billing address is the same as delivery</span></label>
                     </div>
                     <div id="co-billing-block" style="display:none;">
                         @auth
@@ -255,8 +255,9 @@
                     <div id="co-paypal-buttons" style="display:none;margin-bottom:1rem;"></div>
 
                     <div id="co-error" style="display:none;color:#B91C1C;font-size:14px;margin-bottom:1rem;"></div>
-                    <label class="privacy-check">
+                    <label class="privacy-check pick-row">
                         <input type="checkbox" id="co-privacy">
+                        <span class="pick-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
                         <span>I agree to the <a @spa href="{{ route('privacy') }}">privacy policy</a> and <a @spa href="{{ route('terms') }}">terms of service</a></span>
                     </label>
                     <button type="submit" id="co-submit" class="btn btn-dark btn-block">Place order · <span data-co-total>£{{ number_format($bag['subtotal'], 2) }}</span></button>

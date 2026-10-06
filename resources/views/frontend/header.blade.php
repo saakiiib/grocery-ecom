@@ -6,11 +6,30 @@
     $isActive = fn (...$routes) => request()->routeIs(...$routes) ? 'active' : '';
 @endphp
 <div class="topbar">
-    <span>Fresh to your door</span>
-    <span class="sep">·</span>
-    <span>Free delivery on orders over £50</span>
-    <span class="sep">·</span>
-    <span>Thoughtfully sourced, every day</span>
+    <div class="container topbar-inner">
+        <div class="topbar-info">
+            <span class="halal-badge"><x-icon name="shield-check" /> 100% Halal</span>
+            <span class="sep">·</span>
+            <span>Fresh to your door</span>
+            <span class="sep">·</span>
+            <span>Free delivery on orders over £50</span>
+            @if ($company->opening_time)
+                <span class="sep">·</span>
+                <span>{{ $company->opening_time }}</span>
+            @endif
+        </div>
+        @php
+            $appStore = $company->google_appstore_link ?? null;
+            $playStore = $company->google_play_link ?? null;
+        @endphp
+        @if ($appStore || $playStore)
+            <div class="topbar-app">
+                <span class="topbar-app-label">Get our app</span>
+                @if ($appStore)<a href="{{ $appStore }}" target="_blank" rel="noopener" class="app-btn is-mini" aria-label="Download on the App Store"><x-icon name="apple" /><span>App Store</span></a>@endif
+                @if ($playStore)<a href="{{ $playStore }}" target="_blank" rel="noopener" class="app-btn is-mini" aria-label="Get it on Google Play"><x-icon name="play" /><span>Google Play</span></a>@endif
+            </div>
+        @endif
+    </div>
 </div>
 
 <header class="site-header">
