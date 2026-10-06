@@ -8,9 +8,16 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 
 class Product extends Model
 {
+    protected static function booted(): void
+    {
+        static::saved(fn () => Cache::forget('egf_catalog'));
+        static::deleted(fn () => Cache::forget('egf_catalog'));
+    }
+
     protected $fillable = [
         'category_id', 'name', 'slug', 'tagline', 'highlights', 'description',
         'hero_image', 'is_featured', 'status', 'sort_order',
@@ -32,6 +39,24 @@ class Product extends Model
             'is_organic' => 'boolean',
             'is_gluten_free' => 'boolean',
         ];
+    }
+
+    /**
+     * Sized variant of a remote WooCommerce upload (e.g. -300x300), which is
+     * typically 10x lighter than the original. Local images pass through
+     * untouched. Every <img> using this MUST keep the original as an
+     * onerror fallback in case WP never generated that size.
+     */
+    public static function thumb(?string $url, int $size = 300): ?string
+    {
+        if (! $url) {
+            return null;
+        }
+        if (str_contains($url, '/wp-content/uploads/') && preg_match('/\.(webp|jpe?g|png)$/i', $url)) {
+            return (string) preg_replace('/\.(webp|jpe?g|png)$/i', "-{$size}x{$size}.$1", $url);
+        }
+
+        return $url;
     }
 
     public function category(): BelongsTo

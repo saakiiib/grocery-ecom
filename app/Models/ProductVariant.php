@@ -5,9 +5,16 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Facades\Cache;
 
 class ProductVariant extends Model
 {
+    protected static function booted(): void
+    {
+        static::saved(fn () => Cache::forget('egf_catalog'));
+        static::deleted(fn () => Cache::forget('egf_catalog'));
+    }
+
     protected $fillable = [
         'product_id', 'sku', 'mrp', 'offer_price', 'image',
         'in_stock', 'is_default', 'status', 'sort_order',

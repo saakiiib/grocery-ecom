@@ -25,6 +25,7 @@ use App\Models\Slider;
 use App\Models\Testimonial;
 use App\Models\UserPoint;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use OpenGraph;
 use SEOMeta;
 use Twitter;
@@ -53,8 +54,8 @@ class FrontendController extends Controller
         $bundleCover = BundleOffer::coverMap();
         $flashMap = FlashSale::liveMap();
         $bogoLive = BogoOffer::liveAll();
-        $productsJson = $products->map(fn ($p) => $this->productCard($p, $bundleCover, $flashMap, $bogoLive))->values();
-        $featuredJson = $featured->map(fn ($p) => $this->productCard($p, $bundleCover, $flashMap, $bogoLive))->values();
+        $productsJson = collect();
+        $featuredJson = collect();
         $featuredCards = $products->where('is_featured', true)->values()->map(fn ($p) => $this->productCard($p, $bundleCover, $flashMap, $bogoLive))->values();
         // Homepage "Shop by category" shows top 10 parents, in parent-scoped sort_order.
         $categoriesJson = $categories->whereNull('parent_id')->take(10)->values()->map(function ($c) use ($products, $categories) {
@@ -154,7 +155,8 @@ class FrontendController extends Controller
         $diets = collect((array) $request->get('diet', []))
             ->map(fn ($d) => strtolower(trim((string) $d)))
             ->intersect(['vegetarian', 'vegan', 'halal', 'organic', 'gluten_free'])->values()->all();
-        $freeFrom = Allergen::whereIn('slug', (array) $request->get('free_from', []))->pluck('slug')->all();
+        $freeFromInput = (array) $request->get('free_from', []);
+        $freeFrom = $freeFromInput !== [] ? Allergen::whereIn('slug', $freeFromInput)->pluck('slug')->all() : [];
         $allergens = Allergen::orderBy('sort_order')->get(['slug', 'name']);
 
         if ($category === null) {
@@ -208,52 +210,103 @@ class FrontendController extends Controller
             $maxPrice = min($maxPrice, $priceCeil);
         }
 
-        $cards = $withFloors
-            ->when($minPrice !== null || $maxPrice !== null, function ($c) use ($minPrice, $maxPrice) {
-                return $c->filter(function ($row) use ($minPrice, $maxPrice) {
-                    if ($minPrice !== null && $row['floor'] < $minPrice) {
-                        return false;
-                    }
-                    if ($maxPrice !== null && $row['floor'] > $maxPrice) {
-                        return false;
-                    }
+        // Sort the light rows first, then build full cards only for the
+        // shown slice — previously every product paid for a full card build.
+        if ($minPrice !== null || $maxPrice !== null) {
+            $withFloors = $withFloors->filter(function ($row) use ($minPrice, $maxPrice) {
+                if ($minPrice !== null && $row['floor'] < $minPrice) {
+                    return false;
+                }
+                if ($maxPrice !== null && $row['floor'] > $maxPrice) {
+                    return false;
+                }
 
-                    return true;
-                })->values();
-            })
-            ->map(fn ($row) => $this->productCard($row['product'], $bundleCover, $flashMap, $bogoLive))
-            ->values();
+                return true;
+            })->values();
+        }
+        $saveOf = function ($p) use ($flashMap) {
+            $d = $p->defaultVariant();
+            if (! $d) {
+                return 0;
+            }
+            $selling = $d->sellingPrice();
+            $hit = FlashSale::priceFor($d->id, $p->id, $flashMap);
+            if ($hit && $hit['price'] < $selling) {
+                $selling = $hit['price'];
+            }
+            $mrp = (float) $d->mrp;
 
-        $cards = match ($sort) {
-            'price_asc' => $cards->sortBy(fn ($p) => $p['priceNum'] ?? PHP_FLOAT_MAX)->values(),
-            'price_desc' => $cards->sortByDesc(fn ($p) => $p['priceNum'] ?? 0)->values(),
-            'offers' => $cards->sortByDesc(fn ($p) => $p['savePct'] ?? 0)->values(),
-            'name' => $cards->sortBy(fn ($p) => mb_strtolower($p['name']))->values(),
-            default => $cards->sortByDesc(fn ($p) => $p['isFeatured'])->values(),
+            return ($mrp && $selling < $mrp) ? (int) round((($mrp - $selling) / $mrp) * 100) : 0;
+        };
+        $sorted = match ($sort) {
+            'price_asc' => $withFloors->sortBy(fn ($row) => $row['floor'] ?? PHP_FLOAT_MAX)->values(),
+            'price_desc' => $withFloors->sortByDesc(fn ($row) => $row['floor'] ?? 0)->values(),
+            'offers' => $withFloors->sortByDesc(fn ($row) => $saveOf($row['product']))->values(),
+            'name' => $withFloors->sortBy(fn ($row) => mb_strtolower($row['product']->name))->values(),
+            default => $withFloors->sortByDesc(fn ($row) => $row['product']->is_featured)->values(),
         };
 
-        $productsJson = $cards;
+        $productsJson = collect();
         $categoriesJson = $categories->map(fn ($c) => $c->name)->values();
 
         // Paged grid with a Load more button — each page keeps everything above
         // it (?page=2 shows items 1–48), filters reset to page 1, and the
         // button carries every active filter forward via ?page=.
         $perPage = 24;
-        $total = $cards->count();
-        $productsJson = $cards->slice(0, $page * $perPage)->values();
+        $total = $sorted->count();
+        $productsJson = $sorted->slice(0, $page * $perPage)->values()
+            ->map(fn ($row) => $this->productCard($row['product'], $bundleCover, $flashMap, $bogoLive))->values();
         $shown = $productsJson->count();
         $hasMore = $total > $page * $perPage;
 
         $categoryPath = ($category !== null && $category !== 'offers') ? $category : null;
         $offersPath = $category === 'offers';
+        // Diet chips only render when at least one product actually carries a flag.
+        $hasDietFlags = $products->contains(fn ($p) => $p->is_vegetarian || $p->is_vegan || $p->is_halal || $p->is_organic || $p->is_gluten_free);
 
-        return spa('frontend.shop', compact('categories', 'parents', 'activeParent', 'productsJson', 'activeCategory', 'activeCategorySlug', 'categoriesJson', 'search', 'sort', 'onlyOffers', 'minPrice', 'maxPrice', 'priceFloor', 'priceCeil', 'page', 'perPage', 'total', 'shown', 'hasMore', 'categoryPath', 'offersPath', 'diets', 'freeFrom', 'allergens'));
+        return spa('frontend.shop', compact('categories', 'parents', 'activeParent', 'productsJson', 'activeCategory', 'activeCategorySlug', 'categoriesJson', 'search', 'sort', 'onlyOffers', 'minPrice', 'maxPrice', 'priceFloor', 'priceCeil', 'page', 'perPage', 'total', 'shown', 'hasMore', 'categoryPath', 'offersPath', 'diets', 'freeFrom', 'allergens', 'hasDietFlags'));
     }
 
     /** Offers landing page — the shop with the offers filter pre-selected. */
     public function shopOffers(Request $request)
     {
         return $this->shop($request, 'offers');
+    }
+
+    /** Lightweight search index, fetched on demand when the search overlay opens. */
+    public function searchCatalog()
+    {
+        return response()->json(self::searchCatalogData());
+    }
+
+    public static function searchCatalogData()
+    {
+        return Cache::remember('egf_catalog', 3600, function () {
+            return Product::with(['category:id,name', 'variants.values.group', 'variants' => fn ($q) => $q->where('status', true)->orderBy('sort_order')])
+                ->where('status', true)
+                ->orderBy('sort_order')->orderByDesc('id')
+                ->get()
+                ->map(function ($p) {
+                    $v = $p->variants->firstWhere('is_default', true) ?? $p->variants->first();
+                    if (! $v) {
+                        return null;
+                    }
+
+                    $img = $v->image ? url($v->image) : ($p->hero_image ? url($p->hero_image) : url('placeholder.webp'));
+
+                    return [
+                        'slug' => $p->slug,
+                        'name' => $p->name,
+                        'cat' => $p->category?->name ?? '',
+                        'tags' => trim($p->name.' '.($p->category?->name ?? '').' '.($v->sku ?? '')),
+                        'price' => $v->sellingPrice(),
+                        'pack' => $v->combinationLabel() ?? '',
+                        'img' => Product::thumb($img, 300),
+                        'full' => $img,
+                        'variant_id' => $v->id,
+                    ];
+                })->filter()->values();
+        });
     }
 
     /** Category id plus every descendant id (parents include children's products). */
@@ -277,7 +330,7 @@ class FrontendController extends Controller
         $seo = $product->seoArray();
         $this->seo(null, $seo['title'], $seo['description'], $seo['keywords'], $this->imgUrl($seo['image']));
 
-        $related = Product::with('category')
+        $related = Product::with(['category', 'images', 'variants.values.group'])
             ->withReviewSummary()
             ->where('status', true)
             ->where('id', '!=', $product->id)
@@ -287,7 +340,7 @@ class FrontendController extends Controller
             ->get();
         if ($related->count() < 4) {
             $excludeIds = $related->pluck('id')->push($product->id)->values();
-            $filler = Product::with('category')
+            $filler = Product::with(['category', 'images', 'variants.values.group'])
                 ->withReviewSummary()
                 ->where('status', true)
                 ->whereNotIn('id', $excludeIds)
@@ -637,6 +690,7 @@ class FrontendController extends Controller
             'favourited' => Favourite::isFavourited(auth()->id(), $p->id),
             'url' => route('product.show', $p->slug),
             'imgAbs' => $this->imgUrl($this->heroFor($p)),
+            'imgThumb' => Product::thumb($this->imgUrl($this->heroFor($p)), 300),
             'cardVariants' => $p->relationLoaded('variants')
                 ? $p->variants->where('status', true)->sortBy('sort_order')->values()->map(function ($v) use ($p, $flashMap) {
                     $price = $v->sellingPrice();
@@ -675,7 +729,7 @@ class FrontendController extends Controller
             'model3d' => null,
             'show3d' => false,
             'gallery' => $p->images->map(fn ($i) => [
-                'src' => $this->imgUrl($i->image), 'caption' => $i->caption,
+                'src' => Product::thumb($this->imgUrl($i->image), 600), 'full' => $this->imgUrl($i->image), 'caption' => $i->caption,
             ])->values()->all(),
             'optionGroups' => $p->effectiveOptionGroups()->map(fn ($g) => [
                 'id' => $g->id,

@@ -522,11 +522,44 @@
     }
   }
 
+  /* ---------------- Shop filters collapse (mobile) ---------------- */
+  function initShopFiltersToggle() {
+    var btn = document.querySelector('[data-shop-filters-toggle]');
+    var panel = document.querySelector('[data-shop-filters]');
+    if (!btn || !panel || btn._egfBound) return;
+    btn._egfBound = true;
+    btn.addEventListener('click', function () {
+      var open = panel.classList.toggle('open');
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+  }
+
   /* ---------------- Search overlay (server catalog) ---------------- */
   var searchEl = null;
 
   function catalog() {
     return window.EGF_CATALOG || [];
+  }
+
+  var catLoading = false;
+  var catQueue = [];
+
+  function ensureCatalog(done) {
+    if (window.EGF_CATALOG && window.EGF_CATALOG.length) { done(); return; }
+    catQueue.push(done);
+    if (catLoading) return;
+    catLoading = true;
+    var url = (routes().catalog || '/search-catalog');
+    fetch(url, { headers: { 'Accept': 'application/json' } }).then(function (res) { return res.json(); }).then(function (json) {
+      window.EGF_CATALOG = json || [];
+    }).catch(function () {
+      window.EGF_CATALOG = [];
+    }).then(function () {
+      catLoading = false;
+      var q = catQueue;
+      catQueue = [];
+      q.forEach(function (fn) { fn(); });
+    });
   }
 
   function buildSearch() {
@@ -574,7 +607,7 @@
     /* data-spa here is the sanctioned JS-runtime exception (Blade @spa can't compile JS-built markup). */
     return '<article class="product-card" data-card>' +
       '<a data-spa href="' + r.product + '/' + p.slug + '" class="product-img-wrap">' +
-      '<img src="' + p.img + '" alt="' + esc(p.name) + '" loading="lazy"></a>' +
+      '<img src="' + p.img + '" data-full="' + (p.full || '') + '" alt="' + esc(p.name) + '" loading="lazy" decoding="async" onerror="this.onerror=null;this.src=this.dataset.full||this.src;"></a>' +
       '<div class="product-body"><span class="product-meta">' + esc(p.cat) + '</span>' +
       '<a data-spa href="' + r.product + '/' + p.slug + '" class="product-name">' + esc(p.name) + '</a>' +
       '<div class="product-price-row"><span class="product-price">' + formatPrice(p.price) + '</span></div>' +
@@ -618,10 +651,12 @@
   }
 
   function openSearch() {
-    var el = buildSearch();
-    document.body.classList.add('search-open');
-    el.classList.add('open');
-    setTimeout(function () { el.querySelector('#egf-search-input').focus(); }, 120);
+    ensureCatalog(function () {
+      var el = buildSearch();
+      document.body.classList.add('search-open');
+      el.classList.add('open');
+      setTimeout(function () { el.querySelector('#egf-search-input').focus(); }, 120);
+    });
   }
 
   function closeSearch() {
@@ -1029,6 +1064,7 @@
     initHeroSlider();
     initTmnSlider();
     initFaqTabs();
+    initShopFiltersToggle();
     initSearchTriggers();
     initStickyHeader();
     initReveal();

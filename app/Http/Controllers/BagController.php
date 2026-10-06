@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\BogoOffer;
 use App\Models\BundleOffer;
 use App\Models\FlashSale;
+use App\Models\Product;
 use App\Models\ProductVariant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -47,7 +48,7 @@ class BagController extends Controller
             return ['lines' => [], 'count' => 0, 'subtotal' => 0.0, 'bogo_discount' => 0.0, 'bundle_discount' => 0.0];
         }
 
-        $variants = ProductVariant::with('product')
+        $variants = ProductVariant::with(['product', 'values.group'])
             ->whereIn('id', array_keys($bag))
             ->get()
             ->keyBy('id');
@@ -105,9 +106,9 @@ class BagController extends Controller
                 'line_total' => $lineTotal,
                 'promo_label' => $promoLabel,
                 'free_qty' => $freeQty,
-                'image' => static::bagImage($variant?->image, 'uploads/products/variants/')
+                'image' => Product::thumb(static::bagImage($variant?->image, 'uploads/products/variants/')
                     ?? static::bagImage($product?->hero_image, 'uploads/products/')
-                    ?? asset('placeholder.webp'),
+                    ?? asset('placeholder.webp'), 150),
             ];
         }
 

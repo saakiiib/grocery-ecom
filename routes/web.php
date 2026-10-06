@@ -46,6 +46,7 @@ Route::get('/offers', function () {
 });
 Route::get('/product/{slug}', [FrontendController::class, 'productShow'])->name('product.show');
 Route::get('/gallery', [FrontendController::class, 'gallery'])->name('gallery');
+Route::get('/search-catalog', [FrontendController::class, 'searchCatalog'])->middleware('throttle:60,1')->name('search.catalog');
 Route::get('/bag', [FrontendController::class, 'bag'])->name('bag');
 Route::post('/bag/add', [BagController::class, 'add'])->name('bag.add');
 Route::post('/bag/update', [BagController::class, 'update'])->name('bag.update');

@@ -9,9 +9,11 @@ class Setting extends Model
 {
     protected $guarded = [];
 
+    protected static array $memo = [];
+
     public static function get(string $key, ?string $default = null): ?string
     {
-        return Cache::rememberForever('setting.'.$key, function () use ($key, $default) {
+        return static::$memo[$key] ??= Cache::rememberForever('setting.'.$key, function () use ($key, $default) {
             return static::where('key', $key)->value('value') ?? $default;
         });
     }
@@ -19,6 +21,7 @@ class Setting extends Model
     public static function put(string $key, ?string $value): void
     {
         static::updateOrCreate(['key' => $key], ['value' => $value]);
+        unset(static::$memo[$key]);
         Cache::forget('setting.'.$key);
     }
 

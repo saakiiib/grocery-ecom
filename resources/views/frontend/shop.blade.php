@@ -65,6 +65,16 @@
     </div>
 
     <div class="container" style="padding-bottom: 4rem;">
+        @php
+            $activeFilterCount = ($activeCategory !== 'All' ? 1 : 0) + ($onlyOffers ? 1 : 0) + count($diets) + count($freeFrom);
+        @endphp
+        <button type="button" class="shop-filters-toggle" data-shop-filters-toggle aria-expanded="false">
+            <x-icon name="sliders-horizontal" />
+            <span>Categories &amp; filters</span>
+            @if ($activeFilterCount)<span class="shop-filters-count">{{ $activeFilterCount }}</span>@endif
+            <x-icon name="chevron-down" />
+        </button>
+        <div class="shop-filters" data-shop-filters>
         <div class="cat-pills" style="margin-bottom: 1.5rem;">
             <a @spa href="{{ $shopUrl($keepParams) }}"
                 class="cat-pill {{ $activeCategory === 'All' && ! $onlyOffers ? 'active' : '' }}">All groceries</a>
@@ -87,16 +97,22 @@
         @endif
 
         <div class="child-chips" style="margin-bottom:1rem;">
+            @if ($activeFilterCount || $search !== '' || $minPrice !== null || $maxPrice !== null)
+                <a @spa href="{{ route('shop') }}" class="child-chip is-clear">Clear all ×</a>
+            @endif
+            @if ($hasDietFlags)
             @foreach ($dietLabels as $key => $label)
                 @php $toggled = in_array($key, $diets) ? array_values(array_diff($diets, [$key])) : array_merge($diets, [$key]); @endphp
                 <a @spa href="{{ $shopUrl(array_merge($keepParams, ['diet' => $toggled !== [] ? $toggled : null])) }}"
-                    class="child-chip {{ in_array($key, $diets) ? 'active' : '' }}">{{ $label }}</a>
+                    class="child-chip {{ in_array($key, $diets) ? 'active' : '' }}">{{ $label }}{{ in_array($key, $diets) ? ' ×' : '' }}</a>
             @endforeach
+            @endif
             @foreach ($freeFrom as $ff)
                 @php $cleared = array_values(array_diff($freeFrom, [$ff])); @endphp
                 <a @spa href="{{ $shopUrl(array_merge($keepParams, ['free_from' => $cleared !== [] ? $cleared : null])) }}"
                     class="child-chip active">No {{ $ff }} ×</a>
             @endforeach
+        </div>
         </div>
 
         <form method="GET" action="{{ $formAction }}" class="shop-tools">

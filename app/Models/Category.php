@@ -4,9 +4,16 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Facades\Cache;
 
 class Category extends Model
 {
+    protected static function booted(): void
+    {
+        static::saved(fn () => Cache::forget('egf_catalog'));
+        static::deleted(fn () => Cache::forget('egf_catalog'));
+    }
+
     protected $fillable = [
         'name', 'slug', 'description', 'image', 'parent_id', 'status', 'sort_order',
         'meta_title', 'meta_description', 'meta_keywords', 'meta_image', 'video_url',

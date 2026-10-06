@@ -14,7 +14,7 @@
         @elseif ($p['isFeatured'])
             <span class="product-badge badge-bestseller">Bestseller</span>
         @endif
-        <img src="{{ $p['imgAbs'] }}" alt="{{ $p['name'] }}" loading="lazy" onerror="this.onerror=null;this.src='{{ url('placeholder.webp') }}'">
+        <img src="{{ $p['imgThumb'] ?? $p['imgAbs'] }}" data-full="{{ $p['imgAbs'] }}" alt="{{ $p['name'] }}" loading="lazy" decoding="async" onerror="this.onerror=null;this.src=this.dataset.full||'{{ url('placeholder.webp') }}'">
     </a>
     <button type="button" class="product-fav {{ ($p['favourited'] ?? false) ? 'active' : '' }}" data-fav-toggle data-product-id="{{ $p['id'] }}" aria-label="Save to favourites" aria-pressed="{{ ($p['favourited'] ?? false) ? 'true' : 'false' }}"><x-icon name="heart" /></button>
     <div class="product-body">

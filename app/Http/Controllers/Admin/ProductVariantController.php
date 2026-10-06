@@ -7,6 +7,7 @@ use App\Models\OptionValue;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Intervention\Image\Facades\Image;
 
 class ProductVariantController extends Controller
@@ -47,6 +48,7 @@ class ProductVariantController extends Controller
         }
         $variant->save();
         $variant->values()->sync($request->value_ids ?? []);
+        Cache::forget('egf_catalog');
 
         return response()->json(['message' => 'Variant added', 'data' => $variant]);
     }
@@ -78,6 +80,7 @@ class ProductVariantController extends Controller
         $variant->save();
         if ($request->has('value_ids')) {
             $variant->values()->sync($request->value_ids ?? []);
+            Cache::forget('egf_catalog');
         }
 
         return response()->json(['message' => 'Variant updated']);

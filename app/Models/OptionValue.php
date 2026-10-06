@@ -5,9 +5,16 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Facades\Cache;
 
 class OptionValue extends Model
 {
+    protected static function booted(): void
+    {
+        static::saved(fn () => Cache::forget('egf_catalog'));
+        static::deleted(fn () => Cache::forget('egf_catalog'));
+    }
+
     protected $fillable = [
         'option_group_id', 'label', 'slug', 'status', 'sort_order',
     ];

@@ -16,6 +16,8 @@
         <script>window.dataLayer = window.dataLayer || [];function gtag(){dataLayer.push(arguments);}gtag('js', new Date());gtag('config', '{{ $company->google_analytics_id }}');</script>
     @endif
     <link rel="icon" href="{{ $company->fav_icon ? asset('uploads/company/' . $company->fav_icon) : asset('favicon.ico') }}">
+    <link rel="preconnect" href="https://evergreenfoods.co.uk">
+    <link rel="dns-prefetch" href="https://evergreenfoods.co.uk">
     <link rel="stylesheet" href="{{ asset('resources/frontend/css/style.css') }}?v={{ filemtime(public_path('resources/frontend/css/style.css')) }}">
     @yield('style')
 </head>
@@ -36,26 +38,6 @@
 
 @include('frontend.partials.cookie-banner')
 
-@php
-    $egfCatalog = \App\Models\Product::with(['category:id,name', 'variants' => fn ($q) => $q->where('status', true)->orderBy('sort_order')])
-        ->where('status', true)
-        ->orderBy('sort_order')->orderByDesc('id')
-        ->get()
-        ->map(function ($p) {
-            $v = $p->variants->firstWhere('is_default', true) ?? $p->variants->first();
-            if (! $v) return null;
-            return [
-                'slug' => $p->slug,
-                'name' => $p->name,
-                'cat' => $p->category?->name ?? '',
-                'tags' => trim($p->name . ' ' . ($p->category?->name ?? '') . ' ' . ($v->sku ?? '')),
-                'price' => $v->sellingPrice(),
-                'pack' => $v->combinationLabel() ?? '',
-                'img' => $v->image ? url($v->image) : ($p->hero_image ? url($p->hero_image) : url('placeholder.webp')),
-                'variant_id' => $v->id,
-            ];
-        })->filter()->values();
-@endphp
 <script>
     window.EGF_ROUTES = {
         shop: "{{ route('shop') }}",
@@ -68,10 +50,11 @@
         favToggle: "{{ route('favourites.toggle') }}",
         reviewStore: "{{ route('reviews.store') }}",
         login: "{{ route('login') }}",
+        catalog: "{{ route('search.catalog') }}",
         product: "{{ url('/product') }}"
     };
     window.EGF_ASSETS = { placeholder: "{{ asset('placeholder.webp') }}" };
-    window.EGF_CATALOG = @json($egfCatalog);
+    window.EGF_CATALOG = [];
 </script>
 <script src="{{ asset('resources/frontend/js/egf.js') }}?v={{ filemtime(public_path('resources/frontend/js/egf.js')) }}"></script>
 

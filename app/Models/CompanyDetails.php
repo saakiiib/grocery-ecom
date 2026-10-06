@@ -9,14 +9,19 @@ class CompanyDetails extends Model
 {
     protected $guarded = [];
 
+    protected static ?self $memo = null;
+
     protected static function booted(): void
     {
-        static::saved(fn () => Cache::forget('company_details'));
+        static::saved(function () {
+            static::$memo = null;
+            Cache::forget('company_details');
+        });
     }
 
     /** Single cached row shared by every view — one query per request at most. */
     public static function cached(): self
     {
-        return Cache::remember('company_details', 3600, fn () => static::firstOrCreate());
+        return static::$memo ??= Cache::remember('company_details', 3600, fn () => static::firstOrCreate());
     }
 }
