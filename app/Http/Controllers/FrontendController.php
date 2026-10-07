@@ -310,7 +310,7 @@ class FrontendController extends Controller
     }
 
     /** Category id plus every descendant id (parents include children's products). */
-    private function categorySubtreeIds($categories, int $rootId): array
+    protected function categorySubtreeIds($categories, int $rootId): array
     {
         $ids = [$rootId];
         foreach ($categories->where('parent_id', $rootId) as $child) {
@@ -567,7 +567,7 @@ class FrontendController extends Controller
         return spa('frontend.terms');
     }
 
-    private function imgUrl(?string $path): ?string
+    protected function imgUrl(?string $path): ?string
     {
         if (! $path) {
             return null;
@@ -579,7 +579,7 @@ class FrontendController extends Controller
         return url($path);
     }
 
-    private function heroFor(Product $p): string
+    protected function heroFor(Product $p): string
     {
         return $this->imgUrl($p->hero_image)
             ?? $this->imgUrl($p->category?->image)
@@ -592,7 +592,7 @@ class FrontendController extends Controller
     }
 
     /** A product counts as an offer when any variant has an offer price or a live flash below mrp. */
-    private function hasDeal(Product $p, array $flashMap): bool
+    protected function hasDeal(Product $p, array $flashMap): bool
     {
         foreach ($p->variants as $v) {
             if (! $v->status) {
@@ -611,7 +611,7 @@ class FrontendController extends Controller
     }
 
     /** Cheapest variant price with live flash applied. */
-    private function dealFloor(Product $p, array $flashMap): ?float
+    protected function dealFloor(Product $p, array $flashMap): ?float
     {
         $prices = $p->variants->where('status', true)->map(function ($v) use ($p, $flashMap) {
             $price = $v->sellingPrice();
@@ -713,7 +713,7 @@ class FrontendController extends Controller
     }
 
     /** Full shape for the details page JS. */
-    private function productDetail(Product $p, ?array $bundleCover = null, ?array $flashMap = null, $bogoLive = null): array
+    protected function productDetail(Product $p, ?array $bundleCover = null, ?array $flashMap = null, $bogoLive = null): array
     {
         $flashMap = $flashMap ?? FlashSale::liveMap();
 
@@ -847,7 +847,7 @@ class FrontendController extends Controller
         return null;
     }
 
-    private function faqsJson(?int $limit = null)
+    protected function faqsJson(?int $limit = null)
     {
         $q = Faq::with('category')->where('status', true)->orderBy('sort_order');
         if ($limit) {
@@ -863,13 +863,13 @@ class FrontendController extends Controller
         ])->values();
     }
 
-    private function faqCatsJson()
+    protected function faqCatsJson()
     {
         return FaqCategory::where('status', true)->orderBy('sort_order')
             ->pluck('name', 'slug')->all();
     }
 
-    private function galleryJson(?int $limit = null)
+    protected function galleryJson(?int $limit = null)
     {
         $q = Gallery::with('category')->where('status', true)->orderBy('sort_order');
         if ($limit) {
@@ -892,7 +892,7 @@ class FrontendController extends Controller
         })->values();
     }
 
-    private function galleryCatsJson()
+    protected function galleryCatsJson()
     {
         return GalleryCategory::where('status', true)->orderBy('sort_order')
             ->pluck('name', 'slug')->all();

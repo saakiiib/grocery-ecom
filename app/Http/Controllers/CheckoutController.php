@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Api\OrderPayload;
 use App\Mail\OrderPlaced;
 use App\Models\CompanyDetails;
 use App\Models\Coupon;
@@ -523,6 +524,18 @@ class CheckoutController extends Controller
         $order->changeStatus('cancelled', $order->user_id, 'Payment abandoned at checkout.');
 
         return response()->json(['ok' => true]);
+    }
+
+    /** JSON twin of success(): the order a shopper (or the guest who just placed it) may see. */
+    public function successJson(string $number): JsonResponse
+    {
+        $order = Order::with(['items', 'histories', 'status'])->where('number', $number)->firstOrFail();
+
+        if (! $this->maySee($order)) {
+            return response()->json(['message' => 'Order not found.'], 404);
+        }
+
+        return response()->json(['order' => OrderPayload::make($order)]);
     }
 
     private function maySee(Order $order): bool

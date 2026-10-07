@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Middleware\ApiAuth;
+use App\Http\Middleware\ApiSession;
 use App\Http\Middleware\IsAdmin;
 use App\Http\Middleware\IsUser;
 use Illuminate\Foundation\Application;
@@ -24,6 +26,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'is_admin' => IsAdmin::class,
             'is_user' => IsUser::class,
+            'api_auth' => ApiAuth::class,
+            'api_session' => ApiSession::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
