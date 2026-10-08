@@ -23,10 +23,13 @@ use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ProductExcelController;
 use App\Http\Controllers\Admin\ProductImageController;
 use App\Http\Controllers\Admin\ProductVariantController;
+use App\Http\Controllers\Admin\RecipeController as AdminRecipeController;
+use App\Http\Controllers\Admin\RepeatController;
 use App\Http\Controllers\Admin\ReviewController;
 use App\Http\Controllers\Admin\ShopSettingsController;
 use App\Http\Controllers\Admin\SliderController;
 use App\Http\Controllers\Admin\StockAlertController;
+use App\Http\Controllers\Admin\StockWatchController;
 use App\Http\Controllers\Admin\SubscriberController;
 use App\Http\Controllers\Admin\TestimonialController;
 use App\Http\Controllers\HomeController;
@@ -106,6 +109,23 @@ Route::group(['prefix' => 'admin/', 'middleware' => ['auth', 'is_admin']], funct
     Route::get('/stock-alerts', [StockAlertController::class, 'index'])->name('stock-alerts.index');
     Route::delete('/stock-alerts/{id}', [StockAlertController::class, 'destroy'])->name('stock-alerts.delete');
 
+    // Recipes (meal ideas with one-tap ingredients)
+    Route::get('/recipes', [AdminRecipeController::class, 'index'])->name('admin.recipes.index');
+    Route::get('/recipes/create', [AdminRecipeController::class, 'create'])->name('admin.recipes.create');
+    Route::post('/recipes', [AdminRecipeController::class, 'store'])->name('admin.recipes.store');
+    Route::get('/recipes/{id}/edit', [AdminRecipeController::class, 'edit'])->name('admin.recipes.edit');
+    Route::post('/recipes/update', [AdminRecipeController::class, 'update'])->name('admin.recipes.update');
+    Route::delete('/recipes/{id}', [AdminRecipeController::class, 'destroy'])->name('admin.recipes.delete');
+    Route::post('/recipes/toggle-status', [AdminRecipeController::class, 'toggleStatus'])->name('admin.recipes.toggleStatus');
+
+    // Stock watch (out-of-stock + expiring packs)
+    Route::get('/stock-watch', [StockWatchController::class, 'index'])->name('stock-watch.index');
+
+    // Weekly repeats (standing orders)
+    Route::get('/repeats', [RepeatController::class, 'index'])->name('repeats.index');
+    Route::post('/repeats/toggle-status', [RepeatController::class, 'toggleStatus'])->name('repeats.toggleStatus');
+    Route::delete('/repeats/{id}', [RepeatController::class, 'destroy'])->name('repeats.delete');
+
     // Newsletter subscribers
     Route::get('/subscribers', [SubscriberController::class, 'index'])->name('subscribers.index');
     Route::post('/subscribers/toggle-status', [SubscriberController::class, 'toggleStatus'])->name('subscribers.toggleStatus');
@@ -123,8 +143,12 @@ Route::group(['prefix' => 'admin/', 'middleware' => ['auth', 'is_admin']], funct
     Route::get('/orders/{id}/invoice', [OrderController::class, 'invoice'])->name('orders.invoice');
     Route::get('/orders/{id}/invoice-pdf', [OrderController::class, 'invoicePdf'])->name('orders.invoicePdf');
     Route::post('/orders/{id}/status', [OrderController::class, 'updateStatus'])->name('orders.updateStatus');
+    Route::post('/orders/{id}/driver', [OrderController::class, 'assignDriver'])->name('orders.assignDriver');
     Route::post('/orders/{id}/refund', [OrderController::class, 'refund'])->name('orders.refund');
     Route::post('/orders/{orderId}/items/{itemId}/unavailable', [OrderController::class, 'markUnavailable'])->name('orders.items.unavailable');
+    Route::post('/orders/{id}/items', [OrderController::class, 'addItem'])->name('orders.items.store');
+    Route::post('/orders/{id}/items/save', [OrderController::class, 'updateItems'])->name('orders.items.save');
+    Route::delete('/orders/{orderId}/items/{itemId}', [OrderController::class, 'removeItem'])->name('orders.items.delete');
 
     // Delivery slots (checkout time windows + fees)
     Route::get('/delivery-slots', [DeliverySlotController::class, 'index'])->name('delivery-slots.index');

@@ -42,6 +42,14 @@
 
             <form id="egf-checkout-form" class="cart-layout" style="margin:0;align-items:start;">
                 @csrf
+                <div class="auth-card" style="margin:0 0 1.5rem;">
+                    <h2 style="font-size:1.25rem;margin-bottom:1rem;"><span class="co-step">0</span>Delivery or pickup?</h2>
+                    <div style="display:flex;gap:1.25rem;flex-wrap:wrap;">
+                        <label style="display:flex;gap:.45rem;align-items:center;cursor:pointer;"><input type="radio" name="fulfillment" value="delivery" checked> Home delivery</label>
+                        <label style="display:flex;gap:.45rem;align-items:center;cursor:pointer;"><input type="radio" name="fulfillment" value="pickup"> Click &amp; Collect <span class="promo-tag">Free</span></label>
+                    </div>
+                    <p class="text-muted" id="co-pickup-note" style="display:none;font-size:13px;margin:.6rem 0 0;">Pick up from <strong>{{ trim(($company->address1 ?? '').' '.($company->address2 ?? '').' '.($company->address3 ?? '')) ?: 'our store' }}</strong> — we'll email you when it's ready. No delivery fee.</p>
+                </div>
                 <div class="auth-card" style="margin:0;">
                     <h2 style="font-size:1.25rem;margin-bottom:1.25rem;"><span class="co-step">1</span>Where is it going?</h2>
                     @auth
@@ -431,8 +439,14 @@
             var pts = Math.max(0, Math.min(parseInt(pointsInput.value, 10) || 0, pointsBalance));
             return Math.min(pts * pointsValue, subtotal);
         }
+        function fulfillment() {
+            var checked = form.querySelector('input[name="fulfillment"]:checked');
+            return checked ? checked.value : 'delivery';
+        }
         function paintTotals() {
-            var fee = subtotal >= freeOver ? 0 : slotFee();
+            var fee = (fulfillment() === 'pickup' || subtotal >= freeOver) ? 0 : slotFee();
+            var note = document.getElementById('co-pickup-note');
+            if (note) note.style.display = fulfillment() === 'pickup' ? '' : 'none';
             var disc = pointsDiscount();
             var total = Math.max(0, subtotal + fee - disc - couponDiscount);
             document.querySelectorAll('[data-co-fee]').forEach(function (el) { el.textContent = fee === 0 ? 'Free' : money(fee); });
@@ -485,6 +499,9 @@
         if (removeBtn) removeBtn.addEventListener('click', clearCoupon);
         slotSel.addEventListener('change', paintTotals);
         if (pointsInput) pointsInput.addEventListener('input', paintTotals);
+        form.querySelectorAll('input[name="fulfillment"]').forEach(function (radio) {
+            radio.addEventListener('change', paintTotals);
+        });
         paintCutoff();
 
         function method() {
@@ -538,6 +555,7 @@
                 save_address: saveBox && saveBox.checked ? 1 : 0,
                 save_label: saveLabel ? saveLabel.value : '',
                 substitution: sub ? sub.value : 'substitute',
+                fulfillment: fulfillment(),
                 notes: document.getElementById('co-notes').value,
                 delivery_date: document.getElementById('co-date').value,
                 delivery_slot_id: slotSel.value,

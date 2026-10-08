@@ -51,7 +51,8 @@
             @if ($order->points_discount > 0)<div class="summary-row"><span>Loyalty points ({{ $order->points_redeemed }})</span><span>−£{{ number_format($order->points_discount, 2) }}</span></div>@endif
             @if ($order->coupon_discount > 0)<div class="summary-row"><span>Coupon {{ $order->coupon_code }}</span><span>−£{{ number_format($order->coupon_discount, 2) }}</span></div>@endif
             @if ($order->points_earned > 0)<div class="summary-row"><span>Points earned</span><span>+{{ $order->points_earned }}</span></div>@endif
-            <div class="summary-row"><span>Delivery ({{ $order->delivery_date ? $order->delivery_date->format('D j M') : '—' }} · {{ $order->delivery_slot_label }})</span><span>{{ $order->delivery_fee > 0 ? '£'.number_format($order->delivery_fee, 2) : 'Free' }}</span></div>
+            <div class="summary-row"><span>{{ ($order->fulfillment ?? 'delivery') === 'pickup' ? 'Pickup' : 'Delivery' }} ({{ $order->delivery_date ? $order->delivery_date->format('D j M') : '—' }} · {{ $order->delivery_slot_label }})</span><span>{{ $order->delivery_fee > 0 ? '£'.number_format($order->delivery_fee, 2) : 'Free' }}</span></div>
+            @if ($order->driver_name)<div class="summary-row"><span>Driver</span><span>{{ $order->driver_name }}</span></div>@endif
             @if ($order->vat_amount > 0)<div class="summary-row"><span class="text-muted">Includes VAT @ {{ number_format($order->vat_percent, 2) }}%</span><span class="text-muted">£{{ number_format($order->vat_amount, 2) }}</span></div>@endif
             <div class="summary-row total"><span>Total</span><span>£{{ number_format($order->total, 2) }}</span></div>
             @php $billTo = $order->billTo(); @endphp

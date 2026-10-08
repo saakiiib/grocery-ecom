@@ -34,7 +34,7 @@ function subOrder(string $method = 'stripe', string $status = 'paid', string $pr
         'substitution_preference' => $preference,
         'delivery_date' => now()->addDay()->toDateString(),
         'subtotal' => 30.00, 'delivery_fee' => 0, 'total' => 30.00,
-        'payment_method' => $method, 'payment_status' => $status,
+        'payment_method' => $method, 'payment_status' => $status, 'amount_paid' => $status === 'paid' ? 30.00 : 0,
         'payment_reference' => 'pi_test_sub',
         'status_id' => $new->id, 'status_slug' => 'new',
     ]);

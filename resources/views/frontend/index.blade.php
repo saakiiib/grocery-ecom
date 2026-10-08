@@ -79,6 +79,8 @@
         </div>
     </section>
 
+    @include('frontend.partials.halal-promise')
+
     @if ($categoriesJson->isNotEmpty())
         <section class="section">
             <div class="container">

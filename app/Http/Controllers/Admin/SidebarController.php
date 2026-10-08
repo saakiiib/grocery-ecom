@@ -120,6 +120,27 @@ class SidebarController
                 'href' => route('stock-alerts.index'),
             ],
             [
+                'type' => 'item',
+                'icon' => 'ri-alert-line',
+                'label' => 'Stock Watch',
+                'route' => 'stock-watch.*',
+                'href' => route('stock-watch.index'),
+            ],
+            [
+                'type' => 'item',
+                'icon' => 'ri-repeat-line',
+                'label' => 'Repeats',
+                'route' => 'repeats.*',
+                'href' => route('repeats.index'),
+            ],
+            [
+                'type' => 'item',
+                'icon' => 'ri-restaurant-line',
+                'label' => 'Recipes',
+                'route' => 'admin.recipes.*',
+                'href' => route('admin.recipes.index'),
+            ],
+            [
                 'type' => 'group',
                 'icon' => 'ri-settings-3-line',
                 'label' => 'Settings',

@@ -194,6 +194,7 @@ class WebhookController extends Controller
         }
 
         $order->payment_status = 'paid';
+        $order->amount_paid = $order->total;
         $order->save();
         if ($order->status_slug === 'new') {
             $order->changeStatus('confirmed', null, $note);

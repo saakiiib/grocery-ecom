@@ -15,7 +15,10 @@ use App\Models\FlashSale;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\RepeatSchedule;
+use App\Models\ShoppingList;
 use App\Models\UserPoint;
+use App\Support\BuyAgain;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -268,5 +271,110 @@ class AccountApiController extends Controller
         }
 
         return response()->json(array_merge(['message' => $message], BagController::detailed()));
+    }
+
+    /* ---------------- Buy again ---------------- */
+
+    public function buyAgain(): JsonResponse
+    {
+        $maps = [BundleOffer::coverMap(), FlashSale::liveMap(), BogoOffer::liveAll()];
+        $front = app(FrontendController::class);
+        $cards = BuyAgain::productsFor(auth()->id())->map(fn ($p) => $front->productCard($p, ...$maps))->values();
+
+        return response()->json(['products' => $cards]);
+    }
+
+    /* ---------------- Shopping lists ---------------- */
+
+    public function lists(): JsonResponse
+    {
+        return response()->json(['lists' => $this->listPayload()]);
+    }
+
+    public function listStore(Request $request): JsonResponse
+    {
+        $data = $request->validate(['name' => 'required|string|max:100']);
+        auth()->user()->shoppingLists()->create(['name' => $data['name']]);
+
+        return response()->json(['message' => 'List created.', 'lists' => $this->listPayload()]);
+    }
+
+    public function listDestroy(int $id): JsonResponse
+    {
+        ShoppingList::where('id', $id)->where('user_id', auth()->id())->firstOrFail()->delete();
+
+        return response()->json(['message' => 'List deleted.', 'lists' => $this->listPayload()]);
+    }
+
+    public function listAddItem(Request $request, int $id): JsonResponse
+    {
+        $list = ShoppingList::where('id', $id)->where('user_id', auth()->id())->firstOrFail();
+        $data = $request->validate([
+            'variant_id' => 'required|integer|exists:product_variants,id',
+            'qty' => 'nullable|integer|min:1|max:99',
+        ]);
+        $list->items()->updateOrCreate(
+            ['product_variant_id' => $data['variant_id']],
+            ['qty' => $data['qty'] ?? 1]
+        );
+
+        return response()->json(['message' => 'Saved to '.$list->name.'.', 'lists' => $this->listPayload()]);
+    }
+
+    public function listRemoveItem(int $listId, int $itemId): JsonResponse
+    {
+        $list = ShoppingList::where('id', $listId)->where('user_id', auth()->id())->firstOrFail();
+        $list->items()->where('id', $itemId)->delete();
+
+        return response()->json(['message' => 'Item removed.', 'lists' => $this->listPayload()]);
+    }
+
+    public function listAddAll(int $id): JsonResponse
+    {
+        $list = ShoppingList::where('id', $id)->where('user_id', auth()->id())->firstOrFail();
+        [$added, $skipped] = $list->addAllToBag();
+        $message = $added > 0 ? "Added {$added} item".($added === 1 ? '' : 's')." from {$list->name}." : "Nothing from {$list->name} is available.";
+        if ($skipped !== []) {
+            $message .= ' Skipped: '.implode(', ', $skipped).'.';
+        }
+
+        return response()->json(array_merge(['message' => $message], BagController::detailed()));
+    }
+
+    private function listPayload()
+    {
+        return auth()->user()->shoppingLists()->with(['items.variant.product'])->orderByDesc('id')->get()
+            ->map(fn ($list) => [
+                'id' => $list->id,
+                'name' => $list->name,
+                'items' => $list->items->map(fn ($i) => [
+                    'id' => $i->id,
+                    'qty' => $i->qty,
+                    'variant_id' => $i->product_variant_id,
+                    'name' => $i->variant?->product?->name ?? 'Unavailable item',
+                    'available' => (bool) ($i->variant && $i->variant->product && $i->variant->product->status && $i->variant->status && $i->variant->in_stock),
+                ])->values(),
+            ])->values();
+    }
+
+    /* ---------------- Weekly repeats ---------------- */
+
+    public function repeats(): JsonResponse
+    {
+        return response()->json(['repeats' => RepeatSchedule::where('user_id', auth()->id())->orderByDesc('id')->get()]);
+    }
+
+    public function repeatStore(string $number): JsonResponse
+    {
+        $response = app(AccountController::class)->repeatWeekly($number);
+
+        return response()->json(['message' => $response->getSession()->get('status', 'Weekly repeat saved.')]);
+    }
+
+    public function repeatCancel(int $id): JsonResponse
+    {
+        RepeatSchedule::where('id', $id)->where('user_id', auth()->id())->firstOrFail()->update(['is_active' => false]);
+
+        return response()->json(['message' => 'Weekly repeat cancelled.']);
     }
 }

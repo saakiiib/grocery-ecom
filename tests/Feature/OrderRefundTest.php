@@ -36,7 +36,7 @@ function refundPaidOrder(string $method = 'stripe', float $total = 42.99): Order
         'address' => '1 Market St', 'city' => 'Leeds', 'postcode' => 'LS1 1AA',
         'delivery_date' => now()->addDay()->toDateString(),
         'subtotal' => $total, 'delivery_fee' => 0, 'total' => $total,
-        'payment_method' => $method, 'payment_status' => 'paid',
+        'payment_method' => $method, 'payment_status' => 'paid', 'amount_paid' => $total,
         'payment_reference' => $method === 'stripe' ? 'pi_test_123' : 'CAPTURE-123',
         'status_id' => $new->id, 'status_slug' => 'new',
     ]);

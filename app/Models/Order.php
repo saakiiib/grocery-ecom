@@ -26,7 +26,14 @@ class Order extends Model
             'vat_percent' => 'decimal:2',
             'vat_amount' => 'decimal:2',
             'refunded_amount' => 'decimal:2',
+            'amount_paid' => 'decimal:2',
         ];
+    }
+
+    /** Gross money actually received (refunds tracked separately). */
+    public function balanceDue(): float
+    {
+        return round(max(0, (float) $this->total - (float) $this->amount_paid), 2);
     }
 
     public function user(): BelongsTo
@@ -105,7 +112,7 @@ class Order extends Model
         };
     }
 
-    /** Still refundable online: paid online orders minus what was already refunded. */
+    /** Still refundable online: gross paid minus what was already refunded. */
     public function refundableAmount(): float
     {
         if (! in_array($this->payment_status, ['paid', 'partially_refunded'], true)) {
@@ -115,7 +122,7 @@ class Order extends Model
             return 0.0;
         }
 
-        return max(0.0, round((float) $this->total - (float) $this->refunded_amount, 2));
+        return max(0.0, round((float) $this->amount_paid - (float) $this->refunded_amount, 2));
     }
 
     /** VAT follows the unrefunded remainder (prices are VAT-inclusive). */

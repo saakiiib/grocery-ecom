@@ -2,9 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BogoOffer;
+use App\Models\BundleOffer;
+use App\Models\FlashSale;
 use App\Models\Order;
 use App\Models\ProductVariant;
+use App\Models\RepeatSchedule;
+use App\Models\ShoppingList;
 use App\Models\UserPoint;
+use App\Support\BuyAgain;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -32,8 +38,14 @@ class AccountController extends Controller
             ->take(10)
             ->get();
         $addresses = $user->addresses()->get();
+        $front = app(FrontendController::class);
+        $maps = [BundleOffer::coverMap(), FlashSale::liveMap(), BogoOffer::liveAll()];
+        $buyAgain = BuyAgain::productsFor($user->id)->map(fn ($p) => $front->productCard($p, ...$maps))->values();
+        $lists = ShoppingList::with(['items.variant.product'])
+            ->where('user_id', $user->id)->orderByDesc('id')->get();
+        $repeats = RepeatSchedule::where('user_id', $user->id)->orderByDesc('id')->get();
 
-        return spa('frontend.account', compact('user', 'orders', 'pointsBalance', 'pointsHistory', 'addresses'));
+        return spa('frontend.account', compact('user', 'orders', 'pointsBalance', 'pointsHistory', 'addresses', 'buyAgain', 'lists', 'repeats'));
     }
 
     public function show(string $number)
@@ -47,6 +59,44 @@ class AccountController extends Controller
         $payPaypalClient = CheckoutController::paypalClientId();
 
         return spa('frontend.order-detail', ['order' => $order, 'user' => auth()->user(), 'payPublishable' => $payPublishable, 'payPaypalClient' => $payPaypalClient]);
+    }
+
+    /** Weekly repeat: rebuild this order every 7 days from current shelf prices. */
+    public function repeatWeekly(string $number): RedirectResponse
+    {
+        $order = Order::with('items')
+            ->where('number', $number)
+            ->where('user_id', auth()->id())
+            ->firstOrFail();
+
+        $items = $order->items->map(fn ($i) => [
+            'variant_id' => $i->product_variant_id,
+            'qty' => $i->qty,
+        ])->filter(fn ($row) => $row['variant_id'])->values()->all();
+        if ($items === []) {
+            return redirect()->route('account')->with('status', 'That order has nothing repeatable.');
+        }
+        RepeatSchedule::create([
+            'user_id' => auth()->id(),
+            'email' => $order->email ?? auth()->user()->email,
+            'name' => $order->name,
+            'phone' => $order->phone,
+            'address' => $order->address,
+            'city' => $order->city,
+            'postcode' => $order->postcode,
+            'items' => $items,
+            'payment_method' => $order->payment_method,
+            'next_run_at' => today()->addWeek(),
+        ]);
+
+        return redirect()->route('account')->with('status', 'Weekly repeat on — a fresh order arrives every 7 days. Cancel anytime.');
+    }
+
+    public function cancelRepeat(int $id): RedirectResponse
+    {
+        RepeatSchedule::where('id', $id)->where('user_id', auth()->id())->firstOrFail()->update(['is_active' => false]);
+
+        return redirect()->route('account')->with('status', 'Weekly repeat cancelled.');
     }
 
     /** Buy again: put every still-available line back in the session bag. */

@@ -85,7 +85,7 @@
         </div>
         <div class="footer-bottom">
             <span>© {{ date('Y') }} {{ $brand }}. All rights reserved.</span>
-            <span>Prices in GBP · Free delivery over £50</span>
+            <span><x-icon name="shield-check" /> 100% Halal promise · Prices in GBP · Free delivery over £50</span>
         </div>
     </div>
 </footer>

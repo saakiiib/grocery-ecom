@@ -20,7 +20,9 @@ use App\Models\PageSeo;
 use App\Models\Product;
 use App\Models\ProductReview;
 use App\Models\ProductVariant;
+use App\Models\SearchLog;
 use App\Models\Setting;
+use App\Models\ShoppingList;
 use App\Models\Slider;
 use App\Models\StockAlert;
 use App\Models\Subscriber;
@@ -282,8 +284,12 @@ class FrontendController extends Controller
         $offersPath = $category === 'offers';
         // Diet chips only render when at least one product actually carries a flag.
         $hasDietFlags = $products->contains(fn ($p) => $p->is_vegetarian || $p->is_vegan || $p->is_halal || $p->is_organic || $p->is_gluten_free);
+        if (is_string($search) && trim($search) !== '') {
+            SearchLog::record($search, $total);
+        }
+        $trendingSearches = SearchLog::trending();
 
-        return spa('frontend.shop', compact('categories', 'parents', 'activeParent', 'productsJson', 'activeCategory', 'activeCategorySlug', 'categoriesJson', 'search', 'sort', 'onlyOffers', 'minPrice', 'maxPrice', 'priceFloor', 'priceCeil', 'page', 'perPage', 'total', 'shown', 'hasMore', 'categoryPath', 'offersPath', 'diets', 'freeFrom', 'allergens', 'hasDietFlags'));
+        return spa('frontend.shop', compact('categories', 'parents', 'activeParent', 'productsJson', 'activeCategory', 'activeCategorySlug', 'categoriesJson', 'search', 'sort', 'onlyOffers', 'minPrice', 'maxPrice', 'priceFloor', 'priceCeil', 'page', 'perPage', 'total', 'shown', 'hasMore', 'categoryPath', 'offersPath', 'diets', 'freeFrom', 'allergens', 'hasDietFlags', 'trendingSearches'));
     }
 
     /** Offers landing page — the shop with the offers filter pre-selected. */
@@ -317,7 +323,7 @@ class FrontendController extends Controller
                         'slug' => $p->slug,
                         'name' => $p->name,
                         'cat' => $p->category?->name ?? '',
-                        'tags' => trim($p->name.' '.($p->category?->name ?? '').' '.($v->sku ?? '')),
+                        'tags' => trim($p->name.' '.($p->category?->name ?? '').' '.$p->variants->pluck('sku')->filter()->implode(' ')),
                         'price' => $v->sellingPrice(),
                         'pack' => $v->combinationLabel() ?? '',
                         'img' => Product::thumb($img, 300),
@@ -424,13 +430,16 @@ class FrontendController extends Controller
             'upgrade' => [],
         ];
         $zonesJson = collect();
+        $myLists = auth()->check()
+            ? ShoppingList::where('user_id', auth()->id())->orderBy('name')->get(['id', 'name'])
+            : collect();
         $relatedJson = $related->map(fn ($p) => $this->productCard($p, ...$relMaps))->values();
         $faqsJson = $this->faqsJson(4);
         $docsJson = collect();
         $videoUrl = null;
         $videoEmbed = null;
 
-        return spa('frontend.details', compact('product', 'productJson', 'optionsJson', 'zonesJson', 'relatedJson', 'pairsJson', 'recentlyViewed', 'faqsJson', 'docsJson', 'videoUrl', 'videoEmbed', 'reviewsJson', 'myReview'));
+        return spa('frontend.details', compact('product', 'productJson', 'optionsJson', 'zonesJson', 'relatedJson', 'pairsJson', 'recentlyViewed', 'myLists', 'faqsJson', 'docsJson', 'videoUrl', 'videoEmbed', 'reviewsJson', 'myReview'));
     }
 
     public function about()
@@ -908,6 +917,7 @@ class FrontendController extends Controller
                     'offer_price' => $v->offer_price === null ? null : (float) $v->offer_price,
                     'selling' => $price,
                     'flash_ends' => $flashEnds,
+                    'expires' => $v->expires_at ? $v->expires_at->format('j M Y') : null,
                     'in_stock' => (bool) $v->in_stock,
                     'is_default' => (bool) $v->is_default,
                     'image' => $this->imgUrl($v->image),

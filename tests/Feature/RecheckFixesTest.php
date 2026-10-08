@@ -28,7 +28,7 @@ function fixPaidOrder(): Order
         'address' => '1 Market St', 'city' => 'Leeds', 'postcode' => 'LS1 1AA',
         'delivery_date' => now()->addDay()->toDateString(),
         'subtotal' => 40.00, 'delivery_fee' => 0, 'total' => 40.00,
-        'payment_method' => 'stripe', 'payment_status' => 'paid', 'payment_reference' => 'pi_x',
+        'payment_method' => 'stripe', 'payment_status' => 'paid', 'amount_paid' => 40.00, 'payment_reference' => 'pi_x',
         'status_id' => $new->id, 'status_slug' => 'new',
     ]);
 }

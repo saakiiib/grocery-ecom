@@ -30,6 +30,10 @@ Route::middleware(['api_session', 'api_auth:optional'])->group(function () {
     Route::post('/contact', [FrontendController::class, 'contactStore'])->middleware('throttle:10,1');
     Route::post('/newsletter', [FrontendController::class, 'subscribeStore'])->middleware('throttle:10,1');
     Route::post('/notify', [FrontendController::class, 'notifyStore'])->middleware('throttle:10,1');
+    Route::get('/recipes', [CatalogApiController::class, 'recipes']);
+    Route::get('/recipes/{slug}', [CatalogApiController::class, 'recipe']);
+    Route::post('/recipes/{id}/add-all', [CatalogApiController::class, 'recipeAddAll']);
+    Route::get('/trending-searches', [CatalogApiController::class, 'trendingSearches']);
     Route::get('/track', [CatalogApiController::class, 'trackOrder'])->middleware('throttle:20,1');
 
     // Bag
@@ -69,6 +73,19 @@ Route::middleware(['api_session', 'api_auth:optional'])->group(function () {
         Route::get('/favourites', [AccountApiController::class, 'favourites']);
         Route::post('/favourites/toggle', [FavouriteController::class, 'toggle']);
         Route::post('/favourites/move-all', [AccountApiController::class, 'favouritesMoveAll']);
+
+        Route::get('/buy-again', [AccountApiController::class, 'buyAgain']);
+
+        Route::get('/lists', [AccountApiController::class, 'lists']);
+        Route::post('/lists', [AccountApiController::class, 'listStore']);
+        Route::delete('/lists/{id}', [AccountApiController::class, 'listDestroy']);
+        Route::post('/lists/{id}/items', [AccountApiController::class, 'listAddItem']);
+        Route::delete('/lists/{listId}/items/{itemId}', [AccountApiController::class, 'listRemoveItem']);
+        Route::post('/lists/{id}/add-all', [AccountApiController::class, 'listAddAll']);
+
+        Route::get('/repeats', [AccountApiController::class, 'repeats']);
+        Route::post('/orders/{number}/repeat-weekly', [AccountApiController::class, 'repeatStore']);
+        Route::post('/repeats/{id}/cancel', [AccountApiController::class, 'repeatCancel']);
 
         Route::post('/reviews', [ReviewController::class, 'store'])->middleware('throttle:20,1');
         Route::delete('/reviews/{id}', [ReviewController::class, 'destroy']);

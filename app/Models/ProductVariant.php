@@ -16,7 +16,7 @@ class ProductVariant extends Model
     }
 
     protected $fillable = [
-        'product_id', 'sku', 'mrp', 'offer_price', 'image',
+        'product_id', 'sku', 'mrp', 'offer_price', 'image', 'expires_at',
         'in_stock', 'is_default', 'status', 'sort_order',
     ];
 
@@ -29,6 +29,7 @@ class ProductVariant extends Model
             'is_default' => 'boolean',
             'status' => 'boolean',
             'sort_order' => 'integer',
+            'expires_at' => 'date',
         ];
     }
 

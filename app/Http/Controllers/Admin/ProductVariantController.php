@@ -32,12 +32,13 @@ class ProductVariantController extends Controller
             'mrp' => 'required|numeric|min:0',
             'offer_price' => 'nullable|numeric|min:0|lte:mrp',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
+            'expires_at' => 'nullable|date',
             'value_ids' => 'nullable|array',
             'value_ids.*' => 'exists:option_values,id',
         ]);
         $this->assertOneValuePerGroup($request->value_ids ?? []);
 
-        $variant = new ProductVariant($request->only(['sku', 'mrp', 'offer_price']));
+        $variant = new ProductVariant($request->only(['sku', 'mrp', 'offer_price', 'expires_at']));
         $variant->product_id = $product->id;
         $variant->in_stock = $request->boolean('in_stock', true);
         $variant->status = true;
@@ -62,12 +63,13 @@ class ProductVariantController extends Controller
             'mrp' => 'required|numeric|min:0',
             'offer_price' => 'nullable|numeric|min:0|lte:mrp',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
+            'expires_at' => 'nullable|date',
             'value_ids' => 'nullable|array',
             'value_ids.*' => 'exists:option_values,id',
         ]);
         $this->assertOneValuePerGroup($request->value_ids ?? []);
 
-        $variant->fill($request->only(['sku', 'mrp', 'offer_price']));
+        $variant->fill($request->only(['sku', 'mrp', 'offer_price', 'expires_at']));
         if ($request->has('in_stock')) {
             $variant->in_stock = $request->boolean('in_stock');
         }

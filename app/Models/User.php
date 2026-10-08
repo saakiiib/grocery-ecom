@@ -35,6 +35,17 @@ class User extends Authenticatable
         return $this->hasMany(Address::class)->latest();
     }
 
+    /** Named shopping lists (Weekly shop, BBQ…). */
+    public function shoppingLists(): HasMany
+    {
+        return $this->hasMany(ShoppingList::class)->latest();
+    }
+
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class)->latest();
+    }
+
     public function defaultDeliveryAddress(): ?Address
     {
         return $this->addresses->firstWhere('is_default_delivery', true)

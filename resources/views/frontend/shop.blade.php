@@ -126,9 +126,17 @@
                 <input type="hidden" name="diet[]" value="{{ $d }}">
             @endforeach
             <div class="shop-search">
-                <input type="search" name="q" value="{{ $search }}" placeholder="Search the market" aria-label="Search" data-shop-search>
+                <input type="search" name="q" value="{{ $search }}" placeholder="Search the market — try a name or SKU" aria-label="Search" data-shop-search>
                 <button type="submit" class="btn btn-dark btn-sm">Go</button>
             </div>
+            @if (empty($search) && ! empty($trendingSearches))
+                <div class="trend-row">
+                    <span class="text-muted">Trending:</span>
+                    @foreach ($trendingSearches as $term)
+                        <a @spa href="{{ route('shop', ['q' => $term]) }}" class="child-chip">{{ $term }}</a>
+                    @endforeach
+                </div>
+            @endif
             @if ($priceCeil > $priceFloor)
                 <div class="price-slider" data-price-slider data-floor="{{ $priceFloor }}" data-ceil="{{ $priceCeil }}">
                     <input type="hidden" name="min_price" value="{{ $minPrice ?? $priceFloor }}" data-price-min>

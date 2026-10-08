@@ -15,6 +15,8 @@ use App\Models\FlashSale;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductReview;
+use App\Models\Recipe;
+use App\Models\SearchLog;
 use App\Models\Setting;
 use App\Models\Slider;
 use App\Models\Testimonial;
@@ -264,9 +266,84 @@ class CatalogApiController extends FrontendController
         $all = collect(static::searchCatalogData());
         if ($q !== '') {
             $all = $all->filter(fn ($row) => str_contains(mb_strtolower($row['tags']), $q))->values();
+            SearchLog::record($q, $all->count());
         }
 
         return response()->json(['results' => $all->take(30)->values()]);
+    }
+
+    public function trendingSearches(): JsonResponse
+    {
+        return response()->json(['queries' => SearchLog::trending()]);
+    }
+
+    public function recipes(): JsonResponse
+    {
+        $recipes = Recipe::where('status', true)->orderBy('sort_order')->orderByDesc('id')
+            ->get()->map(fn ($r) => [
+                'id' => $r->id, 'title' => $r->title, 'slug' => $r->slug,
+                'servings' => $r->servings, 'image' => $r->image ? url($r->image) : null,
+                'ingredients' => $r->ingredients()->count(),
+            ])->values();
+
+        return response()->json(['recipes' => $recipes]);
+    }
+
+    public function recipe(string $slug): JsonResponse
+    {
+        $recipe = Recipe::with(['ingredients.product', 'ingredients.variant'])
+            ->where('slug', $slug)->where('status', true)->firstOrFail();
+        $maps = [BundleOffer::coverMap(), FlashSale::liveMap(), BogoOffer::liveAll()];
+
+        return response()->json([
+            'recipe' => [
+                'id' => $recipe->id, 'title' => $recipe->title, 'slug' => $recipe->slug,
+                'body' => $recipe->body, 'servings' => $recipe->servings,
+                'image' => $recipe->image ? url($recipe->image) : null,
+            ],
+            'ingredients' => $recipe->ingredients->map(function ($ing) use ($maps) {
+                $variant = $ing->variant_id ? $ing->variant : $ing->product?->defaultVariant();
+                $card = null;
+                if ($ing->product && $variant) {
+                    $card = $this->productCard($ing->product->loadMissing(['category', 'images', 'variants.values.group']), ...$maps);
+                }
+
+                return [
+                    'qty' => $ing->qty,
+                    'product_id' => $ing->product_id,
+                    'variant_id' => $variant?->id,
+                    'name' => $ing->product?->name ?? 'Unavailable item',
+                    'available' => (bool) ($variant && $variant->product && $variant->product->status && $variant->status && $variant->in_stock),
+                    'card' => $card,
+                ];
+            })->values(),
+        ]);
+    }
+
+    public function recipeAddAll(int $id): JsonResponse
+    {
+        $recipe = Recipe::with(['ingredients.variant.product', 'ingredients.product'])
+            ->where('status', true)->findOrFail($id);
+        $bag = BagController::bag();
+        $added = 0;
+        $skipped = [];
+        foreach ($recipe->ingredients as $ingredient) {
+            $variant = $ingredient->variant_id ? $ingredient->variant : $ingredient->product?->defaultVariant();
+            if (! $variant || ! $variant->product || ! $variant->product->status || ! $variant->status || ! $variant->in_stock) {
+                $skipped[] = $ingredient->product?->name ?? 'Unavailable item';
+
+                continue;
+            }
+            $bag[$variant->id] = min(($bag[$variant->id] ?? 0) + $ingredient->qty, 99);
+            $added++;
+        }
+        session()->put(BagController::SESSION_KEY, $bag);
+        $message = $added > 0 ? "Added {$added} ingredient".($added === 1 ? '' : 's')." for {$recipe->title}." : "Nothing for {$recipe->title} is available.";
+        if ($skipped !== []) {
+            $message .= ' Skipped: '.implode(', ', $skipped).'.';
+        }
+
+        return response()->json(array_merge(['message' => $message], BagController::detailed()));
     }
 
     public function bag(): JsonResponse

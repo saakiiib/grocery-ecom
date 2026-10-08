@@ -101,7 +101,7 @@ class CheckoutController extends Controller
      *
      * @return array{ok: bool, message?: string, lines?: array, subtotal?: float, fee?: float, total?: float, slot?: DeliverySlot}
      */
-    public static function priceBag(int $slotId, ?float $subtotalOverride = null): array
+    public static function priceBag(int $slotId, ?float $subtotalOverride = null, bool $pickup = false): array
     {
         $bag = BagController::detailed();
 
@@ -125,7 +125,7 @@ class CheckoutController extends Controller
             return ['ok' => false, 'message' => 'Please choose a delivery slot.'];
         }
 
-        $fee = $subtotal >= Setting::money('delivery_free_over', 50.00) ? 0.0 : (float) $slot->fee;
+        $fee = ($pickup || $subtotal >= Setting::money('delivery_free_over', 50.00)) ? 0.0 : (float) $slot->fee;
 
         return [
             'ok' => true,
@@ -159,6 +159,7 @@ class CheckoutController extends Controller
             'notes' => 'nullable|string|max:1000',
             'delivery_date' => 'required|date_format:Y-m-d',
             'delivery_slot_id' => 'required|integer',
+            'fulfillment' => 'nullable|in:delivery,pickup',
             'payment_method' => 'required|in:cod,stripe,paypal',
             'points_redeem' => 'nullable|integer|min:0|max:1000000',
             'coupon_code' => 'nullable|string|max:50',
@@ -174,7 +175,8 @@ class CheckoutController extends Controller
             return response()->json(['message' => 'That time window just closed for today — please pick tomorrow or another slot.'], 422);
         }
 
-        if (! DeliveryZone::serves($data['postcode'])) {
+        $pickup = ($data['fulfillment'] ?? 'delivery') === 'pickup';
+        if (! $pickup && ! DeliveryZone::serves($data['postcode'])) {
             return response()->json(['message' => 'Sorry — we don\'t deliver to '.$data['postcode'].' yet.'], 422);
         }
 
@@ -185,7 +187,7 @@ class CheckoutController extends Controller
             return response()->json(['message' => 'PayPal is not available right now — please choose another method.'], 422);
         }
 
-        $priced = static::priceBag($data['delivery_slot_id']);
+        $priced = static::priceBag($data['delivery_slot_id'], null, $pickup);
         if (! $priced['ok']) {
             return response()->json(['message' => $priced['message']], 422);
         }
@@ -211,7 +213,7 @@ class CheckoutController extends Controller
         }
 
         try {
-            $order = DB::transaction(function () use ($data, $priced, $pointsRedeem, $pointsDiscount) {
+            $order = DB::transaction(function () use ($data, $priced, $pointsRedeem, $pointsDiscount, $pickup) {
                 $status = OrderStatus::where('slug', 'new')->where('is_active', true)->firstOrFail();
 
                 // Coupon — revalidated server-side, shoppers only. Row-locked so
@@ -267,6 +269,7 @@ class CheckoutController extends Controller
                     'coupon_discount' => $couponDiscount,
                     'payment_method' => $data['payment_method'],
                     'payment_status' => 'unpaid',
+                    'fulfillment' => $pickup ? 'pickup' : 'delivery',
                     'status_id' => $status->id,
                     'status_slug' => $status->slug,
                 ]);
@@ -490,6 +493,7 @@ class CheckoutController extends Controller
         }
 
         $order->payment_status = 'paid';
+        $order->amount_paid = $order->total;
         $order->save();
         $order->changeStatus('confirmed', $order->user_id, 'Paid online ('.$order->paymentLabel().').');
         Order::sendMail($order->receiptEmail(), new OrderPlaced($order));

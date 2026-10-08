@@ -2453,3 +2453,14 @@ body.search-open { overflow: hidden; }
 .proof-avatar svg { width: 16px; height: 16px; }
 .proof-close { background: var(--card); border: 1px solid var(--border); border-radius: 999px; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
 .proof-close svg { width: 12px; height: 12px; }
+
+/* Halal promise */
+.halal-promise { background: var(--muted); }
+.halal-inner { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; }
+.halal-seal { width: 64px; height: 64px; border-radius: 999px; background: var(--deep); color: #fff; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.halal-seal svg { width: 32px; height: 32px; }
+.halal-inner > div { flex: 1; min-width: 220px; }
+.footer-bottom svg { width: 14px; height: 14px; vertical-align: -2px; }
+
+/* Trending searches */
+.trend-row { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; font-size: 0.85rem; }

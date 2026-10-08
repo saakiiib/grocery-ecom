@@ -36,6 +36,7 @@
                 </div>
                 <nav class="portal-nav" aria-label="Account">
                     <button type="button" class="portal-link" data-portal-tab="orders"><x-icon name="package" />Orders</button>
+                    <a @spa href="{{ route('lists.index') }}" class="portal-link"><x-icon name="bookmark" />Lists</a>
                     <button type="button" class="portal-link" data-portal-tab="loyalty"><x-icon name="zap" />Loyalty</button>
                     <button type="button" class="portal-link" data-portal-tab="addresses"><x-icon name="map-pin" />Addresses</button>
                     <button type="button" class="portal-link" data-portal-tab="details"><x-icon name="user" />Your details</button>
@@ -46,6 +47,14 @@
 
             <div class="portal-main" data-portal data-default="{{ $defaultTab }}">
                 <section class="auth-card" data-portal-panel="orders">
+                    @if (! empty($buyAgain) && $buyAgain->isNotEmpty())
+                        <h2 style="font-size:1.25rem;">Buy it again</h2>
+                        <div class="product-grid" style="margin:1rem 0 1.75rem;">
+                            @foreach ($buyAgain as $p)
+                                @include('frontend.partials.product-card', ['p' => $p])
+                            @endforeach
+                        </div>
+                    @endif
                     <h2 style="font-size:1.25rem;">Your orders</h2>
                     @if ($orders->isEmpty())
                         <p class="text-muted" style="margin-top:1rem;">No orders yet — your history will live here.</p>
@@ -58,13 +67,25 @@
                                     <strong><a @spa href="{{ route('account.order', $order->number) }}">{{ $order->number }}</a></strong>
                                     <br><span class="text-muted">{{ $order->created_at->format('j M Y') }} · {{ $order->itemCount() }} item{{ $order->itemCount() === 1 ? '' : 's' }} · £{{ number_format($order->total, 2) }} · {{ $order->paymentLabel() }}</span>
                                 </span>
-                                <span style="display:flex;gap:0.5rem;align-items:center;">
+                                <span style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
                                     <span class="status-pill" @if ($st) style="background:{{ $st->color }}22;color:{{ $st->color }};border:1px solid {{ $st->color }}55;" @endif>{{ $st?->name ?? ucfirst($order->status_slug) }}</span>
                                     <a @spa href="{{ route('account.order', $order->number) }}" class="btn btn-ghost btn-sm">View</a>
+                                    <form method="POST" action="{{ route('account.repeat', $order->number) }}" style="display:inline;">@csrf<button type="submit" class="btn btn-ghost btn-sm" title="Rebuild this order every 7 days">Repeat weekly</button></form>
                                 </span>
                             </div>
                         @endforeach
                         <div style="margin-top:1rem;">{{ $orders->links() }}</div>
+                    @endif
+                    @if (! empty($repeats) && $repeats->isNotEmpty())
+                        <h3 style="font-size:1.05rem;margin:1.75rem 0 0.5rem;">Weekly repeats</h3>
+                        @foreach ($repeats as $r)
+                            <div class="summary-row" style="align-items:center;border-bottom:1px solid var(--border);padding:0.7rem 0;">
+                                <span>Every 7 days · next <strong>{{ $r->next_run_at->format('D j M') }}</strong><br><span class="text-muted">{{ is_array($r->items) ? count($r->items) : 0 }} lines · {{ strtoupper($r->payment_method) }} · {{ $r->is_active ? 'On' : 'Off' }}</span></span>
+                                @if ($r->is_active)
+                                    <form method="POST" action="{{ route('account.repeat.cancel', $r->id) }}">@csrf<button type="submit" class="btn btn-ghost btn-sm">Cancel</button></form>
+                                @endif
+                            </div>
+                        @endforeach
                     @endif
                 </section>
 

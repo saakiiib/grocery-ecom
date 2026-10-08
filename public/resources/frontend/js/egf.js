@@ -157,6 +157,7 @@
     var saveEl = document.querySelector('[data-save-badge]');
     var packNote = document.querySelector('[data-pack-note]');
     var skuNote = document.querySelector('[data-sku-note]');
+    var expiresNote = document.querySelector('[data-expires-note]');
     var mainImg = document.querySelector('[data-main-image]');
     var addBtn = document.querySelector('[data-detail-add]');
     var stockNote = document.querySelector('[data-stock-note]');
@@ -202,7 +203,18 @@
         if (v.sku) { skuNote.textContent = 'SKU: ' + v.sku; skuNote.style.display = ''; }
         else { skuNote.style.display = 'none'; }
       }
+      if (expiresNote) {
+        if (v.expires) { expiresNote.textContent = 'Best before: ' + v.expires; expiresNote.style.display = ''; }
+        else { expiresNote.style.display = 'none'; }
+      }
       if (mainImg && v.image) mainImg.src = v.image;
+      var listVariant = document.querySelector('[data-list-variant]');
+      var listSave = document.querySelector('[data-list-save]');
+      if (listVariant) listVariant.value = v.id;
+      if (listSave && listSave.getAttribute('action') === '#') {
+        var listSel = listSave.querySelector('[data-list-select]');
+        if (listSel && listSel.value) listSave.setAttribute('action', '/account/lists/' + listSel.value + '/items');
+      }
       if (addBtn) {
         addBtn.dataset.variantId = v.id;
         addBtn.dataset.price = v.selling;
@@ -225,6 +237,15 @@
     root.querySelectorAll('select[data-group-select]').forEach(function (s) {
       s.addEventListener('change', function () { paint(findVariant(selected())); });
     });
+
+    var listSaveOnce = document.querySelector('[data-list-save] [data-list-select]');
+    var listSaveForm = document.querySelector('[data-list-save]');
+    if (listSaveOnce && listSaveForm && !listSaveForm._egfBound) {
+      listSaveForm._egfBound = true;
+      listSaveOnce.addEventListener('change', function () {
+        listSaveForm.setAttribute('action', '/account/lists/' + listSaveOnce.value + '/items');
+      });
+    }
 
     paint(findVariant(selected()) || variants.filter(function (v) { return v.is_default; })[0] || variants[0]);
   }

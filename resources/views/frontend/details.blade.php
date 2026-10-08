@@ -16,6 +16,7 @@
             'in_stock' => $v['in_stock'],
             'is_default' => $v['is_default'],
             'image' => $v['image'],
+            'expires' => $v['expires'] ?? null,
             'values' => $pairs->mapWithKeys(fn ($x) => [$x['group'] => $x['value']])->all(),
         ];
     })->values();
@@ -117,6 +118,7 @@
                     @endif
                     <p class="text-muted" style="font-size:13px;margin-top:0.35rem;" data-pack-note>{{ $defaultVariant['pack'] }} · Price includes all taxes</p>
                     @if ($defaultVariant['sku'])<p class="text-muted" style="font-size:13px;margin-top:0.15rem;" data-sku-note>SKU: {{ $defaultVariant['sku'] }}</p>@endif
+                    @if ($defaultVariant['expires'])<p class="text-muted" style="font-size:13px;margin-top:0.15rem;" data-expires-note>Best before: {{ $defaultVariant['expires'] }}</p>@endif
                 </div>
 
                 <p class="text-muted" data-stock-note style="display:none;font-size:14px;">Currently out of stock — check back soon.</p>
@@ -169,6 +171,24 @@
                 </div>
 
                 @include('frontend.partials.notify-me', ['product' => $product, 'defaultVariant' => $defaultVariant])
+
+                @auth
+                    @if ($myLists->isNotEmpty())
+                        <form method="POST" action="#" data-list-save class="notify-box is-subtle">
+                            @csrf
+                            <strong>Save to a list</strong>
+                            <div style="display:flex;gap:.5rem;margin-top:.5rem;">
+                                <select name="list_id" data-list-select aria-label="Choose list" style="flex:1;border:1px solid var(--border);border-radius:var(--radius);padding:.5rem .75rem;">
+                                    @foreach ($myLists as $l)
+                                        <option value="{{ $l->id }}">{{ $l->name }}</option>
+                                    @endforeach
+                                </select>
+                                <input type="hidden" name="variant_id" value="{{ $defaultVariant['id'] ?? '' }}" data-list-variant>
+                                <button type="submit" class="btn btn-ghost btn-sm">Save</button>
+                            </div>
+                        </form>
+                    @endif
+                @endauth
 
                 @if ($product->description)
                     <div style="margin-top:1.5rem;">{!! $product->description !!}</div>

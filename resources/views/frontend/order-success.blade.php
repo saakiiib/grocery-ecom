@@ -12,7 +12,7 @@
     <div class="container" style="padding-bottom:4rem;max-width:760px;">
         <div class="auth-card" style="margin-bottom:1.5rem;">
             <h2 style="font-size:1.25rem;margin-bottom:1rem;">When will it arrive?</h2>
-            <p style="font-size:1.05rem;"><strong>{{ $order->delivery_date ? $order->delivery_date->format('l j F') : '—' }}</strong> · {{ $order->delivery_slot_label }}</p>
+            <p style="font-size:1.05rem;">{{ ($order->fulfillment ?? 'delivery') === 'pickup' ? 'Pickup' : 'Arriving' }} <strong>{{ $order->delivery_date ? $order->delivery_date->format('l j F') : '—' }}</strong> · {{ $order->delivery_slot_label }}</p>
             <p class="text-muted">Delivering to {{ $order->address }}, {{ $order->city }} {{ $order->postcode }} · {{ $order->phone }}</p>
             @if ($order->notes)<p class="text-muted">Note: {{ $order->notes }}</p>@endif
         </div>

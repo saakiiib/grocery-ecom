@@ -34,7 +34,12 @@
                     <h2 style="font-size:1.25rem;">{{ $order->number }}</h2>
                     <span class="status-pill" @if ($st) style="background:{{ $st->color }}22;color:{{ $st->color }};border:1px solid {{ $st->color }}55;" @endif>{{ $st?->name ?? ucfirst($order->status_slug) }}</span>
                 </div>
-                <p class="text-muted">Arriving <strong>{{ $order->delivery_date ? $order->delivery_date->format('l j F') : '—' }}</strong> · {{ $order->delivery_slot_label }}</p>
+                <p class="text-muted">{{ ($order->fulfillment ?? 'delivery') === 'pickup' ? 'Pickup' : 'Arriving' }} <strong>{{ $order->delivery_date ? $order->delivery_date->format('l j F') : '—' }}</strong> · {{ $order->delivery_slot_label }}</p>
+                @if (($order->fulfillment ?? 'delivery') === 'pickup')
+                    <p class="text-muted">Click &amp; Collect — we'll email you when it's ready to pick up.</p>
+                @elseif ($order->driver_name)
+                    <p class="text-muted">Your driver: <strong>{{ $order->driver_name }}</strong></p>
+                @endif
                 <p class="text-muted">{{ $order->itemCount() }} item{{ $order->itemCount() === 1 ? '' : 's' }} · £{{ number_format($order->total, 2) }} · {{ $order->paymentLabel() }}</p>
             </div>
 

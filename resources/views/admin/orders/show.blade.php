@@ -19,6 +19,7 @@
                         <a href="{{ route('orders.invoicePdf', $order->id) }}" class="btn btn-soft-secondary btn-sm ms-1">PDF</a>
                     </div>
                     <div class="card-body">
+                        @php $editable = ! in_array($order->status_slug, ['delivered', 'cancelled'], true); @endphp
                         <div class="table-responsive">
                             <table class="table table-bordered">
                                 <thead>
@@ -29,12 +30,25 @@
                                         <tr @if ($item->status !== 'ok') class="table-light" @endif>
                                             <td>{{ $item->product_name }}<br><small class="text-muted">{{ $item->variant_sku }}</small>@if ($item->promo_label)<br><span class="badge bg-success">{{ $item->promo_label }}{{ $item->free_qty > 0 ? ' · '.$item->free_qty.' free' : '' }}</span>@endif</td>
                                             <td>{{ $item->pack_label }}</td>
-                                            <td>£{{ number_format($item->unit_price, 2) }}</td>
-                                            <td>{{ $item->qty }}</td>
+                                            @if ($editable)
+                                                <td>
+                                                    <input type="hidden" form="lines-form" name="items[{{ $loop->index }}][id]" value="{{ $item->id }}">
+                                                    <input type="number" form="lines-form" name="items[{{ $loop->index }}][unit_price]" class="form-control form-control-sm" style="width:90px;" required step="0.01" min="0" max="999999" value="{{ number_format($item->unit_price, 2, '.', '') }}">
+                                                </td>
+                                                <td><input type="number" form="lines-form" name="items[{{ $loop->index }}][qty]" class="form-control form-control-sm" style="width:70px;" required min="0" max="99" value="{{ $item->qty }}" title="0 removes the line"></td>
+                                            @else
+                                                <td>£{{ number_format($item->unit_price, 2) }}</td>
+                                                <td>{{ $item->qty }}</td>
+                                            @endif
                                             <td class="text-end">£{{ number_format($item->line_total, 2) }}</td>
                                             <td class="text-nowrap">
                                                 @if ($item->status === 'ok')
-                                                    @if (! in_array($order->status_slug, ['delivered', 'cancelled'], true))
+                                                    @if ($editable)
+                                                        <form method="POST" action="{{ route('orders.items.delete', [$order->id, $item->id]) }}" class="d-inline" onsubmit="return confirm('Remove {{ $item->product_name }} from this order? Totals recalculate.');">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            <button class="btn btn-soft-danger btn-sm">Remove</button>
+                                                        </form>
                                                         <form method="POST" action="{{ route('orders.items.unavailable', [$order->id, $item->id]) }}" class="d-inline" onsubmit="return confirm('Mark {{ $item->product_name }} unavailable? Its value goes back to the shopper.');">
                                                             @csrf
                                                             <button class="btn btn-soft-warning btn-sm">Unavailable</button>
@@ -58,9 +72,68 @@
                                     @if ($order->vat_amount > 0)<tr><th colspan="4" class="fw-normal text-muted">Includes VAT @ {{ number_format($order->vat_percent, 2) }}%</th><th class="text-end fw-normal text-muted">£{{ number_format($order->vat_amount, 2) }}</th></tr>@endif
                                     @if ($order->refunded_amount > 0)<tr><th colspan="5">Refunded</th><th class="text-end">−£{{ number_format($order->refunded_amount, 2) }}</th></tr>@endif
                                     <tr><th colspan="5">Total</th><th class="text-end">£{{ number_format($order->total, 2) }}</th></tr>
+                                    @if ($order->amount_paid > 0)<tr><th colspan="5" class="fw-normal text-muted">Paid to date</th><th class="text-end fw-normal text-muted">£{{ number_format($order->amount_paid, 2) }}</th></tr>@endif
                                 </tfoot>
                             </table>
                         </div>
+                        @if ($editable)
+                            <form method="POST" action="{{ route('orders.items.save', $order->id) }}" id="lines-form" class="d-none">@csrf</form>
+                            <div class="d-flex gap-2 align-items-center mt-2">
+                                <button type="submit" form="lines-form" class="btn btn-primary btn-sm">Save all lines</button>
+                                <small class="text-muted">Qty 0 removes a line. Unit prices are £ — totals, delivery and VAT recalculate on save.</small>
+                            </div>
+
+                            <div class="card mt-3">
+                                <div class="card-header"><h6 class="card-title mb-0">Add a pack</h6></div>
+                                <div class="card-body">
+                                    <form method="POST" action="{{ route('orders.items.store', $order->id) }}" class="row g-2 align-items-end" id="add-item-form">
+                                        @csrf
+                                        <div class="col-md-5">
+                                            <label class="form-label">Product</label>
+                                            <select class="form-control" id="add-product" required>
+                                                <option value="">Choose…</option>
+                                                @foreach ($products as $p)
+                                                    <option value="{{ $p->id }}">{{ $p->name }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Pack</label>
+                                            <select name="variant_id" class="form-control" id="add-variant" required>
+                                                <option value="">Pick a product first…</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label">Qty</label>
+                                            <input type="number" name="qty" class="form-control" required min="1" max="99" value="1">
+                                        </div>
+                                        <div class="col-md-1">
+                                            <button type="submit" class="btn btn-primary w-100">Add</button>
+                                        </div>
+                                    </form>
+                                    <script>
+                                        (function () {
+                                            var product = document.getElementById('add-product');
+                                            var variant = document.getElementById('add-variant');
+                                            if (!product || !variant) return;
+                                            product.addEventListener('change', function () {
+                                                variant.innerHTML = '<option value="">Loading…</option>';
+                                                if (!product.value) { variant.innerHTML = '<option value="">Pick a product first…</option>'; return; }
+                                                fetch('/admin/products/' + product.value + '/variants', { headers: { 'Accept': 'application/json' } })
+                                                    .then(function (res) { return res.json(); })
+                                                    .then(function (rows) {
+                                                        variant.innerHTML = rows.map(function (v) {
+                                                            var label = (v.combination || v.sku || ('Pack #' + v.id)) + ' · £' + Number(v.mrp).toFixed(2) + (v.in_stock && v.status ? '' : ' (out)');
+                                                            return '<option value="' + v.id + '"' + (v.in_stock && v.status ? '' : ' disabled') + '>' + label + '</option>';
+                                                        }).join('') || '<option value="">No packs</option>';
+                                                    })
+                                                    .catch(function () { variant.innerHTML = '<option value="">Could not load</option>'; });
+                                            });
+                                        })();
+                                    </script>
+                                </div>
+                            </div>
+                        @endif
 
                         <div class="row mt-3">
                             <div class="col-md-4">
@@ -68,6 +141,7 @@
                                 <p class="mb-1"><strong>{{ $order->name }}</strong> · {{ $order->phone }}</p>
                                 <p class="mb-1">{{ $order->address }}, {{ $order->city }} {{ $order->postcode }}</p>
                                 <p class="mb-1">Slot: <strong>{{ $order->delivery_date ? $order->delivery_date->format('D j M Y') : '—' }}</strong> · {{ $order->delivery_slot_label }}</p>
+                                <p class="mb-1">Fulfilment: <strong>{{ ($order->fulfillment ?? 'delivery') === 'pickup' ? 'Click & Collect' : 'Home delivery' }}</strong>@if ($order->driver_name) · Driver: <strong>{{ $order->driver_name }}</strong>@endif</p>
                                 @if ($order->notes)<p class="mb-1 text-muted">Note: {{ $order->notes }}</p>@endif
                                 <p class="mb-1">If unavailable: <strong>{{ $order->substitutionLabel() }}</strong></p>
                                 @if ($order->user)<p class="mb-0 text-muted">Account: {{ $order->user->name }} ({{ $order->user->email }})</p>@endif
@@ -127,6 +201,19 @@
                             <button type="submit" class="btn btn-primary w-100">Update status</button>
                         </form>
                         <p class="text-muted mt-2 mb-0"><small>Every change is recorded in the history with who made it and when. Statuses themselves are managed under Settings → Order Statuses.</small></p>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header"><h4 class="card-title mb-0">Driver</h4></div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ route('orders.assignDriver', $order->id) }}">
+                            @csrf
+                            <div class="mb-3">
+                                <label class="form-label">Driver name <small class="text-muted">(shown on tracking)</small></label>
+                                <input type="text" name="driver_name" class="form-control" maxlength="100" value="{{ old('driver_name', $order->driver_name) }}" placeholder="e.g. Kamal">
+                            </div>
+                            <button type="submit" class="btn btn-secondary w-100">Save driver</button>
+                        </form>
                     </div>
                 </div>
                 @php $refundable = $order->refundableAmount(); @endphp

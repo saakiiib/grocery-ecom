@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BagSnapshot;
 use App\Models\BogoOffer;
 use App\Models\BundleOffer;
 use App\Models\FlashSale;
@@ -191,6 +192,28 @@ class BagController extends Controller
         return ['removed' => $removed, 'unavailable' => $unavailable];
     }
 
+    /** Remember signed-in shoppers' bags so we can nudge them back later. */
+    protected static function snapshot(): void
+    {
+        if (! auth()->check()) {
+            return;
+        }
+        try {
+            $detailed = static::detailed();
+            BagSnapshot::updateOrCreate(
+                ['user_id' => auth()->id()],
+                [
+                    'lines' => collect($detailed['lines'])->map(fn ($l) => [
+                        'variant_id' => $l['variant_id'], 'qty' => $l['qty'], 'name' => $l['name'],
+                    ])->values()->all(),
+                    'subtotal' => $detailed['subtotal'],
+                ]
+            );
+        } catch (\Throwable $e) {
+            // Snapshots never break the bag.
+        }
+    }
+
     public function add(Request $request): JsonResponse
     {
         $data = $request->validate([
@@ -207,6 +230,7 @@ class BagController extends Controller
         $bag = static::bag();
         $bag[$variant->id] = min(($bag[$variant->id] ?? 0) + ($data['qty'] ?? 1), 99);
         session()->put(self::SESSION_KEY, $bag);
+        static::snapshot();
 
         return response()->json(array_merge(['message' => 'Added to your bag.'], static::detailed()));
     }
@@ -232,6 +256,7 @@ class BagController extends Controller
 
         session()->put(self::SESSION_KEY, $bag);
         static::reconcile();
+        static::snapshot();
 
         return response()->json(static::detailed());
     }
@@ -243,6 +268,7 @@ class BagController extends Controller
         $bag = static::bag();
         unset($bag[$data['variant_id']]);
         session()->put(self::SESSION_KEY, $bag);
+        static::snapshot();
 
         return response()->json(static::detailed());
     }
