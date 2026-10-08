@@ -42,11 +42,12 @@
 
             <form id="egf-checkout-form" class="cart-layout" style="margin:0;align-items:start;">
                 @csrf
+                <div style="min-width:0;">
                 <div class="auth-card" style="margin:0 0 1.5rem;">
                     <h2 style="font-size:1.25rem;margin-bottom:1rem;"><span class="co-step">0</span>Delivery or pickup?</h2>
-                    <div style="display:flex;gap:1.25rem;flex-wrap:wrap;">
-                        <label style="display:flex;gap:.45rem;align-items:center;cursor:pointer;"><input type="radio" name="fulfillment" value="delivery" checked> Home delivery</label>
-                        <label style="display:flex;gap:.45rem;align-items:center;cursor:pointer;"><input type="radio" name="fulfillment" value="pickup"> Click &amp; Collect <span class="promo-tag">Free</span></label>
+                    <div style="display:flex;gap:.6rem;flex-wrap:wrap;">
+                        <label class="pick-row is-inline"><input type="radio" name="fulfillment" value="delivery" checked> <span class="pick-box"></span> <span>Home delivery</span></label>
+                        <label class="pick-row is-inline"><input type="radio" name="fulfillment" value="pickup"> <span class="pick-box"></span> <span>Click &amp; Collect <span class="promo-tag">Free</span></span></label>
                     </div>
                     <p class="text-muted" id="co-pickup-note" style="display:none;font-size:13px;margin:.6rem 0 0;">Pick up from <strong>{{ trim(($company->address1 ?? '').' '.($company->address2 ?? '').' '.($company->address3 ?? '')) ?: 'our store' }}</strong> — we'll email you when it's ready. No delivery fee.</p>
                 </div>
@@ -186,6 +187,7 @@
                         Free delivery over £{{ number_format($freeOver, 2) }} · minimum order £{{ number_format($minOrder, 2) }}.
                     </p>
                 </div>
+                </div>
 
                 <aside class="cart-summary">
                     @include('frontend.partials.delivery-progress', ['subtotal' => $bag['subtotal'] ?? 0, 'minOrder' => $minOrder, 'freeOver' => $freeOver])
@@ -271,7 +273,7 @@
                     <div id="co-paypal-buttons" style="display:none;margin-bottom:1rem;"></div>
 
                     <div id="co-error" style="display:none;color:#B91C1C;font-size:14px;margin-bottom:1rem;"></div>
-                    <label class="privacy-check pick-row">
+                    <label class="privacy-check pick-row" style="margin-bottom:1.25rem;">
                         <input type="checkbox" id="co-privacy">
                         <span class="pick-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
                         <span>I agree to the <a @spa href="{{ route('privacy') }}">privacy policy</a> and <a @spa href="{{ route('terms') }}">terms of service</a></span>
@@ -397,10 +399,14 @@
         }
 
         function money(n) { return '£' + Number(n).toFixed(2); }
+        function toast(msg) {
+            if (window.EGF && window.EGF.showToast) window.EGF.showToast(msg);
+        }
         function showError(msg) {
             errBox.textContent = msg;
             errBox.style.display = '';
             errBox.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            toast(msg);
         }
         function slotFee() {
             var opt = slotSel.options[slotSel.selectedIndex];
@@ -469,6 +475,7 @@
             couponMsg.textContent = text;
             couponMsg.style.display = text ? '' : 'none';
             couponMsg.style.color = ok ? '#1A2E22' : '#B91C1C';
+            if (text) toast(text);
         }
         function clearCoupon() {
             couponDiscount = 0;
@@ -561,7 +568,8 @@
                 delivery_slot_id: slotSel.value,
                 payment_method: method(),
                 points_redeem: pointsInput ? (parseInt(pointsInput.value, 10) || 0) : 0,
-                coupon_code: couponHidden ? couponHidden.value : ''
+                coupon_code: couponHidden ? couponHidden.value : '',
+                privacy: (document.getElementById('co-privacy') || {}).checked ? 1 : 0
             };
         }
         function confirmAndGo(orderNumber, pm) {
