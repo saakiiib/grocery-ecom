@@ -25,27 +25,44 @@ class AccountController extends Controller
 
     public function index()
     {
-        $user = auth()->user();
-        $user->ensureAddressBook();
-        $orders = Order::with(['items', 'status'])
-            ->where('user_id', $user->id)
-            ->orderByDesc('id')
-            ->paginate(10);
-        $pointsBalance = UserPoint::balance($user->id);
-        $pointsHistory = UserPoint::with('order')
-            ->where('user_id', $user->id)
-            ->orderByDesc('id')
-            ->take(10)
-            ->get();
-        $addresses = $user->addresses()->get();
-        $front = app(FrontendController::class);
-        $maps = [BundleOffer::coverMap(), FlashSale::liveMap(), BogoOffer::liveAll()];
-        $buyAgain = BuyAgain::productsFor($user->id)->map(fn ($p) => $front->productCard($p, ...$maps))->values();
-        $lists = ShoppingList::with(['items.variant.product'])
-            ->where('user_id', $user->id)->orderByDesc('id')->get();
-        $repeats = RepeatSchedule::where('user_id', $user->id)->orderByDesc('id')->get();
+        $defaultTab = 'orders';
 
-        return spa('frontend.account', compact('user', 'orders', 'pointsBalance', 'pointsHistory', 'addresses', 'buyAgain', 'lists', 'repeats'));
+        return $this->portal($defaultTab);
+    }
+
+    public function loyalty()
+    {
+        $defaultTab = 'loyalty';
+
+        return $this->portal($defaultTab);
+    }
+
+    public function addresses()
+    {
+        $defaultTab = 'addresses';
+
+        return $this->portal($defaultTab);
+    }
+
+    public function details()
+    {
+        $defaultTab = 'details';
+
+        return $this->portal($defaultTab);
+    }
+
+    public function passwordForm()
+    {
+        $defaultTab = 'password';
+
+        return $this->portal($defaultTab);
+    }
+
+    public function lists()
+    {
+        $defaultTab = 'lists';
+
+        return $this->portal($defaultTab);
     }
 
     public function show(string $number)
@@ -146,7 +163,7 @@ class AccountController extends Controller
 
         $user->update($data);
 
-        return redirect()->to(route('account').'#details')->with('status', 'Your details were saved.');
+        return redirect()->route('account.details')->with('status', 'Your details were saved.');
     }
 
     public function password(Request $request): RedirectResponse
@@ -161,7 +178,7 @@ class AccountController extends Controller
 
         auth()->user()->update(['password' => Hash::make($data['password'])]);
 
-        return redirect()->to(route('account').'#password')->with('status', 'Your password was changed.');
+        return redirect()->route('account.password.form')->with('status', 'Your password was changed.');
     }
 
     /** Start (or retry) online payment for an unpaid order. Returns SDK credentials. */
@@ -240,6 +257,31 @@ class AccountController extends Controller
         $order->changeStatus('cancelled', auth()->id(), 'Cancelled by the shopper.');
 
         return redirect()->route('account')->with('status', $order->number.' was cancelled.');
+    }
+
+    private function portal(string $defaultTab)
+    {
+        $user = auth()->user();
+        $user->ensureAddressBook();
+        $orders = Order::with(['items', 'status'])
+            ->where('user_id', $user->id)
+            ->orderByDesc('id')
+            ->paginate(10);
+        $pointsBalance = UserPoint::balance($user->id);
+        $pointsHistory = UserPoint::with('order')
+            ->where('user_id', $user->id)
+            ->orderByDesc('id')
+            ->take(10)
+            ->get();
+        $addresses = $user->addresses()->get();
+        $front = app(FrontendController::class);
+        $maps = [BundleOffer::coverMap(), FlashSale::liveMap(), BogoOffer::liveAll()];
+        $buyAgain = BuyAgain::productsFor($user->id)->map(fn ($p) => $front->productCard($p, ...$maps))->values();
+        $lists = ShoppingList::with(['items.variant.product'])
+            ->where('user_id', $user->id)->orderByDesc('id')->get();
+        $repeats = RepeatSchedule::where('user_id', $user->id)->orderByDesc('id')->get();
+
+        return spa('frontend.account', compact('user', 'orders', 'pointsBalance', 'pointsHistory', 'addresses', 'buyAgain', 'lists', 'repeats', 'defaultTab'));
     }
 
     private function ownOrder(string $number): Order

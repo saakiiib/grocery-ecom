@@ -482,7 +482,7 @@ test('account shows orders, reorders into the bag, and saves profile', function 
     // Profile.
     $this->actingAs($user)->post(route('account.profile'), [
         'name' => 'Renamed', 'phone' => '07999999999', 'city' => 'York',
-    ])->assertRedirect(route('account').'#details');
+    ])->assertRedirect(route('account.details'));
     expect($user->refresh()->name)->toBe('Renamed');
 
     // Guests are sent to sign in.
@@ -681,7 +681,7 @@ test('shoppers can change their password', function () {
         'current_password' => 'password',
         'password' => '654321',
         'password_confirmation' => '654321',
-    ])->assertRedirect(route('account').'#password')->assertSessionHas('status');
+    ])->assertRedirect(route('account.password.form'))->assertSessionHas('status');
 
     auth()->logout();
     $this->post(route('login'), ['login' => 'shopper@example.com', 'password' => '654321'])

@@ -15,7 +15,7 @@
             <div class="auth-card" style="margin-bottom:1.5rem;text-align:center;">
                 <p class="text-muted" style="font-size:14px;">Your balance</p>
                 <p style="font-size:2.25rem;font-weight:700;margin:0.25rem 0;">{{ $balance }} <span class="text-muted" style="font-size:1rem;font-weight:400;">points · worth £{{ number_format($balance * $rates['value'], 2) }}</span></p>
-                <a @spa href="{{ route('account') }}" class="btn btn-dark btn-sm" style="margin-top:0.5rem;">View my points</a>
+                <a @spa href="{{ route('account.loyalty') }}" class="btn btn-dark btn-sm" style="margin-top:0.5rem;">View my points</a>
             </div>
         @endauth
         <div class="auth-card" style="margin-bottom:1.5rem;">
@@ -32,7 +32,7 @@
         </div>
         @guest
             <div class="text-center">
-                <a @spa href="{{ route('register') }}" class="btn btn-dark">Create an account to earn</a>
+                <a href="{{ route('register') }}" class="btn btn-dark">Create an account to earn</a>
                 <p class="text-muted" style="font-size:14px;margin-top:0.75rem;">Guests can shop without an account, but points need one.</p>
             </div>
         @endguest

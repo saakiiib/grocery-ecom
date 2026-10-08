@@ -14,16 +14,6 @@ class ShoppingListController extends Controller
         $this->middleware('auth');
     }
 
-    public function index()
-    {
-        $lists = ShoppingList::with(['items.variant.product'])
-            ->where('user_id', auth()->id())
-            ->orderByDesc('id')
-            ->get();
-
-        return spa('frontend.lists', compact('lists'));
-    }
-
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate(['name' => 'required|string|max:100']);

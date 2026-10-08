@@ -302,7 +302,7 @@
                     </div>
                 </form>
             @else
-                <p class="review-notice"><a @spa href="{{ route('login') }}">Sign in</a> to write a review.</p>
+                <p class="review-notice"><a href="{{ route('login') }}">Sign in</a> to write a review.</p>
             @endauth
         </section>
 

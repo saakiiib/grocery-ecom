@@ -210,6 +210,34 @@ test('account portal renders sidebar tabs and panels', function () {
         ->toContain('egfPortalInit');
 });
 
+test('account portal sections live on normal routes', function () {
+    $user = User::create([
+        'name' => 'Portal Tabs', 'email' => 'portal-tabs@example.com',
+        'password' => bcrypt('password'), 'user_type' => 0,
+    ]);
+
+    $routes = [
+        'account' => 'orders',
+        'lists.index' => 'lists',
+        'account.loyalty' => 'loyalty',
+        'account.addresses' => 'addresses',
+        'account.details' => 'details',
+        'account.password.form' => 'password',
+    ];
+
+    foreach ($routes as $name => $tab) {
+        $html = $this->actingAs($user)->get(route($name))->assertOk()->getContent();
+        expect($html)->toContain('data-portal-panel="'.$tab.'"')
+            ->toContain('href="'.route($name).'"');
+    }
+
+    // Guests are sent to sign in on every section.
+    auth()->logout();
+    foreach (array_keys($routes) as $name) {
+        $this->get(route($name))->assertRedirect(route('login'));
+    }
+});
+
 test('shoppers can favourite, list and move favourites to the bag', function () {
     $product = seedGrocery();
     $variant = $product->variants()->firstOrFail();

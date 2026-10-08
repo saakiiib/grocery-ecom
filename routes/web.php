@@ -64,11 +64,15 @@ Route::post('/checkout/cancel', [CheckoutController::class, 'cancel'])->name('ch
 Route::get('/order/success/{number}', [CheckoutController::class, 'success'])->name('order.success');
 Route::get('/checkout', [FrontendController::class, 'checkout'])->name('checkout');
 Route::get('/account', [AccountController::class, 'index'])->name('account');
+Route::get('/account/loyalty', [AccountController::class, 'loyalty'])->name('account.loyalty');
+Route::get('/account/addresses', [AccountController::class, 'addresses'])->name('account.addresses');
+Route::get('/account/details', [AccountController::class, 'details'])->name('account.details');
+Route::get('/account/password', [AccountController::class, 'passwordForm'])->name('account.password.form');
+Route::get('/account/lists', [AccountController::class, 'lists'])->name('lists.index');
 Route::get('/account/orders/{number}', [AccountController::class, 'show'])->name('account.order');
 Route::post('/account/orders/{number}/reorder', [AccountController::class, 'reorder'])->name('account.reorder');
 Route::post('/account/orders/{number}/repeat-weekly', [AccountController::class, 'repeatWeekly'])->name('account.repeat');
 Route::post('/account/repeats/{id}/cancel', [AccountController::class, 'cancelRepeat'])->name('account.repeat.cancel');
-Route::get('/account/lists', [ShoppingListController::class, 'index'])->name('lists.index');
 Route::post('/account/lists', [ShoppingListController::class, 'store'])->name('lists.store');
 Route::delete('/account/lists/{id}', [ShoppingListController::class, 'destroy'])->name('lists.delete');
 Route::post('/account/lists/{id}/items', [ShoppingListController::class, 'addItem'])->name('lists.items.store');

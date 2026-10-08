@@ -22,7 +22,7 @@ class AddressController extends Controller
         $address = auth()->user()->addresses()->create($data);
         $this->applyDefaults($address, $request->boolean('is_default_delivery'), $request->boolean('is_default_billing'), true);
 
-        return redirect()->to(route('account').'#addresses')->with('status', 'Address saved to your book.');
+        return redirect()->route('account.addresses')->with('status', 'Address saved to your book.');
     }
 
     /** Update one of the shopper's own entries. */
@@ -32,7 +32,7 @@ class AddressController extends Controller
         $address->update($this->validated($request));
         $this->applyDefaults($address, $request->boolean('is_default_delivery'), $request->boolean('is_default_billing'), false);
 
-        return redirect()->to(route('account').'#addresses')->with('status', 'Address updated.');
+        return redirect()->route('account.addresses')->with('status', 'Address updated.');
     }
 
     /** Remove one of the shopper's own entries (defaults roll to the oldest left). */
@@ -53,7 +53,7 @@ class AddressController extends Controller
             }
         }
 
-        return redirect()->to(route('account').'#addresses')->with('status', 'Address removed.');
+        return redirect()->route('account.addresses')->with('status', 'Address removed.');
     }
 
     /** Mark one entry as the default delivery and/or billing address. */
@@ -65,7 +65,7 @@ class AddressController extends Controller
         auth()->user()->addresses()->update(['is_default_'.$data['type'] => false]);
         $address->update(['is_default_'.$data['type'] => true]);
 
-        return redirect()->to(route('account').'#addresses')->with('status', 'Default address updated.');
+        return redirect()->route('account.addresses')->with('status', 'Default address updated.');
     }
 
     private function ownAddress(int $id): Address
@@ -88,7 +88,7 @@ class AddressController extends Controller
         ]);
 
         if ($validator->fails()) {
-            redirect()->to(route('account').'#addresses')->withErrors($validator)->withInput()->throwResponse();
+            redirect()->route('account.addresses')->withErrors($validator)->withInput()->throwResponse();
         }
 
         return $validator->validated();
