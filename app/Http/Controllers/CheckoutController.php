@@ -568,7 +568,7 @@ class CheckoutController extends Controller
                 'currency' => 'gbp',
                 'automatic_payment_methods[enabled]' => 'true',
                 'metadata[order_number]' => $order->number,
-                'description' => 'Evergreen Foods order '.$order->number,
+                'description' => 'Alam Mini Market order '.$order->number,
             ]);
 
         if ($res->failed()) {
@@ -666,7 +666,7 @@ class CheckoutController extends Controller
                 'intent' => 'CAPTURE',
                 'purchase_units' => [[
                     'reference_id' => $order->number,
-                    'description' => 'Evergreen Foods order '.$order->number,
+                    'description' => 'Alam Mini Market order '.$order->number,
                     'amount' => [
                         'currency_code' => 'GBP',
                         'value' => number_format($order->total, 2, '.', ''),

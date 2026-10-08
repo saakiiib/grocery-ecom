@@ -85,7 +85,7 @@
         <section class="section">
             <div class="container">
                 <div class="section-header">
-                    <p class="section-label">The Evergreen Market</p>
+                    <p class="section-label">The Alam Market</p>
                     <h2 class="section-title">Shop by category</h2>
                     <p class="section-desc">From the field to your table — explore what we're picking today.</p>
                 </div>
@@ -312,7 +312,7 @@
                     <div class="store-card">
                         <div class="store-head">
                             <span class="store-eyebrow">Visit the store</span>
-                            <strong>{{ $company->company_name ?? 'Evergreen Foods' }}</strong>
+                            <strong>{{ $company->company_name ?? 'Alam Mini Market' }}</strong>
                         </div>
                         @if ($company->address1)
                             <div class="store-row">

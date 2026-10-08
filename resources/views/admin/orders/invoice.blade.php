@@ -37,7 +37,7 @@
         <tr>
             <td>
                 @if ($logoDataUri)<img src="{{ $logoDataUri }}" style="height:48px;" alt="">@endif
-                <div class="brand">{{ $company->company_name ?: 'Evergreen Foods' }}</div>
+                <div class="brand">{{ $company->company_name ?: 'Alam Mini Market' }}</div>
                 <div class="muted">
                     @if ($company->address1){{ $company->address1 }}@endif
                     @if ($company->address2)<br>{{ $company->address2 }}@endif
@@ -108,7 +108,7 @@
         <tr class="grand"><td>Order Total</td><td class="num">£{{ number_format($order->total, 2) }}</td></tr>
     </table>
     <div class="footer">
-        Thank you for shopping with {{ $company->company_name ?: 'Evergreen Foods' }}.
+        Thank you for shopping with {{ $company->company_name ?: 'Alam Mini Market' }}.
         @if ($company->phone1) Customer service: {{ $company->phone1 }}. @endif
         Prices include VAT where applicable.
     </div>

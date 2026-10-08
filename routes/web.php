@@ -37,7 +37,7 @@ Route::post('/register', [RegisterController::class, 'register'])->name('registe
 // Dashboard (must keep)
 Route::get('/dashboard', [HomeController::class, 'dashboard'])->name('dashboard');
 
-// Frontend Routes (Evergreen grocery theme)
+// Frontend Routes (Alam Mini Market grocery theme)
 Route::get('/', [FrontendController::class, 'index'])->name('home');
 Route::get('/about', [FrontendController::class, 'about'])->name('about');
 Route::get('/shop', [FrontendController::class, 'shop'])->name('shop');

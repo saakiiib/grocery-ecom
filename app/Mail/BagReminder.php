@@ -17,7 +17,7 @@ class BagReminder extends Mailable
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: 'Your bag is waiting — Evergreen Foods');
+        return new Envelope(subject: 'Your bag is waiting — Alam Mini Market');
     }
 
     public function content(): Content

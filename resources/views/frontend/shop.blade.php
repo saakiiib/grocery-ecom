@@ -58,7 +58,7 @@
 <main>
     <div class="page-hero">
         <div class="container">
-            <p class="section-label">The Evergreen Market</p>
+            <p class="section-label">The Alam Market</p>
             <h1>{{ $onlyOffers && $activeCategory === 'All' ? 'Offers' : ($activeCategory === 'All' ? 'All groceries' : $activeCategory) }}</h1>
             <p>Good things for the everyday table.</p>
         </div>

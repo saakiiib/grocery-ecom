@@ -2,7 +2,7 @@
     $logo = $company->company_logo
         ? asset('uploads/company/' . $company->company_logo)
         : null;
-    $brand = $company->company_name ?? 'Evergreen Foods';
+    $brand = $company->company_name ?? 'Alam Mini Market';
     $footCats = \App\Models\Category::where('status', true)->whereNull('parent_id')->orderBy('sort_order')->take(5)->get(['name', 'slug']);
     $socials = [
         ['facebook', $company->facebook, 'Facebook'],
@@ -86,6 +86,7 @@
         <div class="footer-bottom">
             <span>© {{ date('Y') }} {{ $brand }}. All rights reserved.</span>
             <span><x-icon name="shield-check" /> 100% Halal promise · Prices in GBP · Free delivery over £50</span>
+            <span class="footer-credit">Design &amp; Developed by <a href="https://mentosoftware.co.uk/" target="_blank" rel="noopener">MentoSoftware</a></span>
         </div>
     </div>
 </footer>

@@ -24,7 +24,7 @@ class OrderStatusUpdated extends Mailable
             default => 'Order '.$this->order->number.' update',
         };
 
-        return new Envelope(subject: $subject.' — Evergreen Foods');
+        return new Envelope(subject: $subject.' — Alam Mini Market');
     }
 
     public function content(): Content

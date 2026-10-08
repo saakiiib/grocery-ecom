@@ -22,7 +22,7 @@ class StockAlertMail extends Mailable
             ? 'Price drop: '.$this->alert->product->name.' now £'.number_format($this->price, 2)
             : 'Back in stock: '.$this->alert->product->name;
 
-        return new Envelope(subject: $subject.' — Evergreen Foods');
+        return new Envelope(subject: $subject.' — Alam Mini Market');
     }
 
     public function content(): Content

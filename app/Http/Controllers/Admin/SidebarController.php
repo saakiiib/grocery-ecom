@@ -133,13 +133,14 @@ class SidebarController
                 'route' => 'repeats.*',
                 'href' => route('repeats.index'),
             ],
-            [
-                'type' => 'item',
-                'icon' => 'ri-restaurant-line',
-                'label' => 'Recipes',
-                'route' => 'admin.recipes.*',
-                'href' => route('admin.recipes.index'),
-            ],
+            // Recipes hidden (kept, not deleted).
+            // [
+            //     'type' => 'item',
+            //     'icon' => 'ri-restaurant-line',
+            //     'label' => 'Recipes',
+            //     'route' => 'admin.recipes.*',
+            //     'href' => route('admin.recipes.index'),
+            // ],
             [
                 'type' => 'group',
                 'icon' => 'ri-settings-3-line',

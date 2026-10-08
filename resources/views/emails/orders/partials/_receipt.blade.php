@@ -47,4 +47,4 @@
     <tr><td><strong>Total{{ $order->isPaid() ? ' paid' : '' }}</strong> ({{ $order->paymentLabel() }})</td><td align="right"><strong>£{{ number_format($order->total, 2) }}</strong></td></tr>
 </table>
 <p style="font-size:14px;">Track it any time with your order number and checkout phone: <a href="{{ route('track') }}">Track my order</a></p>
-<p style="font-size:12px;color:#6B7280;">Evergreen Foods — fresh to your door.</p>
+<p style="font-size:12px;color:#6B7280;">Alam Mini Market — fresh to your door.</p>

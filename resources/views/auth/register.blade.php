@@ -7,7 +7,7 @@
         <div class="auth-split">
             @include('auth.side')
             <div class="auth-form">
-                <h1>Join Evergreen</h1>
+                <h1>Join Alam Mini Market</h1>
                 <p class="text-muted" style="margin-bottom:1.5rem;">Track orders, reorder favourites, check out faster.</p>
                 <form method="POST" action="{{ route('register.store') }}">
                     @csrf

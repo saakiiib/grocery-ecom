@@ -21,7 +21,7 @@ class OrderPlaced extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Order '.$this->order->number.' confirmed — Evergreen Foods',
+            subject: 'Order '.$this->order->number.' confirmed — Alam Mini Market',
         );
     }
 

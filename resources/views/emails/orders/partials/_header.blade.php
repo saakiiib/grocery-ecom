@@ -1,6 +1,6 @@
 @php
     $company = \App\Models\CompanyDetails::cached();
-    $brand = $company->company_name ?: config('app.name', 'Evergreen Foods');
+    $brand = $company->company_name ?: config('app.name', 'Alam Mini Market');
 @endphp
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#1A2E22;color:#ffffff;">
     <tr>

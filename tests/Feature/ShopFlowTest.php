@@ -426,7 +426,7 @@ test('shoppers register on the same users table and keep their bag', function ()
     shopFixtures();
     shopSetup();
 
-    $this->get(route('register'))->assertOk()->assertSee('Join Evergreen', false);
+    $this->get(route('register'))->assertOk()->assertSee('Join Alam Mini Market', false);
 
     $response = $this->post(route('register.store'), [
         'name' => 'New Shopper', 'email' => 'new@example.com',

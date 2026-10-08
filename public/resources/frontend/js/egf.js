@@ -1199,7 +1199,7 @@
       }
       bagPost(routes().newsletter || '/newsletter', { email: email, source: 'footer' })
         .then(function (data) {
-          if (msg) { msg.style.display = ''; msg.style.color = '#1A2E22'; msg.textContent = data.message || 'Subscribed.'; }
+          if (msg) { msg.style.display = ''; msg.style.color = '#0B7A3E'; msg.textContent = data.message || 'Subscribed.'; }
           if (input) input.value = '';
         })
         .catch(function (err) {
@@ -1234,7 +1234,7 @@
           product_variant_id: parseInt(box.getAttribute('data-variant'), 10) || null,
           type: box.getAttribute('data-type')
         }).then(function (data) {
-          if (msg) { msg.style.display = ''; msg.style.color = '#1A2E22'; msg.textContent = data.message || 'Watching.'; }
+          if (msg) { msg.style.display = ''; msg.style.color = '#0B7A3E'; msg.textContent = data.message || 'Watching.'; }
           if (input) input.value = '';
         }).catch(function (err) {
           if (msg) { msg.style.display = ''; msg.style.color = '#B91C1C'; msg.textContent = (err && err.message) || 'Could not save — try again.'; }

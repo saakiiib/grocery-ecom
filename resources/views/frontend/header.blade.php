@@ -2,7 +2,7 @@
     $logo = $company->company_logo
         ? asset('uploads/company/' . $company->company_logo)
         : null;
-    $brand = $company->company_name ?? 'Evergreen Foods';
+    $brand = $company->company_name ?? 'Alam Mini Market';
     $isActive = fn (...$routes) => request()->routeIs(...$routes) ? 'active' : '';
 @endphp
 @include('frontend.partials.announcement-bar')
@@ -48,7 +48,7 @@
             <a @spa href="{{ route('about') }}" class="{{ $isActive('about') }}">About Us</a>
             <a @spa href="{{ route('shop') }}" class="{{ $isActive('shop') && ! request()->boolean('only_offers') ? 'active' : '' }}">Shop</a>
             <a @spa href="{{ route('shop.offers') }}" class="{{ $isActive('shop') && request()->boolean('only_offers') ? 'active' : '' }}">Offers</a>
-            <a @spa href="{{ route('recipes.index') }}" class="{{ $isActive('recipes*') }}">Recipes</a>
+            {{-- Recipes hidden (kept, not deleted) --}}
             <a @spa href="{{ route('gallery') }}" class="{{ $isActive('gallery') }}">Gallery</a>
             <a @spa href="{{ route('contact') }}" class="{{ $isActive('contact') }}">Contact Us</a>
         </nav>
@@ -94,7 +94,7 @@
             <a @spa href="{{ route('about') }}">About Us</a>
             <a @spa href="{{ route('shop') }}">Shop</a>
             <a @spa href="{{ route('shop.offers') }}">Offers</a>
-            <a @spa href="{{ route('recipes.index') }}">Recipes</a>
+            {{-- Recipes hidden (kept, not deleted) --}}
             <a @spa href="{{ route('gallery') }}">Gallery</a>
             <a @spa href="{{ route('contact') }}">Contact Us</a>
             <a @spa href="{{ route('favourites') }}">Favourites</a>

@@ -188,14 +188,14 @@
 }
 
 .navbar-menu .navbar-nav .nav-link.active {
-    background: #1A2E22 !important;
+    background: #E01E26 !important;
     font-weight: 600 !important;
     color: #fff !important;
 }
 
 .navbar-menu .navbar-nav .nav-link:hover {
-    background: rgba(26,46,34,.08) !important;
-    color: #1A2E22 !important;
+    background: rgba(224,30,38,.08) !important;
+    color: #E01E26 !important;
 }
 
 /* Sidebar Submenu */
@@ -205,28 +205,28 @@
 }
 
 .navbar-menu .navbar-nav .nav-sm .nav-link.active {
-    background: rgba(26,46,34,.12) !important;
-    color: #1A2E22 !important;
+    background: rgba(224,30,38,.12) !important;
+    color: #E01E26 !important;
 }
 
 .navbar-menu .navbar-nav .nav-sm .nav-link:hover {
-    background: rgba(26,46,34,.06) !important;
-    color: #1A2E22 !important;
+    background: rgba(224,30,38,.06) !important;
+    color: #E01E26 !important;
 }
 
 .navbar-menu .navbar-nav .nav-sm .nav-link.active:before {
-    background-color: #1A2E22 !important;
+    background-color: #E01E26 !important;
     transform: translateY(-50%) scale(1.2) !important;
 }
 
 .navbar-menu .navbar-nav .nav-sm .nav-link:hover:before {
-    background-color: #243D2F !important;
+    background-color: #B9131B !important;
     transform: translateY(-50%) scale(1.1) !important;
 }
 
 /* === PREMIUM NAVBAR === */
 #page-topbar {
-    border-bottom: 2px solid #1A2E22 !important;
+    border-bottom: 2px solid #E01E26 !important;
 }
 
 .navbar-header .btn-topbar {
@@ -235,8 +235,8 @@
 }
 
 .navbar-header .btn-topbar:hover {
-    background-color: rgba(26,46,34,.08) !important;
-    color: #1A2E22 !important;
+    background-color: rgba(224,30,38,.08) !important;
+    color: #E01E26 !important;
     transform: scale(1.05);
 }
 
@@ -530,7 +530,7 @@ select option {
 
 .progress-bar {
     border-radius: 100px;
-    background: #1A2E22;
+    background: #E01E26;
     transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -926,17 +926,17 @@ a {
 /* Sidebar hover */
 [data-sidebar="dark"] .navbar-menu .navbar-nav .nav-link:hover,
 .navbar-menu .navbar-nav .nav-link:hover {
-    background: rgba(26,46,34,.08) !important;
-    color: #1A2E22 !important;
+    background: rgba(224,30,38,.08) !important;
+    color: #E01E26 !important;
 }
 
 /* Sidebar active */
 [data-sidebar="dark"] .navbar-menu .navbar-nav .nav-link.active,
 .navbar-menu .navbar-nav .nav-link.active {
-    background: #1A2E22 !important;
+    background: #E01E26 !important;
     color: #fff !important;
     font-weight: 600 !important;
-    box-shadow: 0 4px 12px rgba(26,46,34,.25) !important;
+    box-shadow: 0 4px 12px rgba(224,30,38,.25) !important;
 }
 
 /* Submenu items */
@@ -950,22 +950,22 @@ a {
 /* Submenu hover */
 [data-sidebar="dark"] .navbar-menu .navbar-nav .nav-sm .nav-link:hover,
 .navbar-menu .navbar-nav .nav-sm .nav-link:hover {
-    background: rgba(26,46,34,.08) !important;
-    color: #1A2E22 !important;
+    background: rgba(224,30,38,.08) !important;
+    color: #E01E26 !important;
 }
 
 /* Submenu active */
 [data-sidebar="dark"] .navbar-menu .navbar-nav .nav-sm .nav-link.active,
 .navbar-menu .navbar-nav .nav-sm .nav-link.active {
-    background: rgba(26,46,34,.12) !important;
-    color: #1A2E22 !important;
+    background: rgba(224,30,38,.12) !important;
+    color: #E01E26 !important;
     font-weight: 600 !important;
 }
 
 /* Active dot indicator for sub items */
 [data-sidebar="dark"] .navbar-menu .navbar-nav .nav-sm .nav-link.active:before,
 .navbar-menu .navbar-nav .nav-sm .nav-link.active:before {
-    background-color: #1A2E22 !important;
+    background-color: #E01E26 !important;
     transform: translateY(-50%) scale(1.2) !important;
 }
 
@@ -979,7 +979,7 @@ a {
 /* Sidebar section labels */
 [data-sidebar="dark"] .navbar-nav .menu-title,
 .navbar-nav .menu-title {
-    color: #1A2E22 !important;
+    color: #E01E26 !important;
     font-weight: 700 !important;
     font-size: .75rem !important;
     letter-spacing: .05em !important;
@@ -996,38 +996,38 @@ a {
 /* Topbar accent */
 #page-topbar {
     background: #fff !important;
-    border-bottom: 2px solid #1A2E22 !important;
+    border-bottom: 2px solid #E01E26 !important;
 }
 
 /* Sidebar toggle hover */
 .btn-vertical-sm-hover:hover {
-    background: rgba(26,46,34,.08) !important;
-    color: #1A2E22 !important;
+    background: rgba(224,30,38,.08) !important;
+    color: #E01E26 !important;
 }
 
 /* === FRONTEND COLOR BUTTONS & TOGGLES === */
 
 /* btn-dark → gradient */
 .btn-dark {
-    background: #1A2E22 !important;
-    border-color: #1A2E22 !important;
+    background: #E01E26 !important;
+    border-color: #E01E26 !important;
     color: #fff !important;
 }
 .btn-dark:hover, .btn-dark:focus {
-    background: #243D2F !important;
-    border-color: #243D2F !important;
+    background: #B9131B !important;
+    border-color: #B9131B !important;
     color: #fff !important;
-    box-shadow: 0 4px 12px rgba(26,46,34,.3) !important;
+    box-shadow: 0 4px 12px rgba(224,30,38,.3) !important;
 }
 
 /* btn-primary → gradient */
 .btn-primary {
-    background: #1A2E22 !important;
-    border-color: #1A2E22 !important;
+    background: #E01E26 !important;
+    border-color: #E01E26 !important;
 }
 .btn-primary:hover, .btn-primary:focus {
-    background: #243D2F !important;
-    border-color: #243D2F !important;
+    background: #B9131B !important;
+    border-color: #B9131B !important;
 }
 
 /* Toggle switch */
@@ -1036,27 +1036,27 @@ a {
     border-color: #d1d5db !important;
 }
 .form-switch .form-check-input:checked {
-    background-color: #1A2E22 !important;
-    border-color: #1A2E22 !important;
+    background-color: #E01E26 !important;
+    border-color: #E01E26 !important;
 }
 .form-switch .form-check-input:focus {
-    box-shadow: 0 0 0 3px rgba(26,46,34,.2) !important;
+    box-shadow: 0 0 0 3px rgba(224,30,38,.2) !important;
 }
 
 /* Pagination active */
 .page-item.active .page-link {
-    background: #1A2E22 !important;
-    border-color: #1A2E22 !important;
+    background: #E01E26 !important;
+    border-color: #E01E26 !important;
 }
 
 /* Tabs active */
 .nav-tabs .nav-link.active {
-    color: #1A2E22 !important;
-    border-bottom-color: #1A2E22 !important;
+    color: #E01E26 !important;
+    border-bottom-color: #E01E26 !important;
     font-weight: 600 !important;
 }
 .nav-tabs .nav-link:hover {
-    color: #1A2E22 !important;
+    color: #E01E26 !important;
 }
 
 /* DataTables info/search styling */
@@ -1070,8 +1070,8 @@ a {
     padding: .4rem .75rem !important;
 }
 .dataTables_wrapper .dataTables_filter input:focus {
-    border-color: #1A2E22 !important;
-    box-shadow: 0 0 0 3px rgba(26,46,34,.1) !important;
+    border-color: #E01E26 !important;
+    box-shadow: 0 0 0 3px rgba(224,30,38,.1) !important;
     outline: none !important;
 }
 
@@ -1083,15 +1083,15 @@ a {
 
 /* Link & text colors */
 a {
-    color: #1A2E22 !important;
+    color: #E01E26 !important;
 }
 a:hover {
-    color: #243D2F !important;
+    color: #B9131B !important;
 }
 
 /* Badge / pill */
 .bg-dark {
-    background: #1A2E22 !important;
+    background: #E01E26 !important;
 }
 
 /* Card header if dark */
@@ -1115,8 +1115,8 @@ a:hover {
     transition: all .2s !important;
 }
 .dropdown-item:hover {
-    background: rgba(26,46,34,.08) !important;
-    color: #1A2E22 !important;
+    background: rgba(224,30,38,.08) !important;
+    color: #E01E26 !important;
 }
 
 /* Action dots button */
@@ -1126,9 +1126,9 @@ a:hover {
     color: #334155 !important;
 }
 .btn-outline-secondary:hover, .btn-light:hover {
-    background: rgba(26,46,34,.08) !important;
-    border-color: #1A2E22 !important;
-    color: #1A2E22 !important;
+    background: rgba(224,30,38,.08) !important;
+    border-color: #E01E26 !important;
+    color: #E01E26 !important;
 }
 .btn-soft-secondary {
     background: #fff !important;
@@ -1138,15 +1138,15 @@ a:hover {
     transition: all .2s !important;
 }
 .btn-soft-secondary:hover {
-    background: rgba(26,46,34,.08) !important;
-    border-color: #1A2E22 !important;
-    color: #1A2E22 !important;
+    background: rgba(224,30,38,.08) !important;
+    border-color: #E01E26 !important;
+    color: #E01E26 !important;
 }
 
 /* Sidebar dark overlay/hover items on left */
 .sidebar-item-dark, .sidebar-dark-item {
-    background: rgba(26,46,34,.1) !important;
-    color: #1A2E22 !important;
+    background: rgba(224,30,38,.1) !important;
+    color: #E01E26 !important;
 }
 
 /* Sidebar collapsed left arrows */
@@ -1159,9 +1159,52 @@ a:hover {
 
 /* Navbar hamburger toggler */
 .navbar-toggler {
-    border-color: rgba(26,46,34,.3) !important;
-    color: #1A2E22 !important;
+    border-color: rgba(224,30,38,.3) !important;
+    color: #E01E26 !important;
 }
 .navbar-toggler:hover {
-    background: rgba(26,46,34,.08) !important;
+    background: rgba(224,30,38,.08) !important;
+}
+
+/* === ALAM MINI MARKET BRAND (logo red primary) === */
+:root {
+    --vz-primary: #E01E26 !important;
+    --vz-primary-rgb: 224, 30, 38 !important;
+}
+.btn-primary {
+    background: linear-gradient(180deg, #f2303a 0%, #e01e26 55%, #c8102e 100%) !important;
+    border-color: #b9131b !important;
+    box-shadow: 0 4px 12px rgba(224,30,38,0.35), inset 0 1px 0 rgba(255,255,255,0.35) !important;
+}
+.btn-primary:hover, .btn-check:focus + .btn-primary, .btn-primary:focus {
+    background: linear-gradient(180deg, #e01e26 0%, #c8102e 60%, #a50d1f 100%) !important;
+    border-color: #9e0f16 !important;
+}
+.btn-primary:active, .btn-primary.active, .show > .btn-primary.dropdown-toggle {
+    background-color: #9E0F16 !important;
+    border-color: #9E0F16 !important;
+}
+.badge-soft-primary {
+    color: #E01E26 !important;
+    background-color: rgba(224,30,38,.1) !important;
+}
+.badge-outline.badge-primary {
+    color: #E01E26 !important;
+    border-color: #E01E26 !important;
+}
+.btn-soft-primary {
+    color: #E01E26 !important;
+    background-color: rgba(224,30,38,.1) !important;
+    border-color: transparent !important;
+}
+.btn-soft-primary:hover {
+    background-color: #E01E26 !important;
+    color: #fff !important;
+}
+.page-item.active .page-link {
+    background-color: #E01E26 !important;
+    border-color: #E01E26 !important;
+}
+.nav-pills .nav-link.active {
+    background-color: #E01E26 !important;
 }
