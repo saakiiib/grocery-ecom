@@ -156,6 +156,7 @@
     var oldEl = document.querySelector('[data-old-price]');
     var saveEl = document.querySelector('[data-save-badge]');
     var packNote = document.querySelector('[data-pack-note]');
+    var skuNote = document.querySelector('[data-sku-note]');
     var mainImg = document.querySelector('[data-main-image]');
     var addBtn = document.querySelector('[data-detail-add]');
     var stockNote = document.querySelector('[data-stock-note]');
@@ -197,6 +198,10 @@
         else { saveEl.style.display = 'none'; }
       }
       if (packNote) packNote.textContent = (v.pack || '') + ' · Price includes all taxes';
+      if (skuNote) {
+        if (v.sku) { skuNote.textContent = 'SKU: ' + v.sku; skuNote.style.display = ''; }
+        else { skuNote.style.display = 'none'; }
+      }
       if (mainImg && v.image) mainImg.src = v.image;
       if (addBtn) {
         addBtn.dataset.variantId = v.id;
@@ -1045,6 +1050,64 @@
     });
   }
 
+  /* ---------------- Announcement bar + welcome promo modal ---------------- */
+  function todayKey() {
+    var d = new Date();
+    return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+  }
+
+  function initAnnouncementBar() {
+    var bar = document.querySelector('[data-announce-bar]');
+    if (!bar || bar._egfBound) return;
+    bar._egfBound = true;
+    var hidden = null;
+    try { hidden = window.localStorage.getItem('egf-announcement'); } catch (e) { hidden = null; }
+    if (hidden === (bar.getAttribute('data-announce-text') || '')) bar.remove();
+    else {
+      var close = bar.querySelector('[data-announce-close]');
+      if (close) close.addEventListener('click', function () {
+        try { window.localStorage.setItem('egf-announcement', bar.getAttribute('data-announce-text') || 'dismissed'); } catch (e) {}
+        bar.remove();
+      });
+    }
+  }
+
+  function initPromoModal() {
+    var modal = document.querySelector('[data-promo-modal]');
+    if (!modal || modal._egfBound) return;
+    modal._egfBound = true;
+    var quiet = modal.querySelector('[data-promo-quiet]');
+    function close(days) {
+      modal.hidden = true;
+      try {
+        if (quiet && quiet.checked) window.localStorage.setItem('egf-promo-quiet', '1');
+        window.localStorage.setItem('egf-promo-day', days || todayKey());
+      } catch (e) {}
+    }
+    modal.querySelectorAll('[data-promo-close]').forEach(function (btn) {
+      btn.addEventListener('click', function () { close(); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && !modal.hidden) close();
+    });
+    var copy = modal.querySelector('[data-promo-copy]');
+    if (copy) copy.addEventListener('click', function () {
+      var code = modal.querySelector('[data-promo-code]');
+      var text = code ? code.textContent : '';
+      function done() { showToast('Code copied: ' + text); }
+      if (navigator.clipboard && text) navigator.clipboard.writeText(text).then(done, done);
+      else done();
+    });
+    var last = null;
+    var muted = null;
+    try {
+      last = window.localStorage.getItem('egf-promo-day');
+      muted = window.localStorage.getItem('egf-promo-quiet');
+    } catch (e) { last = null; muted = null; }
+    if (muted === '1' || last === todayKey()) return;
+    setTimeout(function () { modal.hidden = false; }, 1500);
+  }
+
   /* ---------------- Boot (runs on first load + every SPA nav) ---------------- */
   function boot() {
     if (searchEl && document.body.contains(searchEl)) searchEl.remove();
@@ -1059,6 +1122,8 @@
     initPriceSlider();
     initGalleryLightbox();
     initCookieBanner();
+    initAnnouncementBar();
+    initPromoModal();
     initFavToggles();
     renderBagPage();
     initHeroSlider();

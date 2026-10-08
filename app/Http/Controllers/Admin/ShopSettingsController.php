@@ -11,6 +11,16 @@ use Illuminate\Http\Request;
 class ShopSettingsController extends Controller
 {
     public const FIELDS = [
+        'announcement_enabled' => 'Announcement bar enabled (1/0)',
+        'announcement_text' => 'Announcement bar text',
+        'announcement_link_text' => 'Announcement bar link text',
+        'announcement_link_url' => 'Announcement bar link URL',
+        'promo_enabled' => 'Welcome promo modal enabled (1/0)',
+        'promo_title' => 'Welcome promo title',
+        'promo_subtitle' => 'Welcome promo subtitle',
+        'promo_coupon' => 'Welcome promo coupon code',
+        'promo_button_text' => 'Welcome promo button text',
+        'promo_button_url' => 'Welcome promo button URL',
         'delivery_min_order' => 'Minimum order for delivery (£)',
         'delivery_free_over' => 'Free delivery over (£)',
         'points_per_pound' => 'Loyalty points earned per £1',
@@ -45,7 +55,23 @@ class ShopSettingsController extends Controller
 
     public function update(Request $request): RedirectResponse
     {
+        // New promo keys default to current values so older callers/tests posting
+        // only delivery+points fields keep working.
+        $request->merge([
+            'announcement_enabled' => $request->input('announcement_enabled', Setting::get('announcement_enabled', '0') ?? '0'),
+            'promo_enabled' => $request->input('promo_enabled', Setting::get('promo_enabled', '0') ?? '0'),
+        ]);
         $data = $request->validate([
+            'announcement_enabled' => 'required|in:0,1',
+            'announcement_text' => 'nullable|string|max:255',
+            'announcement_link_text' => 'nullable|string|max:60',
+            'announcement_link_url' => 'nullable|string|max:255',
+            'promo_enabled' => 'required|in:0,1',
+            'promo_title' => 'nullable|string|max:120',
+            'promo_subtitle' => 'nullable|string|max:255',
+            'promo_coupon' => 'nullable|string|max:60',
+            'promo_button_text' => 'nullable|string|max:60',
+            'promo_button_url' => 'nullable|string|max:255',
             'delivery_min_order' => 'required|numeric|min:0|max:9999',
             'delivery_free_over' => 'required|numeric|min:0|max:9999',
             'points_per_pound' => 'required|numeric|min:0|max:100',

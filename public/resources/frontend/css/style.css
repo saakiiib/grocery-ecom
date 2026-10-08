@@ -2377,3 +2377,25 @@ body.search-open { overflow: hidden; }
 /* Clear-all filters chip */
 .child-chip.is-clear { border-style: solid; border-color: #c0392b; color: #c0392b; background: #fff; }
 .child-chip.is-clear:hover { background: #c0392b; border-color: #c0392b; color: #fff; }
+
+/* Announcement bar + welcome promo modal */
+.announce-bar { background: var(--deep); color: #fff; font-size: 0.85rem; }
+.announce-inner { display: flex; align-items: center; gap: 0.75rem; padding-top: 0.45rem; padding-bottom: 0.45rem; }
+.announce-text { margin: 0; flex: 1; text-align: center; }
+.announce-link { color: var(--sun); font-weight: 700; margin-left: 0.5rem; text-decoration: underline; }
+.announce-close { background: transparent; border: 0; color: #fff; cursor: pointer; opacity: 0.7; display: inline-flex; padding: 4px; }
+.announce-close:hover { opacity: 1; }
+.announce-close svg { width: 16px; height: 16px; }
+.promo-modal[hidden] { display: none; }
+.promo-modal { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+.promo-overlay { position: absolute; inset: 0; background: rgba(26, 46, 34, 0.6); }
+.promo-card { position: relative; background: var(--card); border-radius: var(--radius-xl); box-shadow: var(--shadow-lg); max-width: 640px; width: 100%; max-height: 90vh; overflow: auto; padding: 1.75rem; text-align: center; }
+.promo-close { position: absolute; top: 0.6rem; right: 0.6rem; background: var(--muted); border: 0; border-radius: 999px; width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+.promo-close svg { width: 16px; height: 16px; }
+.promo-title { margin: 0.25rem 0 0.5rem; }
+.promo-sub { color: var(--text-light); margin: 0 0 0.75rem; }
+.promo-coupon { background: var(--muted); border-radius: var(--radius); padding: 0.6rem; display: flex; align-items: center; justify-content: center; gap: 0.6rem; flex-wrap: wrap; }
+.promo-products { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; margin: 1rem 0; text-align: left; }
+@media (max-width: 560px) { .promo-products { grid-template-columns: 1fr; } }
+.promo-ctas { display: flex; gap: 0.6rem; justify-content: center; flex-wrap: wrap; margin-top: 0.5rem; }
+.promo-quiet { display: block; margin-top: 0.9rem; font-size: 0.8rem; color: var(--text-light); }

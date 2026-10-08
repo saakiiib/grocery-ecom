@@ -9,6 +9,8 @@ class OrderStatusHistory extends Model
 {
     protected $guarded = [];
 
+    protected static array $statusCache = [];
+
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
@@ -21,19 +23,21 @@ class OrderStatusHistory extends Model
 
     public function fromStatus(): ?OrderStatus
     {
-        static $cache = [];
-
         if (! $this->from_slug) {
             return null;
         }
 
-        return $cache['from:'.$this->from_slug] ??= OrderStatus::where('slug', $this->from_slug)->first();
+        return static::$statusCache['from:'.$this->from_slug] ??= OrderStatus::where('slug', $this->from_slug)->first();
     }
 
     public function toStatus(): ?OrderStatus
     {
-        static $cache = [];
+        return static::$statusCache['to:'.$this->to_slug] ??= OrderStatus::where('slug', $this->to_slug)->first();
+    }
 
-        return $cache['to:'.$this->to_slug] ??= OrderStatus::where('slug', $this->to_slug)->first();
+    /** Drop the in-process memo — the test suite calls this between tests. */
+    public static function flushCache(): void
+    {
+        static::$statusCache = [];
     }
 }

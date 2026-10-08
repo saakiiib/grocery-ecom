@@ -25,6 +25,15 @@ class Setting extends Model
         Cache::forget('setting.'.$key);
     }
 
+    /** Drop the in-process memo (plus its cache rows) — the test suite calls this between tests. */
+    public static function flushMemo(): void
+    {
+        foreach (array_keys(static::$memo) as $key) {
+            Cache::forget('setting.'.$key);
+        }
+        static::$memo = [];
+    }
+
     /** Shop money rules with safe numeric fallbacks. */
     public static function money(string $key, float $default): float
     {

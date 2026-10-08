@@ -7,6 +7,7 @@
         $pairs = collect($v['values']);
         return [
             'id' => $v['id'],
+            'sku' => $v['sku'] ?? null,
             'selling' => $v['selling'],
             'old' => ($v['selling'] < $v['mrp']) ? $v['mrp'] : null,
             'save_pct' => ($v['selling'] < $v['mrp'] && $v['mrp'] > 0)
@@ -22,6 +23,8 @@
     $defaultValues = $defaultVariant['values'] ?? [];
     $gallery = $productJson['gallery'];
     $mainImage = $defaultVariant['image'] ?? $productJson['heroImage'];
+    $variantDataJson = json_encode($pickerVariants, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT);
+    $variantGroupsJson = json_encode(collect($groups)->map(fn ($g) => ['slug' => $g['slug']])->values(), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT);
 @endphp
 
 @section('content')
@@ -113,6 +116,7 @@
                         <span class="save" data-save-badge style="display:none;"></span>
                     @endif
                     <p class="text-muted" style="font-size:13px;margin-top:0.35rem;" data-pack-note>{{ $defaultVariant['pack'] }} · Price includes all taxes</p>
+                    @if ($defaultVariant['sku'])<p class="text-muted" style="font-size:13px;margin-top:0.15rem;" data-sku-note>SKU: {{ $defaultVariant['sku'] }}</p>@endif
                 </div>
 
                 <p class="text-muted" data-stock-note style="display:none;font-size:14px;">Currently out of stock — check back soon.</p>
@@ -148,8 +152,8 @@
                         @endforeach
                     </div>
                 @endif
-                <script type="application/json" id="variant-data">@json($pickerVariants)</script>
-                <script type="application/json" id="variant-groups">@json(collect($groups)->map(fn ($g) => ['slug' => $g['slug']])->values())</script>
+                <script type="application/json" id="variant-data">{!! $variantDataJson !!}</script>
+                <script type="application/json" id="variant-groups">{!! $variantGroupsJson !!}</script>
 
                 <div class="buy-row">
                     <div class="qty-control">

@@ -24,4 +24,11 @@ class CompanyDetails extends Model
     {
         return static::$memo ??= Cache::remember('company_details', 3600, fn () => static::firstOrCreate());
     }
+
+    /** Drop the in-process memo — the test suite calls this between tests. */
+    public static function flushMemo(): void
+    {
+        static::$memo = null;
+        Cache::forget('company_details');
+    }
 }

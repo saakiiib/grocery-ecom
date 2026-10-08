@@ -66,7 +66,7 @@
             <button type="button" class="btn btn-dark btn-sm" data-add-to-bag
                 data-variant-id="{{ $p['variantId'] }}" data-product-id="{{ $p['id'] }}"
                 data-name="{{ $p['name'] }}" data-price="{{ number_format($p['priceNum'] ?? 0, 2, '.', '') }}"
-                data-pack="{{ $p['packLabel'] }}" data-image="{{ $p['imgAbs'] }}"
+                data-pack="{{ $p['packLabel'] }}" data-image="{{ $p['imgAbs'] }}" data-sku="{{ $p['modelCode'] }}"
                 @disabled(!$p['inStock'])>{{ $p['inStock'] ? 'Add to bag' : 'Out of stock' }}</button>
         </div>
     </div>

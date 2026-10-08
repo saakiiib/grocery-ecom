@@ -13,6 +13,61 @@
                     <div class="card-body">
                         <form method="POST" action="{{ route('shop-settings.update') }}">
                             @csrf
+                            <h6 class="mb-3">Announcement bar</h6>
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-3">
+                                    <label class="form-label">Enabled</label>
+                                    <select name="announcement_enabled" class="form-control">
+                                        <option value="0" {{ old('announcement_enabled', $settings['announcement_enabled'] ?? '0') === '0' ? 'selected' : '' }}>Hidden</option>
+                                        <option value="1" {{ old('announcement_enabled', $settings['announcement_enabled'] ?? '0') === '1' ? 'selected' : '' }}>Visible</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-9">
+                                    <label class="form-label">Bar text</label>
+                                    <input type="text" name="announcement_text" class="form-control" maxlength="255" value="{{ old('announcement_text', $settings['announcement_text'] ?? '') }}" placeholder="Free delivery over £50 — this weekend only">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Link text (optional)</label>
+                                    <input type="text" name="announcement_link_text" class="form-control" maxlength="60" value="{{ old('announcement_link_text', $settings['announcement_link_text'] ?? '') }}" placeholder="Shop offers">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Link URL (optional)</label>
+                                    <input type="text" name="announcement_link_url" class="form-control" maxlength="255" value="{{ old('announcement_link_url', $settings['announcement_link_url'] ?? '') }}" placeholder="/shop/offers">
+                                </div>
+                            </div>
+
+                            <h6 class="mb-3">Welcome promo modal (homepage)</h6>
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-3">
+                                    <label class="form-label">Enabled</label>
+                                    <select name="promo_enabled" class="form-control">
+                                        <option value="0" {{ old('promo_enabled', $settings['promo_enabled'] ?? '0') === '0' ? 'selected' : '' }}>Hidden</option>
+                                        <option value="1" {{ old('promo_enabled', $settings['promo_enabled'] ?? '0') === '1' ? 'selected' : '' }}>Visible</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-9">
+                                    <label class="form-label">Title</label>
+                                    <input type="text" name="promo_title" class="form-control" maxlength="120" value="{{ old('promo_title', $settings['promo_title'] ?? '') }}" placeholder="Today's fresh picks">
+                                </div>
+                                <div class="col-md-12">
+                                    <label class="form-label">Subtitle</label>
+                                    <input type="text" name="promo_subtitle" class="form-control" maxlength="255" value="{{ old('promo_subtitle', $settings['promo_subtitle'] ?? '') }}" placeholder="Hand-picked deals, today only">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Coupon code (optional)</label>
+                                    <input type="text" name="promo_coupon" class="form-control" maxlength="60" value="{{ old('promo_coupon', $settings['promo_coupon'] ?? '') }}" placeholder="FRESH10">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Button text (optional)</label>
+                                    <input type="text" name="promo_button_text" class="form-control" maxlength="60" value="{{ old('promo_button_text', $settings['promo_button_text'] ?? '') }}" placeholder="Shop today's deals">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Button URL (optional)</label>
+                                    <input type="text" name="promo_button_url" class="form-control" maxlength="255" value="{{ old('promo_button_url', $settings['promo_button_url'] ?? '') }}" placeholder="/shop/offers">
+                                </div>
+                            </div>
+                            <p class="text-muted mb-4"><small>The modal shows today's offer products automatically, once per visitor per day.</small></p>
+
                             <h6 class="mb-3">Delivery rules</h6>
                             <div class="row g-3 mb-4">
                                 <div class="col-md-6">

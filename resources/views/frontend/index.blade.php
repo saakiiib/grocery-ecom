@@ -293,4 +293,5 @@
         </section>
     @endif
 </main>
+@include('frontend.partials.promo-modal', ['promo' => $promo ?? null])
 @endsection

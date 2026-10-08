@@ -24,6 +24,7 @@ use App\Models\Setting;
 use App\Models\Slider;
 use App\Models\Testimonial;
 use App\Models\UserPoint;
+use App\Support\SitePromo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use OpenGraph;
@@ -86,7 +87,9 @@ class FrontendController extends Controller
             ->map(fn ($s) => [...$s->toArray(), 'image' => $s->image ? url($s->image) : url('placeholder.webp')])
             ->values();
 
-        return spa('frontend.index', compact('productsJson', 'featuredJson', 'featuredCards', 'categoriesJson', 'offerCards', 'faqsJson', 'faqCatsJson', 'galleryJson', 'galleryCatsJson', 'testimonialsJson', 'filesJson', 'zonesJson', 'slidersJson'));
+        $promo = SitePromo::promo();
+
+        return spa('frontend.index', compact('productsJson', 'featuredJson', 'featuredCards', 'categoriesJson', 'offerCards', 'faqsJson', 'faqCatsJson', 'galleryJson', 'galleryCatsJson', 'testimonialsJson', 'filesJson', 'zonesJson', 'slidersJson', 'promo'));
     }
 
     public function shop(Request $request, ?string $category = null)

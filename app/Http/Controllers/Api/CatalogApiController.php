@@ -19,6 +19,7 @@ use App\Models\Setting;
 use App\Models\Slider;
 use App\Models\Testimonial;
 use App\Models\UserPoint;
+use App\Support\SitePromo;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -66,6 +67,8 @@ class CatalogApiController extends FrontendController
             'faq_categories' => $this->faqCatsJson(),
             'gallery' => $this->galleryJson(8),
             'company' => $this->company(),
+            'announcement' => SitePromo::announcement(),
+            'promo' => SitePromo::promo(),
         ]);
     }
 

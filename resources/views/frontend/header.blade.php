@@ -5,6 +5,8 @@
     $brand = $company->company_name ?? 'Evergreen Foods';
     $isActive = fn (...$routes) => request()->routeIs(...$routes) ? 'active' : '';
 @endphp
+@include('frontend.partials.announcement-bar')
+
 <div class="topbar">
     <div class="container topbar-inner">
         <div class="topbar-info">
