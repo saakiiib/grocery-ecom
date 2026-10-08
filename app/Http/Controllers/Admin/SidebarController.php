@@ -74,7 +74,7 @@ class SidebarController
             ],
             [
                 'type' => 'group',
-                'icon' => 'ri-discount-percent-line',
+                'icon' => 'ri-percent-line',
                 'label' => 'Promotions',
                 'id' => 'sidebarPromotions',
                 'children' => [

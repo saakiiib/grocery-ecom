@@ -64,8 +64,8 @@ class FrontendController extends Controller
         $productsJson = collect();
         $featuredJson = collect();
         $featuredCards = $products->where('is_featured', true)->values()->map(fn ($p) => $this->productCard($p, $bundleCover, $flashMap, $bogoLive))->values();
-        // Homepage "Shop by category" shows top 10 parents, in parent-scoped sort_order.
-        $categoriesJson = $categories->whereNull('parent_id')->take(10)->values()->map(function ($c) use ($products, $categories) {
+        // Homepage "Shop by category" shows all parents, in parent-scoped sort_order.
+        $categoriesJson = $categories->whereNull('parent_id')->values()->map(function ($c) use ($products, $categories) {
             $ids = $this->categorySubtreeIds($categories, $c->id);
 
             return [

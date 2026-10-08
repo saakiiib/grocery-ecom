@@ -54,7 +54,7 @@ class CatalogApiController extends FrontendController
         if ($trend->isEmpty()) {
             $trend = $offers;
         }
-        $cats = $categories->whereNull('parent_id')->take(10)->values()->map(function ($c) use ($products, $categories) {
+        $cats = $categories->whereNull('parent_id')->values()->map(function ($c) use ($products, $categories) {
             $ids = $this->categorySubtreeIds($categories, $c->id);
 
             return [
