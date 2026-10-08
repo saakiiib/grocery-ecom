@@ -346,6 +346,25 @@
     if (bogoAmt) bogoAmt.textContent = '−' + formatPrice(save);
     if (bundleRow) bundleRow.style.display = bsave > 0 ? '' : 'none';
     if (bundleAmt) bundleAmt.textContent = '−' + formatPrice(bsave);
+    updateDeliveryBar(data, t);
+  }
+
+  function updateDeliveryBar(data, subtotal) {
+    var bar = document.querySelector('[data-delivery-bar]');
+    if (!bar) return;
+    var min = data && data.min_order ? parseFloat(data.min_order) : parseFloat(bar.getAttribute('data-min')) || 15;
+    var free = data && data.free_over ? parseFloat(data.free_over) : parseFloat(bar.getAttribute('data-free')) || 50;
+    var t = parseFloat(subtotal) || 0;
+    var pct = free > 0 ? Math.min(100, Math.max(0, t / free * 100)) : 0;
+    var fill = bar.querySelector('[data-delivery-fill]');
+    var msg = bar.querySelector('[data-delivery-msg]');
+    if (fill) fill.style.width = pct.toFixed(1) + '%';
+    bar.classList.toggle('is-free', free > 0 && t >= free);
+    if (msg) {
+      if (free > 0 && t >= free) msg.textContent = "You've unlocked FREE delivery";
+      else if (t >= min) msg.textContent = 'Add ' + formatPrice(free - t) + ' more for FREE delivery';
+      else msg.textContent = 'Minimum order ' + formatPrice(min) + ' — add ' + formatPrice(min - t) + ' more';
+    }
   }
 
   /* ---------------- Hero slider ---------------- */

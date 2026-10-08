@@ -279,9 +279,10 @@ class CatalogApiController extends FrontendController
             'bag' => BagController::detailed(),
             'slots' => DeliverySlot::ordered()->map(fn ($s) => [
                 'id' => $s->id, 'name' => $s->name, 'label' => $s->label(), 'fee' => (float) $s->fee,
-                'starts_at' => $s->starts_at, 'ends_at' => $s->ends_at,
+                'starts_at' => $s->starts_at, 'ends_at' => $s->ends_at, 'cutoff_hour' => (int) $s->cutoff_hour,
             ])->values(),
             'dates' => DeliverySlot::bookableDates(),
+            'cutoff_status' => DeliverySlot::todayStatus(),
             'min_order' => Setting::money('delivery_min_order', 15.00),
             'free_over' => Setting::money('delivery_free_over', 50.00),
             'stripe_on' => CheckoutController::stripeConfigured(),

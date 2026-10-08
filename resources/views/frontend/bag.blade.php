@@ -53,6 +53,7 @@
                 @endif
             </div>
             <aside class="cart-summary">
+                @include('frontend.partials.delivery-progress', ['subtotal' => $bag['subtotal'] ?? 0, 'minOrder' => $minOrder ?? 15, 'freeOver' => $freeOver ?? 50])
                 <h3>Order summary</h3>
                 <div class="summary-row"><span>Subtotal</span><span data-summary-subtotal>£{{ number_format($bag['subtotal'], 2) }}</span></div>
                 <div class="summary-row" data-summary-bogo @if (($bag['bogo_discount'] ?? 0) <= 0) style="display:none;" @endif><span>BOGO savings</span><span data-summary-bogo-amount>−£{{ number_format($bag['bogo_discount'] ?? 0, 2) }}</span></div>

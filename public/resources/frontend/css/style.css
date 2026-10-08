@@ -2399,3 +2399,13 @@ body.search-open { overflow: hidden; }
 @media (max-width: 560px) { .promo-products { grid-template-columns: 1fr; } }
 .promo-ctas { display: flex; gap: 0.6rem; justify-content: center; flex-wrap: wrap; margin-top: 0.5rem; }
 .promo-quiet { display: block; margin-top: 0.9rem; font-size: 0.8rem; color: var(--text-light); }
+
+/* Free-delivery progress */
+.delivery-progress { background: var(--muted); border-radius: var(--radius-lg); padding: 0.9rem 1rem; margin-bottom: 1.1rem; }
+.delivery-progress.is-free { background: #e6f2e9; }
+.delivery-msg { margin: 0 0 0.55rem; font-weight: 700; font-size: 0.9rem; }
+.delivery-track { height: 10px; border-radius: 999px; background: #e0dcd0; overflow: hidden; }
+.delivery-fill { height: 100%; border-radius: 999px; background: var(--sun); transition: width 0.4s ease; }
+.delivery-progress.is-free .delivery-fill { background: var(--primary); }
+.delivery-hint { margin: 0.5rem 0 0; font-size: 0.8rem; color: var(--text-light); }
+.delivery-hint a { color: var(--primary); font-weight: 700; }

@@ -7,6 +7,7 @@ use App\Models\BundleOffer;
 use App\Models\FlashSale;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\Setting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -38,14 +39,18 @@ class BagController extends Controller
      * apply first (independent), then dynamic bundles regroup paid units,
      * so bag, checkout, and orders can never disagree.
      *
-     * @return array{lines: array, count: int, subtotal: float, bogo_discount: float, bundle_discount: float}
+     * @return array{lines: array, count: int, subtotal: float, bogo_discount: float, bundle_discount: float, min_order: float, free_over: float}
      */
     public static function detailed(): array
     {
         $bag = static::bag();
+        $thresholds = [
+            'min_order' => Setting::money('delivery_min_order', 15.00),
+            'free_over' => Setting::money('delivery_free_over', 50.00),
+        ];
 
         if ($bag === []) {
-            return ['lines' => [], 'count' => 0, 'subtotal' => 0.0, 'bogo_discount' => 0.0, 'bundle_discount' => 0.0];
+            return array_merge(['lines' => [], 'count' => 0, 'subtotal' => 0.0, 'bogo_discount' => 0.0, 'bundle_discount' => 0.0], $thresholds);
         }
 
         $variants = ProductVariant::with(['product', 'values.group'])
@@ -116,13 +121,13 @@ class BagController extends Controller
         $bundleDiscount = BundleOffer::applyToLines($lines);
         $subtotal = round(array_sum(array_column($lines, 'line_total')), 2);
 
-        return [
+        return array_merge([
             'lines' => $lines,
             'count' => array_sum($bag),
             'subtotal' => round($subtotal, 2),
             'bogo_discount' => round($bogoDiscount, 2),
             'bundle_discount' => round($bundleDiscount, 2),
-        ];
+        ], $thresholds);
     }
 
     /**

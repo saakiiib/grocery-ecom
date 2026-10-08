@@ -152,7 +152,7 @@
                     <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
                         <div class="form-group">
                             <label for="co-date">Delivery day</label>
-                            <select id="co-date" name="delivery_date" required>
+                            <select id="co-date" name="delivery_date" required data-today="{{ now()->format('Y-m-d') }}" data-hour="{{ now()->format('H') }}" data-order-by="{{ $cutoffStatus['order_by_hour'] }}">
                                 @foreach ($dates as $value => $label)
                                     <option value="{{ $value }}">{{ $label }}</option>
                                 @endforeach
@@ -162,17 +162,25 @@
                             <label for="co-slot">Time window</label>
                             <select id="co-slot" name="delivery_slot_id" required>
                                 @foreach ($slots as $slot)
-                                    <option value="{{ $slot->id }}" data-fee="{{ $slot->fee }}">
+                                    <option value="{{ $slot->id }}" data-fee="{{ $slot->fee }}" data-cutoff="{{ $slot->cutoff_hour }}">
                                         {{ $slot->label() }} · {{ $slot->fee > 0 ? '£'.number_format($slot->fee, 2) : 'Free' }}
                                     </option>
                                 @endforeach
                             </select>
                         </div>
                     </div>
-                    <p class="text-muted" style="font-size:13px;">Order before 8pm for next-day slots. Free delivery over £{{ number_format($freeOver, 2) }} · minimum order £{{ number_format($minOrder, 2) }}.</p>
+                    <p class="text-muted" style="font-size:13px;" id="co-cutoff-msg" data-fee-note="Free delivery over £{{ number_format($freeOver, 2) }} · minimum order £{{ number_format($minOrder, 2) }}.">
+                        @if ($cutoffStatus['today_available'])
+                            Order before {{ $cutoffStatus['order_by_hour'] }}:00 for delivery today — after that, earliest is tomorrow.
+                        @else
+                            Today's cutoff has passed — earliest delivery {{ $cutoffStatus['earliest'] }}.
+                        @endif
+                        Free delivery over £{{ number_format($freeOver, 2) }} · minimum order £{{ number_format($minOrder, 2) }}.
+                    </p>
                 </div>
 
                 <aside class="cart-summary">
+                    @include('frontend.partials.delivery-progress', ['subtotal' => $bag['subtotal'] ?? 0, 'minOrder' => $minOrder, 'freeOver' => $freeOver])
                     <h3>Your bag ({{ $bag['count'] }})</h3>
                     @foreach ($bag['lines'] as $item)
                         <div class="summary-row co-line" style="align-items:center;">
@@ -289,6 +297,9 @@
         var pointsValue = parseFloat('{{ $pointsValue }}') || 0;
         var pointsBalance = parseInt('{{ $pointsBalance }}', 10) || 0;
         var slotSel = document.getElementById('co-slot');
+        var dateSel = document.getElementById('co-date');
+        var cutoffMsg = document.getElementById('co-cutoff-msg');
+        var cutoffBase = cutoffMsg ? cutoffMsg.textContent : '';
         var pointsInput = document.getElementById('co-points');
         var errBox = document.getElementById('co-error');
         var submitBtn = document.getElementById('co-submit');
@@ -387,6 +398,34 @@
             var opt = slotSel.options[slotSel.selectedIndex];
             return parseFloat(opt.dataset.fee || 0) || 0;
         }
+        /* Same-day cutoff: past-cutoff windows drop out when today is picked. */
+        function paintCutoff() {
+            if (!dateSel || !slotSel) return;
+            var today = dateSel.getAttribute('data-today') || '';
+            var hour = parseInt(dateSel.getAttribute('data-hour') || '0', 10) || 0;
+            var orderBy = parseInt(dateSel.getAttribute('data-order-by') || '20', 10) || 20;
+            var isToday = dateSel.value === today;
+            var firstOpen = null;
+            Array.prototype.forEach.call(slotSel.options, function (opt) {
+                var closed = isToday && (parseInt(opt.getAttribute('data-cutoff') || '99', 10) || 99) <= hour;
+                opt.disabled = closed;
+                if (!closed && !firstOpen) firstOpen = opt;
+            });
+            if (slotSel.options[slotSel.selectedIndex] && slotSel.options[slotSel.selectedIndex].disabled && firstOpen) {
+                slotSel.value = firstOpen.value;
+            }
+            if (cutoffMsg) {
+                var feeNote = cutoffMsg.getAttribute('data-fee-note') || '';
+                if (isToday) {
+                    var left = orderBy - hour;
+                    cutoffMsg.textContent = 'Order within ' + left + 'h for delivery today — after ' + orderBy + ':00, earliest is tomorrow. ' + feeNote;
+                } else {
+                    cutoffMsg.textContent = cutoffBase;
+                }
+            }
+            paintTotals();
+        }
+        if (dateSel) dateSel.addEventListener('change', paintCutoff);
         function pointsDiscount() {
             if (!pointsInput) return 0;
             var pts = Math.max(0, Math.min(parseInt(pointsInput.value, 10) || 0, pointsBalance));
@@ -446,7 +485,7 @@
         if (removeBtn) removeBtn.addEventListener('click', clearCoupon);
         slotSel.addEventListener('change', paintTotals);
         if (pointsInput) pointsInput.addEventListener('input', paintTotals);
-        paintTotals();
+        paintCutoff();
 
         function method() {
             var checked = form.querySelector('input[name="payment_method"]:checked');

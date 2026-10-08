@@ -464,8 +464,10 @@ class FrontendController extends Controller
         $this->seo('cart');
 
         $bag = BagController::detailed();
+        $minOrder = Setting::money('delivery_min_order', 15.00);
+        $freeOver = Setting::money('delivery_free_over', 50.00);
 
-        return spa('frontend.bag', compact('bag'));
+        return spa('frontend.bag', compact('bag', 'minOrder', 'freeOver'));
     }
 
     public function checkout()
@@ -497,8 +499,9 @@ class FrontendController extends Controller
         $coAddressBook = $addresses->mapWithKeys(fn ($a) => [
             $a->id => $a->only(['name', 'phone', 'address', 'city', 'postcode']),
         ])->all();
+        $cutoffStatus = DeliverySlot::todayStatus();
 
-        return spa('frontend.checkout', compact('bag', 'slots', 'dates', 'minOrder', 'freeOver', 'stripeOn', 'paypalOn', 'paypalClient', 'shopper', 'pointsBalance', 'pointsValue', 'pointsMin', 'addresses', 'defaultDelivery', 'defaultBilling', 'coAddressBook'));
+        return spa('frontend.checkout', compact('bag', 'slots', 'dates', 'minOrder', 'freeOver', 'stripeOn', 'paypalOn', 'paypalClient', 'shopper', 'pointsBalance', 'pointsValue', 'pointsMin', 'addresses', 'defaultDelivery', 'defaultBilling', 'coAddressBook', 'cutoffStatus'));
     }
 
     /** Guest order tracking: order number + the phone given at checkout. */

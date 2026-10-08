@@ -169,6 +169,11 @@ class CheckoutController extends Controller
             return response()->json(['message' => 'Please choose a valid delivery day.'], 422);
         }
 
+        $chosenSlot = DeliverySlot::where('is_active', true)->find($data['delivery_slot_id']);
+        if ($chosenSlot && $chosenSlot->cutoffPassed($data['delivery_date'])) {
+            return response()->json(['message' => 'That time window just closed for today — please pick tomorrow or another slot.'], 422);
+        }
+
         if (! DeliveryZone::serves($data['postcode'])) {
             return response()->json(['message' => 'Sorry — we don\'t deliver to '.$data['postcode'].' yet.'], 422);
         }
