@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use App\Models\Order;
+use App\Models\Product;
 use App\Models\Setting;
 
 /**
@@ -27,6 +29,42 @@ class SitePromo
             'link_text' => trim((string) (Setting::get('announcement_link_text', '') ?? '')),
             'link_url' => trim((string) (Setting::get('announcement_link_url', '') ?? '')),
         ];
+    }
+
+    /**
+     * Recent-order social proof: anonymized (first name + city + item),
+     * last 7 days, never cancelled. Null when disabled or nothing recent.
+     */
+    public static function socialProof(int $limit = 8): ?array
+    {
+        if (Setting::get('social_proof_enabled', '1') !== '1') {
+            return null;
+        }
+        $orders = Order::with('items')
+            ->where('status_slug', '!=', 'cancelled')
+            ->where('created_at', '>=', now()->subDays(7))
+            ->latest()
+            ->take($limit)
+            ->get();
+        if ($orders->isEmpty()) {
+            return null;
+        }
+
+        $slugs = Product::whereIn('id', $orders->flatMap(fn ($o) => $o->items->pluck('product_id'))->filter()->unique()->values())
+            ->pluck('slug', 'id');
+
+        return $orders->map(function ($order) use ($slugs) {
+            $item = $order->items->first();
+            $slug = $item && $item->product_id ? $slugs->get($item->product_id) : null;
+
+            return [
+                'name' => trim(explode(' ', (string) $order->name)[0] ?: 'A shopper'),
+                'city' => (string) $order->city,
+                'item' => $item?->product_name ?? 'groceries',
+                'ago' => $order->created_at->diffForHumans(),
+                'url' => $slug ? route('product.show', $slug) : route('shop'),
+            ];
+        })->values()->all();
     }
 
     public static function promo(): ?array

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\OptionValue;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\StockAlert;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Intervention\Image\Facades\Image;
@@ -82,6 +83,7 @@ class ProductVariantController extends Controller
             $variant->values()->sync($request->value_ids ?? []);
             Cache::forget('egf_catalog');
         }
+        StockAlert::fulfillFor($variant->fresh());
 
         return response()->json(['message' => 'Variant updated']);
     }
@@ -115,6 +117,7 @@ class ProductVariantController extends Controller
     {
         $variant = ProductVariant::findOrFail($request->id);
         $variant->update(['in_stock' => ! $variant->in_stock]);
+        StockAlert::fulfillFor($variant->fresh());
 
         return response()->json(['message' => 'Stock updated']);
     }

@@ -68,6 +68,20 @@
                             </div>
                             <p class="text-muted mb-4"><small>The modal shows today's offer products automatically, once per visitor per day.</small></p>
 
+                            <h6 class="mb-3">Social proof popup</h6>
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-3">
+                                    <label class="form-label">Recent-sales popup</label>
+                                    <select name="social_proof_enabled" class="form-control">
+                                        <option value="0" {{ old('social_proof_enabled', $settings['social_proof_enabled'] ?? '1') === '0' ? 'selected' : '' }}>Hidden</option>
+                                        <option value="1" {{ old('social_proof_enabled', $settings['social_proof_enabled'] ?? '1') === '1' ? 'selected' : '' }}>Visible</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-9">
+                                    <p class="text-muted mt-4"><small>Shows anonymised recent orders ("Rahim from Leeds bought Lamb Leg") — max 3 per page view, never from cancelled orders.</small></p>
+                                </div>
+                            </div>
+
                             <h6 class="mb-3">Delivery rules</h6>
                             <div class="row g-3 mb-4">
                                 <div class="col-md-6">

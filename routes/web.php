@@ -84,6 +84,8 @@ Route::get('/loyalty', [FrontendController::class, 'loyalty'])->name('loyalty');
 Route::get('/delivery', [FrontendController::class, 'delivery'])->name('delivery');
 Route::get('/contact', [FrontendController::class, 'contact'])->name('contact');
 Route::post('/contact', [FrontendController::class, 'contactStore'])->middleware('throttle:10,1')->name('contact.store');
+Route::post('/newsletter', [FrontendController::class, 'subscribeStore'])->middleware('throttle:10,1')->name('newsletter.subscribe');
+Route::post('/notify', [FrontendController::class, 'notifyStore'])->middleware('throttle:10,1')->name('notify.store');
 
 // Static Pages
 Route::get('/privacy-policy', [FrontendController::class, 'privacy'])->name('privacy');

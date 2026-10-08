@@ -144,6 +144,75 @@
         </section>
     @endif
 
+    @include('frontend.partials.deal-of-day', ['dealOfDay' => $dealOfDay ?? null])
+
+    @if (! empty($bestCards) && $bestCards->isNotEmpty())
+        <section class="section">
+            <div class="container">
+                <div class="section-header">
+                    <p class="section-label">Loved by many</p>
+                    <h2 class="section-title">Bestsellers</h2>
+                    <p class="section-desc">What the neighbourhood keeps reordering.</p>
+                </div>
+                <div class="product-grid">
+                    @foreach ($bestCards as $p)
+                        @include('frontend.partials.product-card', ['p' => $p])
+                    @endforeach
+                </div>
+            </div>
+        </section>
+    @endif
+
+    @if (! empty($newCards) && $newCards->isNotEmpty())
+        <section class="section" style="background: var(--muted);">
+            <div class="container">
+                <div class="section-header">
+                    <p class="section-label">Just landed</p>
+                    <h2 class="section-title">New arrivals</h2>
+                    <p class="section-desc">The latest additions to the market.</p>
+                </div>
+                <div class="product-grid">
+                    @foreach ($newCards as $p)
+                        @include('frontend.partials.product-card', ['p' => $p])
+                    @endforeach
+                </div>
+            </div>
+        </section>
+    @endif
+
+    @if (! empty($trendCards) && $trendCards->isNotEmpty())
+        <section class="section">
+            <div class="container">
+                <div class="section-header">
+                    <p class="section-label">Hot right now</p>
+                    <h2 class="section-title">Trending this week</h2>
+                    <p class="section-desc">Selling fast over the last 14 days.</p>
+                </div>
+                <div class="product-grid">
+                    @foreach ($trendCards as $p)
+                        @include('frontend.partials.product-card', ['p' => $p])
+                    @endforeach
+                </div>
+            </div>
+        </section>
+    @endif
+
+    @if (! empty($recentCards) && $recentCards->isNotEmpty())
+        <section class="section" style="background: var(--muted);">
+            <div class="container">
+                <div class="section-header">
+                    <p class="section-label">Pick up where you left off</p>
+                    <h2 class="section-title">Recently viewed</h2>
+                </div>
+                <div class="product-grid">
+                    @foreach ($recentCards as $p)
+                        @include('frontend.partials.product-card', ['p' => $p])
+                    @endforeach
+                </div>
+            </div>
+        </section>
+    @endif
+
     <section class="section" style="background: var(--muted);">
         <div class="container text-center">
             <p class="section-label">Ready when you are</p>

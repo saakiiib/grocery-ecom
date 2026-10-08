@@ -28,6 +28,8 @@ Route::middleware(['api_session', 'api_auth:optional'])->group(function () {
     Route::get('/delivery', [CatalogApiController::class, 'delivery']);
     Route::get('/loyalty', [CatalogApiController::class, 'loyalty']);
     Route::post('/contact', [FrontendController::class, 'contactStore'])->middleware('throttle:10,1');
+    Route::post('/newsletter', [FrontendController::class, 'subscribeStore'])->middleware('throttle:10,1');
+    Route::post('/notify', [FrontendController::class, 'notifyStore'])->middleware('throttle:10,1');
     Route::get('/track', [CatalogApiController::class, 'trackOrder'])->middleware('throttle:20,1');
 
     // Bag

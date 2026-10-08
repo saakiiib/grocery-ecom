@@ -106,6 +106,20 @@ class SidebarController
                 'href' => route('admin.contacts.index'),
             ],
             [
+                'type' => 'item',
+                'icon' => 'ri-mail-send-line',
+                'label' => 'Subscribers',
+                'route' => 'subscribers.*',
+                'href' => route('subscribers.index'),
+            ],
+            [
+                'type' => 'item',
+                'icon' => 'ri-notification-3-line',
+                'label' => 'Stock Alerts',
+                'route' => 'stock-alerts.*',
+                'href' => route('stock-alerts.index'),
+            ],
+            [
                 'type' => 'group',
                 'icon' => 'ri-settings-3-line',
                 'label' => 'Settings',

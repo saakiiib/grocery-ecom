@@ -38,6 +38,8 @@
 
 @include('frontend.partials.cookie-banner')
 
+@include('frontend.partials.social-proof')
+
 <script>
     window.EGF_ROUTES = {
         shop: "{{ route('shop') }}",
@@ -51,6 +53,8 @@
         reviewStore: "{{ route('reviews.store') }}",
         login: "{{ route('login') }}",
         catalog: "{{ route('search.catalog') }}",
+        newsletter: "{{ route('newsletter.subscribe') }}",
+        notify: "{{ route('notify.store') }}",
         product: "{{ url('/product') }}"
     };
     window.EGF_ASSETS = { placeholder: "{{ asset('placeholder.webp') }}" };

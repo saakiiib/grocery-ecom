@@ -64,6 +64,19 @@
                 <a @spa href="{{ route('shop') }}" class="btn btn-ghost btn-block" style="margin-top:0.5rem;">Continue shopping</a>
             </aside>
         </div>
+        @if (! empty($suggestions))
+            <section class="section">
+                <div class="section-header">
+                    <p class="section-label">Complete your basket</p>
+                    <h2 class="section-title">Pairs well with your bag</h2>
+                </div>
+                <div class="product-grid">
+                    @foreach ($suggestions as $p)
+                        @include('frontend.partials.product-card', ['p' => $p])
+                    @endforeach
+                </div>
+            </section>
+        @endif
     </div>
 </main>
 @endsection

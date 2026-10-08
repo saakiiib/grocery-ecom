@@ -21,6 +21,7 @@ class ShopSettingsController extends Controller
         'promo_coupon' => 'Welcome promo coupon code',
         'promo_button_text' => 'Welcome promo button text',
         'promo_button_url' => 'Welcome promo button URL',
+        'social_proof_enabled' => 'Recent-sales popup enabled (1/0)',
         'delivery_min_order' => 'Minimum order for delivery (£)',
         'delivery_free_over' => 'Free delivery over (£)',
         'points_per_pound' => 'Loyalty points earned per £1',
@@ -60,6 +61,7 @@ class ShopSettingsController extends Controller
         $request->merge([
             'announcement_enabled' => $request->input('announcement_enabled', Setting::get('announcement_enabled', '0') ?? '0'),
             'promo_enabled' => $request->input('promo_enabled', Setting::get('promo_enabled', '0') ?? '0'),
+            'social_proof_enabled' => $request->input('social_proof_enabled', Setting::get('social_proof_enabled', '1') ?? '1'),
         ]);
         $data = $request->validate([
             'announcement_enabled' => 'required|in:0,1',
@@ -72,6 +74,7 @@ class ShopSettingsController extends Controller
             'promo_coupon' => 'nullable|string|max:60',
             'promo_button_text' => 'nullable|string|max:60',
             'promo_button_url' => 'nullable|string|max:255',
+            'social_proof_enabled' => 'required|in:0,1',
             'delivery_min_order' => 'required|numeric|min:0|max:9999',
             'delivery_free_over' => 'required|numeric|min:0|max:9999',
             'points_per_pound' => 'required|numeric|min:0|max:100',

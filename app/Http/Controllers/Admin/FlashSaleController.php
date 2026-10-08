@@ -7,6 +7,7 @@ use App\Models\FlashSale;
 use App\Models\Offer;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\StockAlert;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -31,7 +32,8 @@ class FlashSaleController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        FlashSale::create($this->validated($request) + ['sort_order' => (int) FlashSale::max('sort_order') + 1]);
+        $sale = FlashSale::create($this->validated($request) + ['sort_order' => (int) FlashSale::max('sort_order') + 1]);
+        StockAlert::fulfillForProduct($sale->product_id);
 
         return redirect()->route('flash.index')->with('status', 'Flash sale added.');
     }
@@ -49,6 +51,7 @@ class FlashSaleController extends Controller
     {
         $sale = FlashSale::findOrFail($request->input('id'));
         $sale->update($this->validated($request));
+        StockAlert::fulfillForProduct($sale->product_id);
 
         return redirect()->route('flash.index')->with('status', 'Flash sale saved.');
     }
@@ -65,6 +68,7 @@ class FlashSaleController extends Controller
         $sale = FlashSale::findOrFail($request->input('id'));
         $sale->status = ! $sale->status;
         $sale->save();
+        StockAlert::fulfillForProduct($sale->product_id);
 
         return response()->json(['success' => true]);
     }
@@ -78,6 +82,7 @@ class FlashSaleController extends Controller
         } else {
             ProductVariant::where('product_id', $sale->product_id)->update(['offer_price' => $sale->promo_price]);
         }
+        StockAlert::fulfillForProduct($sale->product_id);
 
         return redirect()->route('flash.index')->with('status', 'Flash price is now the permanent offer price.');
     }

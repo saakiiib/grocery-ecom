@@ -19,6 +19,8 @@ use App\Models\Setting;
 use App\Models\Slider;
 use App\Models\Testimonial;
 use App\Models\UserPoint;
+use App\Support\Discovery;
+use App\Support\PairsWell;
 use App\Support\SitePromo;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -41,6 +43,15 @@ class CatalogApiController extends FrontendController
             ->map(fn ($p) => $this->productCard($p, $cover, $flash, $bogo))->values();
         $offers = $products->filter(fn ($p) => $this->hasDeal($p, $flash))->take(4)->values()
             ->map(fn ($p) => $this->productCard($p, $cover, $flash, $bogo))->values();
+        $cardOf = fn ($p) => $this->productCard($p, $cover, $flash, $bogo);
+        $best = Discovery::bestsellers($products)->map($cardOf)->values();
+        if ($best->isEmpty()) {
+            $best = $featured->take(4)->values();
+        }
+        $trend = Discovery::trending($products)->map($cardOf)->values();
+        if ($trend->isEmpty()) {
+            $trend = $offers;
+        }
         $cats = $categories->whereNull('parent_id')->take(10)->values()->map(function ($c) use ($products, $categories) {
             $ids = $this->categorySubtreeIds($categories, $c->id);
 
@@ -60,6 +71,9 @@ class CatalogApiController extends FrontendController
             'categories' => $cats,
             'featured' => $featured,
             'offers' => $offers,
+            'new_in' => Discovery::newIn($products)->map($cardOf)->values(),
+            'bestsellers' => $best,
+            'trending' => $trend,
             'testimonials' => Testimonial::where('is_active', true)->orderBy('sort_order')->orderBy('id')
                 ->get(['name', 'image', 'designation', 'review'])
                 ->map(fn ($t) => [...$t->toArray(), 'image' => $t->image ? url($t->image) : null])->values(),
@@ -69,6 +83,7 @@ class CatalogApiController extends FrontendController
             'company' => $this->company(),
             'announcement' => SitePromo::announcement(),
             'promo' => SitePromo::promo(),
+            'deal_of_day' => $this->dealOfDay($products, $flash, $cover, $bogo),
         ]);
     }
 
@@ -238,6 +253,7 @@ class CatalogApiController extends FrontendController
                 ? ProductReview::where('product_id', $product->id)->where('user_id', auth()->id())->first()
                 : null,
             'related' => $related->map(fn ($p) => $this->productCard($p, ...$maps))->values(),
+            'pairs_well_with' => PairsWell::productsFor([$product->id])->map(fn ($p) => $this->productCard($p, ...$maps))->values(),
             'faqs' => $this->faqsJson(4),
         ]);
     }
@@ -256,8 +272,10 @@ class CatalogApiController extends FrontendController
     public function bag(): JsonResponse
     {
         BagController::reconcile();
+        $bag = BagController::detailed();
+        $bag['suggestions'] = $this->bagSuggestions($bag);
 
-        return response()->json(BagController::detailed());
+        return response()->json($bag);
     }
 
     /** Everything the checkout screen needs (mirrors FrontendController::checkout). */

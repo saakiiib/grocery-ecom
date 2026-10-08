@@ -26,6 +26,8 @@ use App\Http\Controllers\Admin\ProductVariantController;
 use App\Http\Controllers\Admin\ReviewController;
 use App\Http\Controllers\Admin\ShopSettingsController;
 use App\Http\Controllers\Admin\SliderController;
+use App\Http\Controllers\Admin\StockAlertController;
+use App\Http\Controllers\Admin\SubscriberController;
 use App\Http\Controllers\Admin\TestimonialController;
 use App\Http\Controllers\HomeController;
 use Illuminate\Support\Facades\Route;
@@ -99,6 +101,15 @@ Route::group(['prefix' => 'admin/', 'middleware' => ['auth', 'is_admin']], funct
     Route::post('/reviews/update', [ReviewController::class, 'update'])->name('reviews.update');
     Route::post('/reviews/toggle-status', [ReviewController::class, 'toggleStatus'])->name('reviews.toggleStatus');
     Route::delete('/reviews/{id}', [ReviewController::class, 'destroy'])->name('reviews.delete');
+
+    // Stock & price alerts
+    Route::get('/stock-alerts', [StockAlertController::class, 'index'])->name('stock-alerts.index');
+    Route::delete('/stock-alerts/{id}', [StockAlertController::class, 'destroy'])->name('stock-alerts.delete');
+
+    // Newsletter subscribers
+    Route::get('/subscribers', [SubscriberController::class, 'index'])->name('subscribers.index');
+    Route::post('/subscribers/toggle-status', [SubscriberController::class, 'toggleStatus'])->name('subscribers.toggleStatus');
+    Route::delete('/subscribers/{id}', [SubscriberController::class, 'destroy'])->name('subscribers.delete');
 
     // Contacts
     Route::get('/contacts', [ContactController::class, 'index'])->name('admin.contacts.index');
@@ -215,10 +226,11 @@ Route::group(['prefix' => 'admin/', 'middleware' => ['auth', 'is_admin']], funct
     // Product variants (per-product workspace tab)
     Route::get('/products/{product}/variants', [ProductVariantController::class, 'list'])->name('product-variants.list');
     Route::post('/products/{product}/variants', [ProductVariantController::class, 'store'])->name('product-variants.store');
+    // Static segment first: otherwise toggle-stock matches {id} and 404s.
+    Route::post('/product-variants/toggle-stock', [ProductVariantController::class, 'toggleStock'])->name('product-variants.toggleStock');
     Route::post('/product-variants/{id}', [ProductVariantController::class, 'update'])->name('product-variants.update');
     Route::delete('/product-variants/{id}', [ProductVariantController::class, 'destroy'])->name('product-variants.delete');
     Route::post('/product-variants/{id}/default', [ProductVariantController::class, 'setDefault'])->name('product-variants.default');
-    Route::post('/product-variants/toggle-stock', [ProductVariantController::class, 'toggleStock'])->name('product-variants.toggleStock');
     Route::delete('/product-variants/{id}/image', [ProductVariantController::class, 'removeImage'])->name('product-variants.removeImage');
     Route::post('/products/{product}/variant-groups', [ProductVariantController::class, 'syncGroups'])->name('product-variants.syncGroups');
     Route::post('/products/{id}/attributes', [ProductController::class, 'attributesSync'])->name('products.attributesSync');

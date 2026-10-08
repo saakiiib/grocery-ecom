@@ -168,6 +168,8 @@
                         @disabled(!($defaultVariant['in_stock'] ?? false))>{{ ($defaultVariant['in_stock'] ?? false) ? '+ Add to bag' : 'Out of stock' }}</button>
                 </div>
 
+                @include('frontend.partials.notify-me', ['product' => $product, 'defaultVariant' => $defaultVariant])
+
                 @if ($product->description)
                     <div style="margin-top:1.5rem;">{!! $product->description !!}</div>
                 @endif
@@ -283,6 +285,35 @@
                 <p class="review-notice"><a @spa href="{{ route('login') }}">Sign in</a> to write a review.</p>
             @endauth
         </section>
+
+        @if (! empty($pairsJson) && $pairsJson->isNotEmpty())
+            <section class="section">
+                <div class="section-header">
+                    <p class="section-label">Frequently bought together</p>
+                    <h2 class="section-title">Pairs well with</h2>
+                    <p class="section-desc">Shoppers who bought this also picked these.</p>
+                </div>
+                <div class="product-grid">
+                    @foreach ($pairsJson as $p)
+                        @include('frontend.partials.product-card', ['p' => $p])
+                    @endforeach
+                </div>
+            </section>
+        @endif
+
+        @if (! empty($recentlyViewed) && $recentlyViewed->isNotEmpty())
+            <section class="section">
+                <div class="section-header">
+                    <p class="section-label">Pick up where you left off</p>
+                    <h2 class="section-title">Recently viewed</h2>
+                </div>
+                <div class="product-grid">
+                    @foreach ($recentlyViewed as $p)
+                        @include('frontend.partials.product-card', ['p' => $p])
+                    @endforeach
+                </div>
+            </section>
+        @endif
 
         @if ($relatedJson->isNotEmpty())
             <section class="section">

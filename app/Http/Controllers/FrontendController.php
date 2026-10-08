@@ -22,8 +22,12 @@ use App\Models\ProductReview;
 use App\Models\ProductVariant;
 use App\Models\Setting;
 use App\Models\Slider;
+use App\Models\StockAlert;
+use App\Models\Subscriber;
 use App\Models\Testimonial;
 use App\Models\UserPoint;
+use App\Support\Discovery;
+use App\Support\PairsWell;
 use App\Support\SitePromo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -88,8 +92,20 @@ class FrontendController extends Controller
             ->values();
 
         $promo = SitePromo::promo();
+        $dealOfDay = $this->dealOfDay($products, $flashMap, $bundleCover, $bogoLive);
+        $cardOf = fn ($p) => $this->productCard($p, $bundleCover, $flashMap, $bogoLive);
+        $newCards = Discovery::newIn($products)->map($cardOf)->values();
+        $bestCards = Discovery::bestsellers($products)->map($cardOf)->values();
+        if ($bestCards->isEmpty()) {
+            $bestCards = $featuredCards->take(4)->values();
+        }
+        $trendCards = Discovery::trending($products)->map($cardOf)->values();
+        if ($trendCards->isEmpty()) {
+            $trendCards = $offerCards;
+        }
+        $recentCards = $this->recentCards($products, $bundleCover, $flashMap, $bogoLive);
 
-        return spa('frontend.index', compact('productsJson', 'featuredJson', 'featuredCards', 'categoriesJson', 'offerCards', 'faqsJson', 'faqCatsJson', 'galleryJson', 'galleryCatsJson', 'testimonialsJson', 'filesJson', 'zonesJson', 'slidersJson', 'promo'));
+        return spa('frontend.index', compact('productsJson', 'featuredJson', 'featuredCards', 'categoriesJson', 'offerCards', 'faqsJson', 'faqCatsJson', 'galleryJson', 'galleryCatsJson', 'testimonialsJson', 'filesJson', 'zonesJson', 'slidersJson', 'promo', 'dealOfDay', 'newCards', 'bestCards', 'trendCards', 'recentCards'));
     }
 
     public function shop(Request $request, ?string $category = null)
@@ -323,12 +339,31 @@ class FrontendController extends Controller
         return $ids;
     }
 
+    /** Recently-viewed product cards (session, most recent first, excluding $excludeId). */
+    protected function recentCards($products, ?array $bundleCover, array $flashMap, $bogoLive, ?int $excludeId = null, int $limit = 4)
+    {
+        $ids = collect(session()->get('recently_viewed', []))
+            ->reject(fn ($id) => $excludeId !== null && (int) $id === $excludeId)
+            ->take($limit)
+            ->values();
+        if ($ids->isEmpty()) {
+            return collect();
+        }
+        $byId = $products->where('status', true)->keyBy('id');
+
+        return $ids->map(fn ($id) => $byId->get((int) $id))->filter()
+            ->map(fn ($p) => $this->productCard($p, $bundleCover, $flashMap, $bogoLive))->values();
+    }
+
     public function productShow($slug)
     {
         $product = Product::with(['category', 'images', 'extraAttributes', 'variants.values.group', 'optionGroups.values', 'category.optionGroups.values', 'allergens'])
             ->where('slug', $slug)
             ->where('status', true)
             ->firstOrFail();
+
+        $recent = collect(session()->get('recently_viewed', []))->reject(fn ($id) => (int) $id === $product->id);
+        session()->put('recently_viewed', $recent->prepend($product->id)->take(8)->values()->all());
 
         $seo = $product->seoArray();
         $this->seo(null, $seo['title'], $seo['description'], $seo['keywords'], $this->imgUrl($seo['image']));
@@ -354,6 +389,11 @@ class FrontendController extends Controller
         }
 
         $relMaps = [BundleOffer::coverMap(), FlashSale::liveMap(), BogoOffer::liveAll()];
+        $pairsJson = PairsWell::productsFor([$product->id])->map(fn ($p) => $this->productCard($p, ...$relMaps))->values();
+        $recentIds = collect(session()->get('recently_viewed', []))->reject(fn ($id) => (int) $id === $product->id)->take(4)->values();
+        $recentlyViewed = $recentIds->isEmpty() ? collect() : Product::with(['category', 'images', 'variants.values.group'])
+            ->withReviewSummary()->where('status', true)->whereIn('id', $recentIds)->get()->sortBy(fn ($p) => $recentIds->search($p->id))->values()
+            ->map(fn ($p) => $this->productCard($p, ...$relMaps))->values();
         $productJson = $this->productDetail($product, ...$relMaps);
         $reviewStats = ProductReview::approved()->where('product_id', $product->id)
             ->selectRaw('COUNT(*) as count, AVG(rating) as avg')
@@ -390,7 +430,7 @@ class FrontendController extends Controller
         $videoUrl = null;
         $videoEmbed = null;
 
-        return spa('frontend.details', compact('product', 'productJson', 'optionsJson', 'zonesJson', 'relatedJson', 'faqsJson', 'docsJson', 'videoUrl', 'videoEmbed', 'reviewsJson', 'myReview'));
+        return spa('frontend.details', compact('product', 'productJson', 'optionsJson', 'zonesJson', 'relatedJson', 'pairsJson', 'recentlyViewed', 'faqsJson', 'docsJson', 'videoUrl', 'videoEmbed', 'reviewsJson', 'myReview'));
     }
 
     public function about()
@@ -423,6 +463,53 @@ class FrontendController extends Controller
         ]);
 
         return response()->json(['success' => true, 'message' => 'Message received. The shop will reply within one working day.']);
+    }
+
+    /** Newsletter signup — idempotent by email, optional source tag (footer/modal/app). */
+    public function subscribeStore(Request $request)
+    {
+        $data = $request->validate([
+            'email' => 'required|email|max:255',
+            'source' => 'nullable|string|max:30',
+        ]);
+
+        $subscriber = Subscriber::updateOrCreate(
+            ['email' => strtolower(trim($data['email']))],
+            ['source' => $data['source'] ?? 'footer', 'is_active' => true]
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => $subscriber->wasRecentlyCreated
+                ? 'You are on the list — fresh deals coming your way.'
+                : 'That email is already subscribed.',
+        ]);
+    }
+
+    /** Back-in-stock / price-drop watch — idempotent per email + pack + type. */
+    public function notifyStore(Request $request)
+    {
+        $data = $request->validate([
+            'email' => 'required|email|max:255',
+            'product_id' => 'required|integer|exists:products,id',
+            'product_variant_id' => 'nullable|integer|exists:product_variants,id',
+            'type' => 'required|in:back_in_stock,price_drop',
+        ]);
+        $variant = $data['product_variant_id']
+            ? ProductVariant::where('id', $data['product_variant_id'])->where('product_id', $data['product_id'])->firstOrFail()
+            : ProductVariant::where('product_id', $data['product_id'])->orderBy('sort_order')->firstOrFail();
+
+        $alert = StockAlert::updateOrCreate(
+            ['email' => strtolower(trim($data['email'])), 'product_variant_id' => $variant->id, 'type' => $data['type']],
+            ['product_id' => $data['product_id'], 'target_price' => StockAlert::effectivePrice($variant), 'is_sent' => false, 'sent_at' => null]
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => $data['type'] === 'price_drop'
+                ? 'We will email you if this drops below £'.number_format($alert->target_price, 2).'.'
+                : 'We will email you the moment it is back.',
+        ]);
     }
 
     public function refund()
@@ -466,8 +553,27 @@ class FrontendController extends Controller
         $bag = BagController::detailed();
         $minOrder = Setting::money('delivery_min_order', 15.00);
         $freeOver = Setting::money('delivery_free_over', 50.00);
+        $suggestions = $this->bagSuggestions($bag);
 
-        return spa('frontend.bag', compact('bag', 'minOrder', 'freeOver'));
+        return spa('frontend.bag', compact('bag', 'minOrder', 'freeOver', 'suggestions'));
+    }
+
+    /** "Complete your basket" cards for the bag page + API, from co-buy history. */
+    protected function bagSuggestions(array $bag, int $limit = 4): array
+    {
+        $variantIds = collect($bag['lines'] ?? [])->pluck('variant_id')->all();
+        if ($variantIds === []) {
+            return [];
+        }
+        $inBag = ProductVariant::whereIn('id', $variantIds)->pluck('product_id')->unique()->all();
+        $maps = [BundleOffer::coverMap(), FlashSale::liveMap(), BogoOffer::liveAll()];
+
+        return PairsWell::productsFor($inBag, $limit + count($inBag))
+            ->reject(fn ($p) => in_array($p->id, $inBag))
+            ->take($limit)
+            ->map(fn ($p) => $this->productCard($p, ...$maps))
+            ->values()
+            ->all();
     }
 
     public function checkout()
@@ -614,6 +720,46 @@ class FrontendController extends Controller
         }
 
         return false;
+    }
+
+    /**
+     * Deal of the day: the live flash sale ending soonest, with its product
+     * card plus a machine-readable end time for the countdown. Null when
+     * no flash with an end time is live. Plain offer_price rows (no urgency)
+     * never qualify.
+     *
+     * @return array{card: array, ends_at: string, ends_label: string}|null
+     */
+    protected function dealOfDay($products, array $flashMap, ?array $bundleCover = null, $bogoLive = null): ?array
+    {
+        $best = null;
+        foreach ($products as $p) {
+            if (! $p->status) {
+                continue;
+            }
+            foreach ($p->variants as $v) {
+                if (! $v->status || ! $v->in_stock) {
+                    continue;
+                }
+                $hit = FlashSale::priceFor($v->id, $p->id, $flashMap);
+                if (! $hit || ! $hit['ends'] || $hit['price'] >= (float) $v->mrp) {
+                    continue;
+                }
+                if ($best === null || $hit['ends']->lt($best['ends'])) {
+                    $best = ['product' => $p, 'ends' => $hit['ends']];
+                }
+            }
+        }
+        if ($best === null) {
+            return null;
+        }
+        $card = $this->productCard($best['product'], $bundleCover, $flashMap, $bogoLive);
+
+        return [
+            'card' => $card,
+            'ends_at' => $best['ends']->toIso8601String(),
+            'ends_label' => $best['ends']->format('D j M, H:i'),
+        ];
     }
 
     /** Cheapest variant price with live flash applied. */

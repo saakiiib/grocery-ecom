@@ -1127,6 +1127,134 @@
     setTimeout(function () { modal.hidden = false; }, 1500);
   }
 
+  /* ---------------- Deal-of-the-day countdown (1s tick, SPA re-runnable) ---------------- */
+  function paintDeal(el) {
+    var ends = new Date(el.getAttribute('data-deal-countdown')).getTime();
+    var diff = ends - Date.now();
+    if (isNaN(diff) || diff <= 0) {
+      var day = el.closest ? el.closest('[data-deal-day]') : null;
+      if (day) day.remove();
+      if (el._dealTimer) clearInterval(el._dealTimer);
+      return;
+    }
+    var s = Math.floor(diff / 1000);
+    var d = Math.floor(s / 86400);
+    var h = Math.floor((s % 86400) / 3600);
+    var m = Math.floor((s % 3600) / 60);
+    var sec = s % 60;
+    function set(sel, val) {
+      var n = el.querySelector(sel);
+      if (n) n.textContent = val;
+    }
+    set('[data-deal-d]', d);
+    set('[data-deal-h]', h);
+    set('[data-deal-m]', m);
+    set('[data-deal-s]', sec);
+  }
+
+  function initDealCountdown() {
+    var el = document.querySelector('[data-deal-countdown]');
+    if (!el || el._dealBound) return;
+    el._dealBound = true;
+    paintDeal(el);
+    el._dealTimer = setInterval(function () { paintDeal(el); }, 1000);
+  }
+
+  /* ---------------- Newsletter signup (footer, SPA re-runnable) ---------------- */
+  function initNewsletter() {
+    var box = document.querySelector('[data-newsletter]');
+    if (!box || box._egfBound) return;
+    box._egfBound = true;
+    var form = box.querySelector('[data-newsletter-form]');
+    var msg = box.querySelector('[data-newsletter-msg]');
+    if (!form) return;
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var input = form.querySelector('input[name="email"]');
+      var email = input ? input.value.trim() : '';
+      if (!email || email.indexOf('@') < 0) {
+        if (msg) { msg.style.display = ''; msg.style.color = '#B91C1C'; msg.textContent = 'Enter a valid email address.'; }
+        return;
+      }
+      bagPost(routes().newsletter || '/newsletter', { email: email, source: 'footer' })
+        .then(function (data) {
+          if (msg) { msg.style.display = ''; msg.style.color = '#1A2E22'; msg.textContent = data.message || 'Subscribed.'; }
+          if (input) input.value = '';
+        })
+        .catch(function (err) {
+          if (msg) { msg.style.display = ''; msg.style.color = '#B91C1C'; msg.textContent = (err && err.message) || 'Could not subscribe — try again.'; }
+        });
+    });
+  }
+
+  /* ---------------- Notify-me (back in stock / price drop, SPA re-runnable) ---------------- */
+  function initNotifyMe() {
+    document.querySelectorAll('[data-notify]').forEach(function (box) {
+      if (box._egfBound) return;
+      box._egfBound = true;
+      var toggle = box.querySelector('[data-notify-toggle]');
+      var form = box.querySelector('[data-notify-form]');
+      var msg = box.querySelector('[data-notify-msg]');
+      if (toggle && form) toggle.addEventListener('click', function () {
+        form.style.display = form.style.display === 'none' ? '' : 'none';
+      });
+      if (!form) return;
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var input = form.querySelector('input[name="email"]');
+        var email = input ? input.value.trim() : '';
+        if (!email || email.indexOf('@') < 0) {
+          if (msg) { msg.style.display = ''; msg.style.color = '#B91C1C'; msg.textContent = 'Enter a valid email address.'; }
+          return;
+        }
+        bagPost(routes().notify || '/notify', {
+          email: email,
+          product_id: parseInt(box.getAttribute('data-product'), 10),
+          product_variant_id: parseInt(box.getAttribute('data-variant'), 10) || null,
+          type: box.getAttribute('data-type')
+        }).then(function (data) {
+          if (msg) { msg.style.display = ''; msg.style.color = '#1A2E22'; msg.textContent = data.message || 'Watching.'; }
+          if (input) input.value = '';
+        }).catch(function (err) {
+          if (msg) { msg.style.display = ''; msg.style.color = '#B91C1C'; msg.textContent = (err && err.message) || 'Could not save — try again.'; }
+        });
+      });
+    });
+  }
+
+  /* ---------------- Social proof toast (recent orders, max 3 per view) ---------------- */
+  function initSocialProof() {
+    var box = document.querySelector('[data-proof]');
+    if (!box || box._egfBound) return;
+    box._egfBound = true;
+    var dataEl = box.querySelector('[data-proof-data]');
+    var items = [];
+    try { items = JSON.parse(dataEl ? dataEl.textContent : '[]'); } catch (e) { items = []; }
+    if (!items.length) return;
+    var link = box.querySelector('[data-proof-link]');
+    var text = box.querySelector('[data-proof-text]');
+    var idx = 0;
+    var shown = 0;
+    function show() {
+      if (shown >= 3 || idx >= items.length) return;
+      var it = items[idx++];
+      shown++;
+      if (link) link.setAttribute('href', it.url);
+      if (text) text.textContent = it.name + (it.city ? ' from ' + it.city : '') + ' bought ' + it.item + ' · ' + it.ago;
+      box.hidden = false;
+      setTimeout(function () {
+        box.hidden = true;
+        setTimeout(show, 9000);
+      }, 6000);
+    }
+    setTimeout(show, 8000);
+    var close = box.querySelector('[data-proof-close]');
+    if (close) close.addEventListener('click', function () {
+      box.remove();
+      idx = items.length;
+    });
+  }
+
   /* ---------------- Boot (runs on first load + every SPA nav) ---------------- */
   function boot() {
     if (searchEl && document.body.contains(searchEl)) searchEl.remove();
@@ -1143,6 +1271,10 @@
     initCookieBanner();
     initAnnouncementBar();
     initPromoModal();
+    initDealCountdown();
+    initNewsletter();
+    initNotifyMe();
+    initSocialProof();
     initFavToggles();
     renderBagPage();
     initHeroSlider();
