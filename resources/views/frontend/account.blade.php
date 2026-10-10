@@ -261,8 +261,8 @@
                         </div>
                         <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
                             <div class="form-group">
-                                <label for="pw-new">New password <span class="text-muted">(6 digits)</span></label>
-                                <input id="pw-new" type="password" name="password" required inputmode="numeric" maxlength="6" autocomplete="new-password">
+                                <label for="pw-new">New password <span class="text-muted">(at least 8 characters)</span></label>
+                                <input id="pw-new" type="password" name="password" required minlength="8" maxlength="72" autocomplete="new-password">
                                 @error('password')<p style="color:#B91C1C;font-size:13px;margin-top:0.35rem;">{{ $message }}</p>@enderror
                             </div>
                             <div class="form-group">

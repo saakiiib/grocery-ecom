@@ -54,7 +54,7 @@ Route::post('/bag/add', [BagController::class, 'add'])->name('bag.add');
 Route::post('/bag/update', [BagController::class, 'update'])->name('bag.update');
 Route::post('/bag/remove', [BagController::class, 'remove'])->name('bag.remove');
 Route::get('/bag/data', [BagController::class, 'show'])->name('bag.data');
-Route::post('/checkout/place', [CheckoutController::class, 'place'])->name('checkout.place');
+Route::post('/checkout/place', [CheckoutController::class, 'place'])->middleware('throttle:10,1')->name('checkout.place');
 Route::post('/checkout/coupon', [CheckoutController::class, 'coupon'])->middleware('throttle:20,1')->name('checkout.coupon');
 Route::post('/checkout/postcode', [CheckoutController::class, 'postcode'])->name('checkout.postcode');
 Route::post('/checkout/payment-confirm', [CheckoutController::class, 'paymentConfirm'])->middleware('throttle:30,1')->name('checkout.payment-confirm');

@@ -43,17 +43,27 @@ function pickupPayload(int $slotId, string $date, string $fulfillment = 'pickup'
 
 test('pickup is free and skips the delivery zone check', function () {
     $f = seedPickupGrocery();
+    Setting::put('delivery_min_order', '15.00');
     DeliveryZone::create(['name' => 'Leeds only', 'is_active' => true])
         ->postcodes()->create(['prefix' => 'LS']);
 
     session()->put('bag', [$f['variant']->id => 1]);
     $date = array_key_first(DeliverySlot::bookableDates());
-    $redirect = $this->postJson(route('checkout.place'), pickupPayload($f['slot']->id, $date))
+    $payload = pickupPayload($f['slot']->id, $date);
+    foreach (['address', 'city', 'postcode', 'billing_name', 'billing_phone', 'billing_address', 'billing_city', 'billing_postcode'] as $field) {
+        $payload[$field] = '';
+    }
+    $redirect = $this->postJson(route('checkout.place'), $payload)
         ->assertOk()->json('redirect');
 
     preg_match('/EGF-\d+/', $redirect, $m);
     $order = Order::where('number', $m[0])->firstOrFail();
-    expect($order->fulfillment)->toBe('pickup')->and((float) $order->delivery_fee)->toBe(0.0);
+    expect($order->fulfillment)->toBe('pickup')
+        ->and((float) $order->delivery_fee)->toBe(0.0)
+        ->and($order->address)->toBe('Click & Collect')
+        ->and($order->postcode)->toBe('')
+        ->and($order->billing_address)->toBeNull()
+        ->and($order->paymentLabel())->toBe('Cash on Collection');
 });
 
 test('delivery still enforces the zone', function () {

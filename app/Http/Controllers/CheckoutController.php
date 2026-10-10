@@ -12,7 +12,6 @@ use App\Models\Order;
 use App\Models\OrderStatus;
 use App\Models\ProductVariant;
 use App\Models\Setting;
-use App\Models\User;
 use App\Models\UserPoint;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -116,7 +115,7 @@ class CheckoutController extends Controller
 
         $subtotal = $subtotalOverride ?? $bag['subtotal'];
         $min = Setting::money('delivery_min_order', 15.00);
-        if ($subtotal < $min) {
+        if (! $pickup && $subtotal < $min) {
             return ['ok' => false, 'message' => 'The minimum order for delivery is £'.number_format($min, 2).'.'];
         }
 
@@ -140,19 +139,22 @@ class CheckoutController extends Controller
     /** Create the order from the session bag. Online methods return payment credentials for the JS SDKs. */
     public function place(Request $request): JsonResponse
     {
+        $pickup = $request->input('fulfillment') === 'pickup';
+        $deliveryAddressRule = $pickup ? 'nullable' : 'required';
+        $billingRule = $pickup ? 'nullable' : 'required';
         $data = $request->validate([
             'name' => 'required|string|max:100',
             'phone' => 'required|string|max:30',
             // Guests must leave an email — otherwise no receipt can reach them.
             'email' => [auth()->check() ? 'nullable' : 'required', 'email', 'max:255'],
-            'address' => 'required|string|max:500',
-            'city' => 'required|string|max:100',
-            'postcode' => 'required|string|max:20',
-            'billing_name' => 'required|string|max:100',
-            'billing_phone' => 'required|string|max:30',
-            'billing_address' => 'required|string|max:500',
-            'billing_city' => 'required|string|max:100',
-            'billing_postcode' => 'required|string|max:20',
+            'address' => [$deliveryAddressRule, 'string', 'max:500'],
+            'city' => [$deliveryAddressRule, 'string', 'max:100'],
+            'postcode' => [$deliveryAddressRule, 'string', 'max:20'],
+            'billing_name' => [$billingRule, 'string', 'max:100'],
+            'billing_phone' => [$billingRule, 'string', 'max:30'],
+            'billing_address' => [$billingRule, 'string', 'max:500'],
+            'billing_city' => [$billingRule, 'string', 'max:100'],
+            'billing_postcode' => [$billingRule, 'string', 'max:20'],
             'save_address' => 'nullable|boolean',
             'save_label' => 'nullable|string|max:50',
             'substitution' => 'required|in:substitute,refund,call',
@@ -214,24 +216,37 @@ class CheckoutController extends Controller
 
         try {
             $order = DB::transaction(function () use ($data, $priced, $pointsRedeem, $pointsDiscount, $pickup) {
-                $status = OrderStatus::where('slug', 'new')->where('is_active', true)->firstOrFail();
+                // Lock existing ledger rows and recheck the balance inside the
+                // transaction so two simultaneous checkouts cannot spend the
+                // same points twice.
+                if ($pointsRedeem > 0) {
+                    $lockedPoints = UserPoint::where('user_id', auth()->id())
+                        ->lockForUpdate()->get(['points']);
+                    $balance = (int) $lockedPoints->sum('points');
+                    $maxPoints = (int) min($balance, floor($priced['subtotal'] / UserPoint::value()));
+                    if ($pointsRedeem < UserPoint::minRedeem() || $pointsRedeem > $maxPoints) {
+                        throw new PointsRejected('Your loyalty balance changed. Please review your points and try again.');
+                    }
+                }
 
                 // Coupon — revalidated server-side, shoppers only. Row-locked so
                 // concurrent checkouts cannot over-redeem a limited coupon.
                 $coupon = null;
                 $couponDiscount = 0.0;
                 if (! empty($data['coupon_code'])) {
-                    $coupon = Coupon::findByCode($data['coupon_code']);
+                    $coupon = Coupon::where('code', strtoupper(trim($data['coupon_code'])))
+                        ->lockForUpdate()->first();
                     if (! $coupon) {
                         throw new CouponRejected('That coupon does not exist.');
                     }
-                    $coupon = Coupon::where('id', $coupon->id)->lockForUpdate()->firstOrFail();
                     $check = $coupon->checkFor(auth()->id(), $priced['subtotal']);
                     if (! $check['ok']) {
                         throw new CouponRejected($check['message']);
                     }
                     $couponDiscount = $check['discount'];
                 }
+
+                $status = OrderStatus::where('slug', 'new')->where('is_active', true)->firstOrFail();
 
                 /** @var Order $order */
                 // VAT is included in shelf prices: snapshot the VAT portion of the total.
@@ -244,14 +259,15 @@ class CheckoutController extends Controller
                     'name' => $data['name'],
                     'phone' => $data['phone'],
                     'email' => $data['email'] ?? null,
-                    'address' => $data['address'],
-                    'city' => $data['city'],
-                    'postcode' => $data['postcode'],
-                    'billing_name' => $data['billing_name'],
-                    'billing_phone' => $data['billing_phone'],
-                    'billing_address' => $data['billing_address'],
-                    'billing_city' => $data['billing_city'],
-                    'billing_postcode' => $data['billing_postcode'],
+                    // Pickup orders don't collect or persist a delivery address.
+                    'address' => $pickup ? 'Click & Collect' : $data['address'],
+                    'city' => $pickup ? '' : $data['city'],
+                    'postcode' => $pickup ? '' : $data['postcode'],
+                    'billing_name' => $pickup ? null : $data['billing_name'],
+                    'billing_phone' => $pickup ? null : $data['billing_phone'],
+                    'billing_address' => $pickup ? null : $data['billing_address'],
+                    'billing_city' => $pickup ? null : $data['billing_city'],
+                    'billing_postcode' => $pickup ? null : $data['billing_postcode'],
                     'notes' => $data['notes'] ?? null,
                     'substitution_preference' => $data['substitution'],
                     'delivery_date' => $data['delivery_date'],
@@ -311,19 +327,18 @@ class CheckoutController extends Controller
                 // Remember the shopper's details for next time (never overwrite,
                 // and never steal a phone number that belongs to another account).
                 if ($order->user_id) {
-                    $profile = ['address' => $order->address, 'city' => $order->city, 'postcode' => $order->postcode];
-                    foreach (['address', 'city', 'postcode'] as $field) {
-                        if ($order->user->$field) {
-                            unset($profile[$field]);
+                    if (! $pickup) {
+                        $profile = ['address' => $order->address, 'city' => $order->city, 'postcode' => $order->postcode];
+                        foreach (['address', 'city', 'postcode'] as $field) {
+                            if ($order->user->$field) {
+                                unset($profile[$field]);
+                            }
+                        }
+                        if ($profile !== []) {
+                            $order->user->update($profile);
                         }
                     }
-                    if (! $order->user->phone && ! User::where('phone', $order->phone)->where('id', '!=', $order->user_id)->exists()) {
-                        $profile['phone'] = $order->phone;
-                    }
-                    if ($profile !== []) {
-                        $order->user->update($profile);
-                    }
-                    if (! empty($data['save_address'])) {
+                    if (! $pickup && ! empty($data['save_address'])) {
                         $exists = $order->user->addresses()
                             ->where('address', $order->address)
                             ->where('postcode', $order->postcode)
@@ -347,6 +362,8 @@ class CheckoutController extends Controller
             });
         } catch (CouponRejected $e) {
             return response()->json(['message' => $e->getMessage()], 422);
+        } catch (PointsRejected $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
         } catch (\Throwable $e) {
             report($e);
 
@@ -356,7 +373,11 @@ class CheckoutController extends Controller
         session(['last_order_id' => $order->id]);
 
         if ($data['payment_method'] === 'cod') {
-            $order->changeStatus('confirmed', auth()->id(), 'Cash on delivery — pay the driver.');
+            $order->changeStatus(
+                'confirmed',
+                auth()->id(),
+                $pickup ? 'Cash on collection — pay in store.' : 'Cash on delivery — pay the driver.'
+            );
             Order::sendMail($order->receiptEmail(), new OrderPlaced($order));
             BagController::clear();
 
@@ -587,7 +608,22 @@ class CheckoutController extends Controller
         $res = Http::withBasicAuth(static::stripeSecret(), '')
             ->get('https://api.stripe.com/v1/payment_intents/'.$order->payment_reference);
 
-        return $res->ok() && $res->json('status') === 'succeeded';
+        return $res->ok() && static::stripePaymentMatches((array) $res->json(), $order);
+    }
+
+    /** Accept only the exact successful intent created for this order and amount. */
+    public static function stripePaymentMatches(array $intent, Order $order): bool
+    {
+        $intentId = $intent['id'] ?? null;
+        $referenceMatches = is_string($intentId)
+            && str_starts_with($intentId, 'pi_')
+            && (! $order->payment_reference || hash_equals((string) $order->payment_reference, $intentId));
+
+        return $referenceMatches
+            && ($intent['metadata']['order_number'] ?? null) === $order->number
+            && ($intent['status'] ?? null) === 'succeeded'
+            && strtolower((string) ($intent['currency'] ?? '')) === 'gbp'
+            && (int) ($intent['amount_received'] ?? 0) === (int) round((float) $order->total * 100);
     }
 
     /**
@@ -694,15 +730,25 @@ class CheckoutController extends Controller
             return false;
         }
 
-        $captures = $res->json('purchase_units.0.payments.captures', []);
-        $completed = collect($captures)->contains(fn ($c) => ($c['status'] ?? null) === 'COMPLETED');
+        $unit = $res->json('purchase_units.0', []);
+        if (! is_array($unit)) {
+            return false;
+        }
+        $capture = collect($unit['payments']['captures'] ?? [])->first(fn ($c) => ($c['status'] ?? null) === 'COMPLETED'
+            && is_string($c['id'] ?? null)
+            && $c['id'] !== ''
+            && strtoupper((string) ($c['amount']['currency_code'] ?? '')) === 'GBP'
+            && (int) round((float) ($c['amount']['value'] ?? 0) * 100) === (int) round((float) $order->total * 100)
+        );
 
-        if ($completed) {
-            $order->payment_reference = $captures[0]['id'] ?? $order->payment_reference;
+        if (($unit['reference_id'] ?? null) === $order->number && $capture) {
+            $order->payment_reference = $capture['id'];
             $order->save();
+
+            return true;
         }
 
-        return $completed;
+        return false;
     }
 
     /**

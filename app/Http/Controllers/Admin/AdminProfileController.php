@@ -24,7 +24,7 @@ class AdminProfileController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,'.$admin->id,
-            'password' => 'nullable|string|min:6|confirmed',
+            'password' => 'nullable|string|min:8|max:72|confirmed',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ], [
             'name.required' => 'Name is required',
@@ -35,7 +35,7 @@ class AdminProfileController extends Controller
             'email.unique' => 'This email is already in use',
 
             'password.string' => 'Password must be text',
-            'password.min' => 'Password must be at least 6 characters',
+            'password.min' => 'Password must be at least 8 characters',
             'password.confirmed' => 'Password confirmation does not match',
 
             'image.image' => 'The file must be an image',

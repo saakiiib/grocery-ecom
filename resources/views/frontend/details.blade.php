@@ -190,17 +190,17 @@
                     @endif
                 @endauth
 
-                @if ($product->description)
-                    <div style="margin-top:1.5rem;">{!! $product->description !!}</div>
+                @if ($productJson['descriptionText'])
+                    <div style="margin-top:1.5rem;white-space:pre-line;">{{ $productJson['descriptionText'] }}</div>
                 @endif
 
-                @if ($product->extraAttributes->isNotEmpty())
+                @if (! empty($productJson['extraAttributes']))
                     <div style="margin-top:1.25rem;">
                         <h3 style="font-size:1rem;margin-bottom:.5rem;">Good to know</h3>
                         <dl style="display:grid;grid-template-columns:auto 1fr;gap:.35rem 1rem;font-size:14px;">
-                            @foreach ($product->extraAttributes as $a)
-                                <dt style="font-weight:600;">{{ $a->label }}</dt>
-                                <dd style="margin:0;">{{ $a->value }}</dd>
+                            @foreach ($productJson['extraAttributes'] as $a)
+                                <dt style="font-weight:600;">{{ $a['label'] }}</dt>
+                                <dd style="margin:0;">{{ $a['value'] }}</dd>
                             @endforeach
                         </dl>
                     </div>

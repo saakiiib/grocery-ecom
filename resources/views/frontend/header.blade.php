@@ -2,7 +2,7 @@
     $logo = $company->company_logo
         ? asset('uploads/company/' . $company->company_logo)
         : null;
-    $brand = $company->company_name ?? 'Alam Mini Market';
+    $brand = $siteBrand ?? trim((string) ($company->company_name ?? '')) ?: 'Alam Mini Market';
     $isActive = fn (...$routes) => request()->routeIs(...$routes) ? 'active' : '';
 @endphp
 @include('frontend.partials.announcement-bar')
@@ -21,8 +21,20 @@
             @endif
         </div>
         @php
-            $appStore = $company->google_appstore_link ?? null;
-            $playStore = $company->google_play_link ?? null;
+            $safeAppUrl = function ($url, $host) {
+                if (! $url) {
+                    return null;
+                }
+                $parts = parse_url((string) $url) ?: [];
+                $actualHost = strtolower($parts['host'] ?? '');
+                $path = strtolower(trim($parts['path'] ?? '', '/'));
+                if (($parts['scheme'] ?? '') !== 'https' || $actualHost !== $host || $path === '' || $path === 'test') {
+                    return null;
+                }
+                return $url;
+            };
+            $appStore = $safeAppUrl($company->google_appstore_link, 'apps.apple.com');
+            $playStore = $safeAppUrl($company->google_play_link, 'play.google.com');
         @endphp
         @if ($appStore || $playStore)
             <div class="topbar-app">

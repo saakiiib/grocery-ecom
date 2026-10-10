@@ -312,7 +312,7 @@
                     <div class="store-card">
                         <div class="store-head">
                             <span class="store-eyebrow">Visit the store</span>
-                            <strong>{{ $company->company_name ?? 'Alam Mini Market' }}</strong>
+                            <strong>{{ $siteBrand }}</strong>
                         </div>
                         @if ($company->address1)
                             <div class="store-row">

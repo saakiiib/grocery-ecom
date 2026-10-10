@@ -5,8 +5,8 @@
 <main>
     <div class="page-hero">
         <div class="container">
-            <h1>Checkout</h1>
-            <p>Choose when your groceries arrive, then pay your way.</p>
+            <h1>Your bag</h1>
+            <p>Review your items before checkout.</p>
         </div>
     </div>
     <div class="container" style="padding-bottom:4rem;">
@@ -17,6 +17,13 @@
                 <a @spa href="{{ route('shop') }}" class="btn btn-dark">Shop groceries</a>
             </div>
         @else
+            @php($hasUnavailable = collect($bag['lines'] ?? [])->contains(fn ($item) => ! $item['available']))
+            @if ($hasUnavailable)
+                <div class="auth-card" role="alert" style="border-color:#B91C1C;margin-bottom:1.5rem;">
+                    Some items in your bag are no longer available. Return to your bag, remove them, and then try checkout again.
+                    <a @spa href="{{ route('bag') }}">Review your bag</a>.
+                </div>
+            @endif
             @if (session('error'))
                 <div class="auth-card" style="border-color:#B91C1C;margin-bottom:1.5rem;">{{ session('error') }}</div>
             @endif
@@ -40,32 +47,19 @@
                 </div>
             @endauth
 
-            <form id="egf-checkout-form" class="cart-layout" style="margin:0;align-items:start;">
+            <form id="egf-checkout-form" class="cart-layout" data-has-unavailable="{{ $hasUnavailable ? '1' : '0' }}" style="margin:0;align-items:start;">
                 @csrf
                 <div style="min-width:0;">
                 <div class="auth-card" style="margin:0 0 1.5rem;">
-                    <h2 style="font-size:1.25rem;margin-bottom:1rem;"><span class="co-step">0</span>Delivery or pickup?</h2>
+                    <h2 style="font-size:1.25rem;margin-bottom:1rem;"><span class="co-step">0</span>Delivery or collection?</h2>
                     <div style="display:flex;gap:.6rem;flex-wrap:wrap;">
                         <label class="pick-row is-inline"><input type="radio" name="fulfillment" value="delivery" checked> <span class="pick-box"></span> <span>Home delivery</span></label>
                         <label class="pick-row is-inline"><input type="radio" name="fulfillment" value="pickup"> <span class="pick-box"></span> <span>Click &amp; Collect <span class="promo-tag">Free</span></span></label>
                     </div>
-                    <p class="text-muted" id="co-pickup-note" style="display:none;font-size:13px;margin:.6rem 0 0;">Pick up from <strong>{{ trim(($company->address1 ?? '').' '.($company->address2 ?? '').' '.($company->address3 ?? '')) ?: 'our store' }}</strong> — we'll email you when it's ready. No delivery fee.</p>
+                    <p class="text-muted" id="co-pickup-note" role="status" aria-live="polite" style="display:none;font-size:13px;margin:.6rem 0 0;">Pick up from <strong>{{ trim(($company->address1 ?? '').' '.($company->address2 ?? '').' '.($company->address3 ?? '')) ?: 'our store' }}</strong> — we'll email you when it's ready. No delivery fee.</p>
                 </div>
                 <div class="auth-card" style="margin:0;">
-                    <h2 style="font-size:1.25rem;margin-bottom:1.25rem;"><span class="co-step">1</span>Where is it going?</h2>
-                    @auth
-                        @if ($addresses->isNotEmpty())
-                            <div class="form-group">
-                                <label for="co-delivery-id">Deliver to (your address book)</label>
-                                <select id="co-delivery-id">
-                                    @foreach ($addresses as $a)
-                                        <option value="{{ $a->id }}" @selected($defaultDelivery && $defaultDelivery->id === $a->id)>{{ $a->label }} — {{ $a->line() }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <script type="application/json" id="co-address-book">@json($coAddressBook)</script>
-                        @endif
-                    @endauth
+                    <h2 style="font-size:1.25rem;margin-bottom:1.25rem;"><span class="co-step">1</span>Your details</h2>
                     <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
                         <div class="form-group">
                             <label for="co-name">Full name</label>
@@ -80,6 +74,21 @@
                         <label for="co-email">Email @auth<span class="text-muted">(for your receipt)</span>@else<span class="text-danger">*</span>@endauth</label>
                         <input type="email" id="co-email" name="email" maxlength="255" @guest required @endguest value="{{ old('email', $shopper->email ?? '') }}" placeholder="you@example.com" autocomplete="email">
                     </div>
+                    <div id="co-delivery-fields">
+                    @auth
+                        @if ($addresses->isNotEmpty())
+                            <div class="form-group">
+                                <label for="co-delivery-id">Deliver to (your address book)</label>
+                                <select id="co-delivery-id">
+                                    @foreach ($addresses as $a)
+                                        <option value="{{ $a->id }}" @selected($defaultDelivery && $defaultDelivery->id === $a->id)>{{ $a->label }} — {{ $a->line() }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <script type="application/json" id="co-address-book">@json($coAddressBook)</script>
+                        @endif
+                    @endauth
+                    <h3 id="co-delivery-title" style="font-size:1rem;margin:1.25rem 0 .75rem;">Delivery address</h3>
                     <div class="form-group">
                         <label for="co-address">Street address</label>
                         <input type="text" id="co-address" name="address" required maxlength="500" value="{{ old('address', $defaultDelivery->address ?? $shopper->address ?? '') }}" placeholder="Flat, street" autocomplete="street-address">
@@ -105,6 +114,7 @@
                         <label for="co-notes">Delivery notes <span class="text-muted">(optional)</span></label>
                         <input type="text" id="co-notes" name="notes" maxlength="1000" value="{{ old('notes') }}" placeholder="Gate code, leave with neighbour…">
                     </div>
+                    </div>
                     <div class="form-group">
                         <label>If something is unavailable</label>
                         <div class="pick-grid cols-3">
@@ -114,7 +124,8 @@
                         </div>
                     </div>
 
-                    <h2 style="font-size:1.25rem;margin:1.5rem 0 1rem;"><span class="co-step">2</span>Who is paying?</h2>
+                    <div id="co-billing-section">
+                    <h2 style="font-size:1.25rem;margin:1.5rem 0 1rem;"><span class="co-step">2</span>Billing details</h2>
                     <div class="form-group">
                         <label class="pick-row is-inline"><input type="checkbox" id="co-billing-same" checked> <span class="pick-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> <span>Billing address is the same as delivery</span></label>
                     </div>
@@ -156,11 +167,12 @@
                             </div>
                         </div>
                     </div>
+                    </div>
 
-                    <h2 style="font-size:1.25rem;margin:1.5rem 0 1rem;"><span class="co-step">3</span>When should it arrive?</h2>
+                    <h2 style="font-size:1.25rem;margin:1.5rem 0 1rem;"><span class="co-step">3</span><span id="co-fulfillment-heading">When should it arrive?</span></h2>
                     <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
                         <div class="form-group">
-                            <label for="co-date">Delivery day</label>
+                            <label for="co-date" id="co-date-label">Delivery day</label>
                             <select id="co-date" name="delivery_date" required data-today="{{ now()->format('Y-m-d') }}" data-hour="{{ now()->format('H') }}" data-order-by="{{ $cutoffStatus['order_by_hour'] }}">
                                 @foreach ($dates as $value => $label)
                                     <option value="{{ $value }}">{{ $label }}</option>
@@ -168,7 +180,7 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="co-slot">Time window</label>
+                            <label for="co-slot" id="co-slot-label">Time window</label>
                             <select id="co-slot" name="delivery_slot_id" required>
                                 @foreach ($slots as $slot)
                                     <option value="{{ $slot->id }}" data-fee="{{ $slot->fee }}" data-cutoff="{{ $slot->cutoff_hour }}">
@@ -190,13 +202,13 @@
                 </div>
 
                 <aside class="cart-summary">
-                    @include('frontend.partials.delivery-progress', ['subtotal' => $bag['subtotal'] ?? 0, 'minOrder' => $minOrder, 'freeOver' => $freeOver])
+                    <div id="co-delivery-progress">@include('frontend.partials.delivery-progress', ['subtotal' => $bag['subtotal'] ?? 0, 'minOrder' => $minOrder, 'freeOver' => $freeOver])</div>
                     <h3>Your bag ({{ $bag['count'] }})</h3>
                     @foreach ($bag['lines'] as $item)
                         <div class="summary-row co-line" style="align-items:center;">
                             <img class="co-thumb" src="{{ $item['image'] }}" alt="" loading="lazy" onerror="this.onerror=null;this.src='{{ url('placeholder.webp') }}'">
-                            <span style="flex:1;min-width:0;">{{ $item['qty'] }} × {{ $item['name'] }}@if ($item['promo_label']) <span class="promo-tag">{{ $item['promo_label'] }}</span>@endif<br><span class="text-muted">{{ $item['pack'] }}</span></span>
-                            <span>£{{ number_format($item['line_total'], 2) }}</span>
+                            <span style="flex:1;min-width:0;">{{ $item['qty'] }} × {{ $item['name'] }}@if ($item['promo_label']) <span class="promo-tag">{{ $item['promo_label'] }}</span>@endif<br><span class="text-muted">{{ $item['pack'] }}</span>@if (! $item['available'])<br><span style="color:#B91C1C">Unavailable</span>@endif</span>
+                            <span>@if ($item['available'])£{{ number_format($item['line_total'], 2) }}@else—@endif</span>
                         </div>
                     @endforeach
                     <div class="summary-row"><span>Subtotal</span><span data-co-subtotal>£{{ number_format($bag['subtotal'], 2) }}</span></div>
@@ -204,7 +216,7 @@
                     @if (($bag['bundle_discount'] ?? 0) > 0)<div class="summary-row"><span>Bundle savings</span><span>−£{{ number_format($bag['bundle_discount'], 2) }}</span></div>@endif
                     <div class="summary-row" data-co-coupon style="display:none;"><span>Coupon <strong data-co-coupon-code></strong> <button type="button" data-co-coupon-remove aria-label="Remove coupon" style="border:0;background:none;color:#B91C1C;cursor:pointer;font-size:14px;">×</button></span><span data-co-coupon-amount>−£0.00</span></div>
                     <div class="summary-row" data-co-points style="display:none;"><span>Loyalty points</span><span>−£0.00</span></div>
-                    <div class="summary-row"><span>Delivery</span><span data-co-fee>Calculated…</span></div>
+                    <div class="summary-row"><span data-co-fulfillment-fee-label>Delivery</span><span data-co-fee>Calculated…</span></div>
                     <div class="summary-row total"><span>Total</span><span data-co-total>£{{ number_format($bag['subtotal'], 2) }}</span></div>
 
                     <h3 style="margin-top:1.5rem;">Coupon code</h3>
@@ -242,8 +254,8 @@
                             <span class="pay-tile-icon">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>
                             </span>
-                            <strong>Cash</strong>
-                            <span class="text-muted">Pay at door</span>
+                            <strong id="co-cash-title">Cash</strong>
+                            <span class="text-muted" id="co-cash-note">Pay at door</span>
                             <span class="pay-tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
                         </label>
                         <label class="pay-tile @if (! $stripeOn) pay-tile-off @endif">
@@ -327,6 +339,8 @@
         var deliverySel = document.getElementById('co-delivery-id');
         var billingSame = document.getElementById('co-billing-same');
         var billingBlock = document.getElementById('co-billing-block');
+        var deliveryFields = document.getElementById('co-delivery-fields');
+        var billingSection = document.getElementById('co-billing-section');
         var billingSel = document.getElementById('co-billing-id');
         var saveBox = document.getElementById('co-save-address');
         var saveLabel = document.getElementById('co-save-label');
@@ -360,8 +374,8 @@
         }
         if (billingSame && billingBlock) {
             billingSame.addEventListener('change', function () {
-                billingBlock.style.display = billingSame.checked ? 'none' : '';
                 if (billingSame.checked) syncBillingFromDelivery();
+                syncFulfillmentUI();
             });
         }
         if (saveBox && saveLabel) {
@@ -415,6 +429,11 @@
         /* Same-day cutoff: past-cutoff windows drop out when today is picked. */
         function paintCutoff() {
             if (!dateSel || !slotSel) return;
+            if (fulfillment() === 'pickup') {
+                if (cutoffMsg) cutoffMsg.textContent = 'Choose a collection day and time. Collection is free.';
+                paintTotals();
+                return;
+            }
             var today = dateSel.getAttribute('data-today') || '';
             var hour = parseInt(dateSel.getAttribute('data-hour') || '0', 10) || 0;
             var orderBy = parseInt(dateSel.getAttribute('data-order-by') || '20', 10) || 20;
@@ -448,6 +467,49 @@
         function fulfillment() {
             var checked = form.querySelector('input[name="fulfillment"]:checked');
             return checked ? checked.value : 'delivery';
+        }
+        var lastFulfillment = null;
+        function disableFields(container, disabled) {
+            if (!container) return;
+            container.querySelectorAll('input, select, textarea, button').forEach(function (el) { el.disabled = disabled; });
+        }
+        function syncFulfillmentUI() {
+            var currentFulfillment = fulfillment();
+            var pickup = currentFulfillment === 'pickup';
+            var fulfillmentChanged = currentFulfillment !== lastFulfillment;
+            lastFulfillment = currentFulfillment;
+            if (deliveryFields) {
+                deliveryFields.style.display = pickup ? 'none' : '';
+                disableFields(deliveryFields, pickup);
+            }
+            if (billingSection) billingSection.style.display = pickup ? 'none' : '';
+            if (billingSame && billingBlock) {
+                billingBlock.style.display = pickup || billingSame.checked ? 'none' : '';
+                disableFields(billingBlock, pickup || billingSame.checked);
+            }
+            var heading = document.getElementById('co-fulfillment-heading');
+            var dateLabel = document.getElementById('co-date-label');
+            var slotLabel = document.getElementById('co-slot-label');
+            var feeLabel = document.querySelector('[data-co-fulfillment-fee-label]');
+            var cashNote = document.getElementById('co-cash-note');
+            if (heading) heading.textContent = pickup ? 'When can you collect?' : 'When should it arrive?';
+            if (dateLabel) dateLabel.textContent = pickup ? 'Collection day' : 'Delivery day';
+            if (slotLabel) slotLabel.textContent = pickup ? 'Collection time' : 'Time window';
+            if (feeLabel) feeLabel.textContent = pickup ? 'Collection' : 'Delivery';
+            if (cashNote) cashNote.textContent = pickup ? 'Pay on collection' : 'Pay at door';
+            var progress = document.getElementById('co-delivery-progress');
+            if (progress) progress.style.display = pickup ? 'none' : '';
+            if (pickup) {
+                clearTimeout(postcodeTimer);
+                postcodeOk = true;
+                if (postcodeMsg) postcodeMsg.style.display = 'none';
+            } else if (fulfillmentChanged && postcodeEl && postcodeEl.value.trim().length >= 3) {
+                postcodeEl.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            if (cutoffMsg) {
+                if (pickup) cutoffMsg.textContent = 'Choose a collection day and time. Collection is free.';
+                else paintCutoff();
+            }
         }
         function paintTotals() {
             var fee = (fulfillment() === 'pickup' || subtotal >= freeOver) ? 0 : slotFee();
@@ -507,8 +569,12 @@
         slotSel.addEventListener('change', paintTotals);
         if (pointsInput) pointsInput.addEventListener('input', paintTotals);
         form.querySelectorAll('input[name="fulfillment"]').forEach(function (radio) {
-            radio.addEventListener('change', paintTotals);
+            radio.addEventListener('change', function () {
+                syncFulfillmentUI();
+                paintTotals();
+            });
         });
+        syncFulfillmentUI();
         paintCutoff();
 
         function method() {
@@ -519,6 +585,12 @@
             radio.addEventListener('change', syncMethod);
         });
         function syncMethod() {
+            if (form.dataset.hasUnavailable === '1') {
+                submitBtn.disabled = true;
+                submitBtn.style.display = 'none';
+                document.getElementById('co-paypal-buttons').style.display = 'none';
+                return;
+            }
             var m = method();
             document.getElementById('co-card-wrap').style.display = m === 'stripe' ? '' : 'none';
             document.getElementById('co-paypal-buttons').style.display = m === 'paypal' ? '' : 'none';
@@ -545,21 +617,22 @@
             });
         }
         function payload() {
+            var isPickup = fulfillment() === 'pickup';
             if (billingSame && billingSame.checked) syncBillingFromDelivery();
             var sub = form.querySelector('input[name="substitution"]:checked');
             return {
                 name: document.getElementById('co-name').value,
                 phone: document.getElementById('co-phone').value,
                 email: document.getElementById('co-email').value,
-                address: document.getElementById('co-address').value,
-                city: document.getElementById('co-city').value,
-                postcode: document.getElementById('co-postcode').value,
-                billing_name: val('co-bill-name') || document.getElementById('co-name').value,
-                billing_phone: val('co-bill-phone') || document.getElementById('co-phone').value,
-                billing_address: val('co-bill-address') || document.getElementById('co-address').value,
-                billing_city: val('co-bill-city') || document.getElementById('co-city').value,
-                billing_postcode: val('co-bill-postcode') || document.getElementById('co-postcode').value,
-                save_address: saveBox && saveBox.checked ? 1 : 0,
+                address: isPickup ? '' : document.getElementById('co-address').value,
+                city: isPickup ? '' : document.getElementById('co-city').value,
+                postcode: isPickup ? '' : document.getElementById('co-postcode').value,
+                billing_name: isPickup ? '' : (val('co-bill-name') || document.getElementById('co-name').value),
+                billing_phone: isPickup ? '' : (val('co-bill-phone') || document.getElementById('co-phone').value),
+                billing_address: isPickup ? '' : (val('co-bill-address') || document.getElementById('co-address').value),
+                billing_city: isPickup ? '' : (val('co-bill-city') || document.getElementById('co-city').value),
+                billing_postcode: isPickup ? '' : (val('co-bill-postcode') || document.getElementById('co-postcode').value),
+                save_address: !isPickup && saveBox && saveBox.checked ? 1 : 0,
                 save_label: saveLabel ? saveLabel.value : '',
                 substitution: sub ? sub.value : 'substitute',
                 fulfillment: fulfillment(),

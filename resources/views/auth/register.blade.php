@@ -32,9 +32,9 @@
                         </div>
                     </div>
                     <div class="form-group">
-                        <label for="password">Password <span class="text-muted">(6 digits)</span></label>
+                        <label for="password">Password <span class="text-muted">(at least 8 characters)</span></label>
                         <div class="pw-wrap">
-                            <input id="password" type="password" name="password" required inputmode="numeric" maxlength="6" autocomplete="new-password">
+                            <input id="password" type="password" name="password" required minlength="8" maxlength="72" autocomplete="new-password">
                             <button type="button" class="pw-eye" data-eye="password" aria-label="Show password"><x-icon name="eye" /><x-icon name="eye-off" class="pw-eye-off" /></button>
                         </div>
                         @error('password')<p style="color:#B91C1C;font-size:13px;margin-top:0.35rem;">{{ $message }}</p>@enderror

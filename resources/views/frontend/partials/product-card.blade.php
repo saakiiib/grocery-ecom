@@ -20,6 +20,9 @@
     <div class="product-body">
         <span class="product-meta">{{ $p['category'] }}</span>
         <a @spa href="{{ $p['url'] }}" class="product-name">{{ $p['name'] }}</a>
+        @if ($p['descriptionText'])
+            <p class="product-description">{{ $p['descriptionText'] }}</p>
+        @endif
         @if ($p['diets'])
             <div class="product-diets">
                 @foreach ($p['diets'] as $diet)

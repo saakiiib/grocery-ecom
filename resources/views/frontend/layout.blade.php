@@ -1,3 +1,9 @@
+@php
+    $siteBrand = $siteBrand ?? trim((string) ($company->company_name ?? ''));
+    if ($siteBrand === '' || strcasecmp($siteBrand, 'Evergreen') === 0) {
+        $siteBrand = 'Alam Mini Market';
+    }
+@endphp
 <!DOCTYPE html>
 <html lang="en-GB">
 
@@ -5,7 +11,7 @@
     <meta charset="utf-8">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="author" content="{{ $company->company_name ?? '' }}">
+    <meta name="author" content="{{ $siteBrand }}">
     <link rel="canonical" href="{{ url()->current() }}">
     <title>@yield('title', config('app.name'))</title>
     {!! SEOMeta::generate() !!}
@@ -16,8 +22,6 @@
         <script>window.dataLayer = window.dataLayer || [];function gtag(){dataLayer.push(arguments);}gtag('js', new Date());gtag('config', '{{ $company->google_analytics_id }}');</script>
     @endif
     <link rel="icon" href="{{ $company->fav_icon ? asset('uploads/company/' . $company->fav_icon) : asset('favicon.ico') }}">
-    <link rel="preconnect" href="https://evergreenfoods.co.uk">
-    <link rel="dns-prefetch" href="https://evergreenfoods.co.uk">
     <link rel="stylesheet" href="{{ asset('resources/frontend/css/style.css') }}?v={{ filemtime(public_path('resources/frontend/css/style.css')) }}">
     @yield('style')
 </head>

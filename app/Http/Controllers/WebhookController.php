@@ -37,7 +37,11 @@ class WebhookController extends Controller
 
         if ($type === 'payment_intent.succeeded') {
             $order = $this->findStripeOrder($object);
-            if ($order) {
+            if ($order && CheckoutController::stripePaymentMatches($object, $order)) {
+                if (! $order->payment_reference) {
+                    $order->payment_reference = $object['id'];
+                    $order->save();
+                }
                 $this->confirmPaid($order, 'stripe', 'Paid online (Card (Stripe), webhook).');
             }
 
@@ -118,8 +122,18 @@ class WebhookController extends Controller
 
         if ($type === 'PAYMENT.CAPTURE.COMPLETED') {
             $captureId = $resource['id'] ?? null;
-            $order = $captureId ? Order::where('payment_method', 'paypal')->where('payment_reference', $captureId)->first() : null;
-            if ($order && static::paypalCaptureCompleted($captureId)) {
+            $paypalOrderId = data_get($resource, 'supplementary_data.related_ids.order_id');
+            $order = $captureId
+                ? Order::where('payment_method', 'paypal')->where('payment_reference', $captureId)->first()
+                : null;
+            if (! $order && $paypalOrderId) {
+                $order = Order::where('payment_method', 'paypal')->where('payment_reference', $paypalOrderId)->first();
+            }
+            if ($order && $captureId && static::paypalCaptureCompleted($captureId, $order)) {
+                if ($order->payment_reference !== $captureId) {
+                    $order->payment_reference = $captureId;
+                    $order->save();
+                }
                 $this->confirmPaid($order, 'paypal', 'Paid online (PayPal, webhook).');
             }
 
@@ -162,14 +176,17 @@ class WebhookController extends Controller
         }
     }
 
-    private static function paypalCaptureCompleted(string $captureId): bool
+    private static function paypalCaptureCompleted(string $captureId, Order $order): bool
     {
         try {
             $token = CheckoutController::paypalTokenForWebhook();
             $res = Http::withToken($token)
                 ->get(CheckoutController::paypalBaseUrl().'/v2/payments/captures/'.$captureId);
 
-            return $res->ok() && strtoupper((string) $res->json('status')) === 'COMPLETED';
+            return $res->ok()
+                && strtoupper((string) $res->json('status')) === 'COMPLETED'
+                && strtoupper((string) $res->json('amount.currency_code')) === 'GBP'
+                && (int) round((float) $res->json('amount.value', 0) * 100) === (int) round((float) $order->total * 100);
         } catch (\Throwable $e) {
             report($e);
 

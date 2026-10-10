@@ -46,7 +46,7 @@ Route::middleware(['api_session', 'api_auth:optional'])->group(function () {
     Route::get('/checkout/init', [CatalogApiController::class, 'checkoutInit']);
     Route::post('/checkout/postcode', [CheckoutController::class, 'postcode']);
     Route::post('/checkout/coupon', [CheckoutController::class, 'coupon'])->middleware('throttle:20,1');
-    Route::post('/checkout/place', [CheckoutController::class, 'place']);
+    Route::post('/checkout/place', [CheckoutController::class, 'place'])->middleware('throttle:10,1');
     Route::post('/checkout/payment-confirm', [CheckoutController::class, 'paymentConfirm'])->middleware('throttle:30,1');
     Route::get('/checkout/success/{number}', [CheckoutController::class, 'successJson']);
     Route::post('/checkout/cancel', [CheckoutController::class, 'cancel']);

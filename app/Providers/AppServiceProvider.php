@@ -25,6 +25,14 @@ class AppServiceProvider extends ServiceProvider
             if (! $view->offsetExists('company')) {
                 $view->with('company', CompanyDetails::cached());
             }
+            if (! $view->offsetExists('siteBrand')) {
+                $company = CompanyDetails::cached();
+                $siteBrand = trim((string) ($company->company_name ?? ''));
+                if ($siteBrand === '' || strcasecmp($siteBrand, 'Evergreen') === 0) {
+                    $siteBrand = 'Alam Mini Market';
+                }
+                $view->with('siteBrand', $siteBrand);
+            }
         });
     }
 }

@@ -45,7 +45,13 @@ function stripeSigned(string $payload, string $secret): array
 
 function stripeEvent(string $type, string $intentId, string $number): string
 {
-    return json_encode(['id' => 'evt_test', 'type' => $type, 'data' => ['object' => ['id' => $intentId, 'metadata' => ['order_number' => $number]]]]);
+    return json_encode(['id' => 'evt_test', 'type' => $type, 'data' => ['object' => [
+        'id' => $intentId,
+        'status' => $type === 'payment_intent.succeeded' ? 'succeeded' : 'requires_payment_method',
+        'currency' => 'gbp',
+        'amount_received' => $type === 'payment_intent.succeeded' ? 4000 : 0,
+        'metadata' => ['order_number' => $number],
+    ]]]);
 }
 
 test('stripe webhooks need configuration and a valid signature', function () {
@@ -75,6 +81,20 @@ test('stripe success confirms and mails exactly once, even replayed', function (
     Mail::assertSent(OrderPlaced::class, 1);
 });
 
+test('stripe webhook refuses a successful intent for the wrong order amount', function () {
+    webhookFixtures();
+    Setting::put('stripe_webhook_secret', 'whsec_test');
+    $order = webhookOrder('stripe', 'pi_wrong_amount');
+    $event = json_decode(stripeEvent('payment_intent.succeeded', 'pi_wrong_amount', $order->number), true);
+    $event['data']['object']['amount_received'] = 1;
+    $signed = stripeSigned(json_encode($event), 'whsec_test');
+
+    $this->call('POST', route('webhooks.stripe'), [], [], [], ['HTTP_Stripe-Signature' => $signed['header']], $signed['payload'])->assertOk();
+
+    expect($order->fresh()->payment_status)->toBe('unpaid')
+        ->and($order->fresh()->status_slug)->toBe('new');
+});
+
 test('stripe failure cancels untouched orders, unknown events ack', function () {
     webhookFixtures();
     Setting::put('stripe_webhook_secret', 'whsec_test');
@@ -96,7 +116,7 @@ function paypalFakes(): void
     Http::fake([
         '*/oauth2/token' => Http::response(['access_token' => 'tok'], 200),
         '*/verify-webhook-signature' => Http::response(['verification_status' => 'SUCCESS'], 200),
-        '*/payments/captures/*' => Http::response(['id' => 'CAP-1', 'status' => 'COMPLETED'], 200),
+        '*/payments/captures/*' => Http::response(['id' => 'CAP-1', 'status' => 'COMPLETED', 'amount' => ['currency_code' => 'GBP', 'value' => '40.00']], 200),
     ]);
 }
 

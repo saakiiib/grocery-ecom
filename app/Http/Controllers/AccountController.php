@@ -170,7 +170,7 @@ class AccountController extends Controller
     {
         $data = $request->validate([
             'current_password' => 'required|current_password',
-            'password' => 'required|digits:6|confirmed',
+            'password' => 'required|string|min:8|max:72|confirmed',
         ], [
             'current_password.current_password' => 'Your current password is not correct',
             'password.confirmed' => 'The new passwords do not match',

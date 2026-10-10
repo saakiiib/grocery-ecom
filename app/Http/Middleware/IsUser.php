@@ -10,8 +10,14 @@ class IsUser
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (auth()->check() && auth()->user()->user_type == '0') {
+        if (auth()->check() && auth()->user()->status == 1 && auth()->user()->user_type == '0') {
             return $next($request);
+        }
+
+        if (auth()->check() && auth()->user()->status != 1) {
+            auth()->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
         }
 
         return redirect()->route('login');

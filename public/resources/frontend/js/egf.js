@@ -1,4 +1,4 @@
-/* Evergreen Foods storefront — vanilla JS, SPA re-runnable.
+/* Alam Mini Market storefront — vanilla JS, SPA re-runnable.
    Rules: var only (shared global scope), no DOMContentLoaded (init runs
    directly + on spa:loaded). Document-level listeners bind exactly once. */
 
@@ -49,6 +49,18 @@
     document.querySelectorAll('[data-bag-total]').forEach(function (el) { el.textContent = formatPrice(data.subtotal || 0); });
   }
 
+  function pulseBag() {
+    document.querySelectorAll('[data-bag-count]').forEach(function (el) {
+      var bag = el.closest('.float-bag');
+      if (!bag) return;
+      bag.classList.remove('is-updated');
+      void bag.offsetWidth;
+      bag.classList.add('is-updated');
+      clearTimeout(bag._egfPulseTimer);
+      bag._egfPulseTimer = setTimeout(function () { bag.classList.remove('is-updated'); }, 850);
+    });
+  }
+
   function loadBag() {
     var r = routes();
     if (!r.bagData) return;
@@ -75,7 +87,8 @@
     bagPost(r.bagAdd, { variant_id: parseInt(variantId, 10), qty: qty || 1 })
       .then(function (data) {
         refreshBagUI(data);
-        showToast(data.message || 'Added to your bag');
+        pulseBag();
+        showAddedToast();
         flashAdded(btn);
         if (document.querySelector('[data-bag-items]')) renderBagPage(data);
       })
@@ -90,10 +103,43 @@
       t.className = 'egf-toast toast';
       document.body.appendChild(t);
     }
+    t.classList.remove('egf-toast-added');
     t.textContent = msg;
+    t.setAttribute('role', 'status');
+    t.setAttribute('aria-live', 'polite');
     t.classList.add('show');
     clearTimeout(t._timer);
     t._timer = setTimeout(function () { t.classList.remove('show'); }, 2600);
+  }
+
+  function showAddedToast() {
+    var t = document.querySelector('.egf-toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.className = 'egf-toast toast';
+      document.body.appendChild(t);
+    }
+    t.classList.add('egf-toast-added');
+    t.setAttribute('role', 'status');
+    t.setAttribute('aria-live', 'polite');
+    t.setAttribute('aria-atomic', 'true');
+    t.replaceChildren();
+
+    var check = document.createElement('span');
+    check.className = 'egf-toast-check';
+    check.setAttribute('aria-hidden', 'true');
+    check.textContent = '✓';
+    var copy = document.createElement('span');
+    copy.className = 'egf-toast-copy';
+    copy.textContent = 'Added to your bag';
+    var link = document.createElement('a');
+    link.className = 'egf-toast-link';
+    link.href = routes().bag || '/bag';
+    link.textContent = 'View bag';
+    t.append(check, copy, link);
+    t.classList.add('show');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(function () { t.classList.remove('show'); }, 5000);
   }
 
   /* ---------------- Mobile nav ---------------- */
@@ -291,6 +337,15 @@
     if (!data) { loadBag(); return; }
     var r = routes();
     refreshBagUI(data);
+    var unavailable = (data.lines || []).some(function (item) { return !item.available; });
+    var availabilityMessage = document.querySelector('[data-bag-availability-message]');
+    if (availabilityMessage) availabilityMessage.style.display = unavailable ? '' : 'none';
+    var checkoutAction = document.querySelector('[data-bag-checkout-action]');
+    if (checkoutAction) {
+      checkoutAction.innerHTML = unavailable
+        ? '<button type="button" class="btn btn-dark btn-block" style="margin-top:1.25rem;opacity:.55;cursor:not-allowed;" disabled>Remove unavailable items to continue</button>'
+        : '<a data-spa href="' + r.checkout + '" class="btn btn-dark btn-block" style="margin-top:1.25rem;">Proceed to checkout</a>';
+    }
     if (!data.lines || data.lines.length === 0) {
       container.innerHTML =
         '<div class="empty-state"><h2>Your bag is empty</h2>' +
@@ -314,7 +369,7 @@
         '<button type="button" data-bag-minus aria-label="Decrease">−</button>' +
         '<span data-bag-qty>' + item.qty + '</span>' +
         '<button type="button" data-bag-plus aria-label="Increase">+</button></div></div>' +
-        '<div><div class="cart-item-price">' + formatPrice(item.line_total) + '</div>' +
+        '<div>' + (item.available ? '<div class="cart-item-price">' + formatPrice(item.line_total) + '</div>' : '<div class="cart-item-meta" style="color:#B91C1C">Unavailable</div>') +
         '<button type="button" class="icon-btn" data-bag-remove aria-label="Remove" title="Remove">' +
         '<svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div></div>';
 

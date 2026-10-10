@@ -2,20 +2,46 @@
     $logo = $company->company_logo
         ? asset('uploads/company/' . $company->company_logo)
         : null;
-    $brand = $company->company_name ?? 'Alam Mini Market';
+    $brand = $siteBrand ?? trim((string) ($company->company_name ?? '')) ?: 'Alam Mini Market';
+    $footerCopy = trim((string) ($company->footer_content ?? ''));
+    if ($footerCopy === '' || preg_match('/^(enim|lorem ipsum|test content)/i', trim(strip_tags($footerCopy)))) {
+        $footerCopy = 'Fresh groceries, meat and everyday essentials, ready for delivery or collection.';
+    }
+    $safeSocialUrl = function ($url, $host) {
+        if (! $url) {
+            return null;
+        }
+        $parts = parse_url((string) $url) ?: [];
+        $actualHost = strtolower($parts['host'] ?? '');
+        if (($parts['scheme'] ?? '') !== 'https' || ($actualHost !== $host && ! str_ends_with($actualHost, '.'.$host))) {
+            return null;
+        }
+        return $url;
+    };
+    $safeAppUrl = function ($url, $host) use ($safeSocialUrl) {
+        $safe = $safeSocialUrl($url, $host);
+        $pathValue = parse_url((string) $url, PHP_URL_PATH);
+        $path = strtolower(trim(is_string($pathValue) ? $pathValue : '', '/'));
+        if (! $safe || $path === '' || $path === 'test') {
+            return null;
+        }
+        return $safe;
+    };
     $footCats = \App\Models\Category::where('status', true)->whereNull('parent_id')->orderBy('sort_order')->take(5)->get(['name', 'slug']);
     $socials = [
-        ['facebook', $company->facebook, 'Facebook'],
-        ['instagram', $company->instagram, 'Instagram'],
-        ['twitter', $company->twitter, 'X'],
-        ['linkedin', $company->linkedin, 'LinkedIn'],
-        ['youtube', $company->youtube, 'YouTube'],
-        ['music', $company->tiktok, 'TikTok'],
-        ['message-circle', $company->whatsapp ? 'https://wa.me/' . preg_replace('/\D/', '', $company->whatsapp) : null, 'WhatsApp'],
+        ['facebook', $safeSocialUrl($company->facebook, 'facebook.com'), 'Facebook'],
+        ['instagram', $safeSocialUrl($company->instagram, 'instagram.com'), 'Instagram'],
+        ['twitter', $safeSocialUrl($company->twitter, 'x.com') ?? $safeSocialUrl($company->twitter, 'twitter.com'), 'X'],
+        ['linkedin', $safeSocialUrl($company->linkedin, 'linkedin.com'), 'LinkedIn'],
+        ['youtube', $safeSocialUrl($company->youtube, 'youtube.com'), 'YouTube'],
+        ['music', $safeSocialUrl($company->tiktok, 'tiktok.com'), 'TikTok'],
+        ['message-circle', $company->whatsapp ? $safeSocialUrl('https://wa.me/' . preg_replace('/\D/', '', $company->whatsapp), 'wa.me') : null, 'WhatsApp'],
     ];
     $hasSocials = collect($socials)->contains(fn ($s) => ! empty($s[1]));
-    $appStore = $company->google_appstore_link ?? null;
-    $playStore = $company->google_play_link ?? null;
+    $appStore = $safeAppUrl($company->google_appstore_link, 'apps.apple.com');
+    $playStore = $safeAppUrl($company->google_play_link, 'play.google.com');
+    $stripeOn = \App\Http\Controllers\CheckoutController::stripeConfigured();
+    $paypalOn = \App\Http\Controllers\CheckoutController::paypalConfigured();
 @endphp
 <footer class="site-footer">
     <div class="container">
@@ -28,7 +54,7 @@
                         <small>Fresh living, every day</small>
                     </span>
                 </a>
-                {!! $company->footer_content ?? '<p>Thoughtfully sourced groceries delivered to your door. Fresh picks, everyday essentials, and a simpler way to shop.</p>' !!}
+                <p>{{ trim(strip_tags($footerCopy)) }}</p>
                 @if ($hasSocials)
                     <div class="social-row">
                         @foreach ($socials as [$icon, $url, $label])
@@ -47,6 +73,14 @@
                         </div>
                     </div>
                 @endif
+                <div class="footer-payments" aria-label="Payment options">
+                    <span class="footer-payments-label"><x-icon name="shield-check" /> {{ $stripeOn || $paypalOn ? 'Secure online payments' : 'Payment options' }}</span>
+                    <div class="footer-payment-marks">
+                        @if ($stripeOn)<span class="footer-payment-mark"><strong>Card</strong><small>via Stripe</small></span>@endif
+                        @if ($paypalOn)<span class="footer-payment-mark footer-payment-paypal"><strong>PayPal</strong></span>@endif
+                        <span class="footer-payment-mark"><strong>Cash</strong><small>delivery / pickup</small></span>
+                    </div>
+                </div>
             </div>
             <div class="footer-col">
                 <h4>Shop</h4>

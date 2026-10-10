@@ -157,7 +157,9 @@ class ProductsImport
 
     /**
      * Resolve one image cell + slot. Cell wins when filled: URL/path stored
-     * as-is, bare filename must exist in the ZIP.
+     * as-is, bare filename must exist in the ZIP. Supplier (evergreenfoods)
+     * hotlinks are refused — download the file into the ZIP instead so all
+     * storefront images stay local in public/uploads.
      */
     private static function resolveImage(?string $cell, string $expectedSlot, array $map): array
     {
@@ -166,6 +168,9 @@ class ProductsImport
             $found = self::findSlot($map, $expectedSlot);
 
             return $found ? ['kind' => 'slot', 'file' => $found] : ['kind' => 'none', 'file' => null];
+        }
+        if (str_contains(strtolower($cell), 'evergreenfoods.co.uk')) {
+            return ['kind' => 'missing', 'file' => null, 'wanted' => $cell.' — download this file into the images ZIP instead of hotlinking evergreenfoods.co.uk'];
         }
         if (preg_match('~^(https?://|/)~', $cell)) {
             return ['kind' => 'as-is', 'file' => null];

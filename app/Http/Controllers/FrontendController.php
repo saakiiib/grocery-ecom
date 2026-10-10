@@ -33,6 +33,7 @@ use App\Support\PairsWell;
 use App\Support\SitePromo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 use OpenGraph;
 use SEOMeta;
 use Twitter;
@@ -821,6 +822,7 @@ class FrontendController extends Controller
             'discipline' => $p->category?->name ?? 'Collection',
             'tagline' => $p->tagline,
             'subtitle' => $p->tagline,
+            'descriptionText' => Str::limit($this->plainProductDescription($p->description ?: $p->tagline), 160),
             'price' => $this->priceFor($p),
             'leadTime' => null,
             'heroImage' => $this->heroFor($p),
@@ -880,11 +882,22 @@ class FrontendController extends Controller
 
         return [
             ...$this->productCard($p, $bundleCover, $flashMap, $bogoLive),
-            'description' => $p->description,
+            // Keep the legacy key for app clients, but never expose product
+            // HTML to consumers that might render it unsafely.
+            'description' => $this->plainProductDescription($p->description ?: $p->tagline),
+            'descriptionText' => $this->plainProductDescription($p->description ?: $p->tagline),
             'highlights' => $p->highlightList(),
-            'extraAttributes' => $p->extraAttributes->map(fn ($a) => [
-                'label' => $a->label, 'value' => $a->value,
-            ])->values()->all(),
+            // WooCommerce identifiers and supplier source URLs are internal
+            // import metadata; never expose them on the storefront or API.
+            'extraAttributes' => $p->extraAttributes
+                ->reject(function ($a) {
+                    $label = trim((string) preg_replace('/[^a-z0-9]+/i', '_', strtolower(trim((string) $a->label))), '_');
+
+                    return in_array($label, ['woo_id', 'woocommerce_id', 'source_url', 'source', 'external_url', 'external_id'], true);
+                })
+                ->map(fn ($a) => [
+                    'label' => $a->label, 'value' => $a->value,
+                ])->values()->all(),
             'video' => null,
             'videoEmbed' => null,
             'model3d' => null,
@@ -957,6 +970,24 @@ class FrontendController extends Controller
                 'Salt' => $p->salt_g !== null ? (float) $p->salt_g : null,
             ],
         ];
+    }
+
+    /** Convert rich product copy to safe plain text for the app and catalog cards. */
+    protected function plainProductDescription(?string $description): string
+    {
+        $html = trim((string) $description);
+        if ($html === '') {
+            return '';
+        }
+
+        $html = preg_replace('/<(script|style)\b[^>]*>.*?<\/\1>/is', '', $html) ?? $html;
+        $html = preg_replace('/<(?:br\s*\/?|\/(?:p|div|li|h[1-6]|blockquote|tr))\b[^>]*>/i', "\n", $html) ?? $html;
+        $text = html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $text = preg_replace('/[ \t]+/u', ' ', $text) ?? $text;
+        $text = preg_replace('/\h*\R\h*/u', "\n", $text) ?? $text;
+        $text = preg_replace('/\n{3,}/', "\n\n", $text) ?? $text;
+
+        return trim($text);
     }
 
     /** Bundle pools covering this product, with a few mix-and-match partners. */

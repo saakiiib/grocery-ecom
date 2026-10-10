@@ -224,7 +224,7 @@ test('a shopper journeys from registration to reorder to cancel', function () {
     // 1. Register on the same users table.
     $this->post(route('register.store'), [
         'name' => 'Journey', 'email' => 'journey@example.com',
-        'password' => '123456', 'password_confirmation' => '123456',
+        'password' => 'SecurePass123', 'password_confirmation' => 'SecurePass123',
     ])->assertRedirect(route('account'));
     expect(auth()->check())->toBeTrue();
 
@@ -430,7 +430,7 @@ test('shoppers register on the same users table and keep their bag', function ()
 
     $response = $this->post(route('register.store'), [
         'name' => 'New Shopper', 'email' => 'new@example.com',
-        'password' => '123456', 'password_confirmation' => '123456',
+        'password' => 'SecurePass123', 'password_confirmation' => 'SecurePass123',
     ]);
     $response->assertRedirect(route('account'));
 
@@ -442,7 +442,7 @@ test('shoppers register on the same users table and keep their bag', function ()
     auth()->logout();
     $this->post(route('register.store'), [
         'name' => 'Dup', 'email' => 'new@example.com',
-        'password' => '123456', 'password_confirmation' => '123456',
+        'password' => 'SecurePass123', 'password_confirmation' => 'SecurePass123',
     ])->assertSessionHasErrors('email');
 });
 
@@ -667,24 +667,24 @@ test('shoppers can change their password', function () {
 
     $this->actingAs($user)->post(route('account.password'), [
         'current_password' => 'wrong',
-        'password' => '654321',
-        'password_confirmation' => '654321',
+        'password' => 'SecurePass123',
+        'password_confirmation' => 'SecurePass123',
     ])->assertSessionHasErrors('current_password');
 
     $this->actingAs($user)->post(route('account.password'), [
         'current_password' => 'password',
-        'password' => '12345',
-        'password_confirmation' => '12345',
+        'password' => '123456',
+        'password_confirmation' => '123456',
     ])->assertSessionHasErrors('password');
 
     $this->actingAs($user)->post(route('account.password'), [
         'current_password' => 'password',
-        'password' => '654321',
-        'password_confirmation' => '654321',
+        'password' => 'SecurePass456',
+        'password_confirmation' => 'SecurePass456',
     ])->assertRedirect(route('account.password.form'))->assertSessionHas('status');
 
     auth()->logout();
-    $this->post(route('login'), ['login' => 'shopper@example.com', 'password' => '654321'])
+    $this->post(route('login'), ['login' => 'shopper@example.com', 'password' => 'SecurePass456'])
         ->assertRedirect(route('home'));
 });
 

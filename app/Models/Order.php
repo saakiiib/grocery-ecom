@@ -71,7 +71,7 @@ class Order extends Model
         return match ($this->payment_method) {
             'stripe' => 'Card (Stripe)',
             'paypal' => 'PayPal',
-            default => 'Cash on Delivery',
+            default => $this->fulfillment === 'pickup' ? 'Cash on Collection' : 'Cash on Delivery',
         };
     }
 
