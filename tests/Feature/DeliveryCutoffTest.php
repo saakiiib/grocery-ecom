@@ -29,8 +29,8 @@ function seedCutoffGrocery(float $price = 20.00): array
 function cutoffPayload(int $slotId, string $date): array
 {
     return [
-        'name' => 'N', 'phone' => '07', 'email' => 'cutoff-guest@example.com', 'address' => '1 M St', 'city' => 'Leeds', 'postcode' => 'LS1 1AA',
-        'billing_name' => 'N', 'billing_phone' => '07', 'billing_address' => '1 M St', 'billing_city' => 'Leeds', 'billing_postcode' => 'LS1 1AA',
+        'name' => 'N', 'phone' => '07123456789', 'email' => 'cutoff-guest@example.com', 'address' => '1 M St', 'city' => 'Leeds', 'postcode' => 'LS1 1AA',
+        'billing_name' => 'N', 'billing_phone' => '07987654321', 'billing_address' => '1 M St', 'billing_city' => 'Leeds', 'billing_postcode' => 'LS1 1AA',
         'substitution' => 'substitute',
         'delivery_date' => $date, 'delivery_slot_id' => $slotId, 'payment_method' => 'cod', 'privacy' => true,
     ];

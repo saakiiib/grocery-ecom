@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\Order;
 use App\Models\User;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Illuminate\Http\Request;
@@ -46,6 +47,11 @@ class LoginController extends Controller
             return redirect()->back()
                 ->withInput($request->only('login'))
                 ->withErrors(['login' => 'These credentials do not match our records.']);
+        }
+
+        // Shoppers who ordered as guests inherit that history on sign-in.
+        if (auth()->user()->user_type == 0) {
+            Order::claimGuestOrders(auth()->user());
         }
 
         $redirect = $request->input('redirect');

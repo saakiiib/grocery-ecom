@@ -33,8 +33,8 @@ function seedPickupGrocery(): array
 function pickupPayload(int $slotId, string $date, string $fulfillment = 'pickup'): array
 {
     return [
-        'name' => 'N', 'phone' => '07', 'email' => 'pickup-guest@example.com', 'address' => '1 M St', 'city' => 'Leeds', 'postcode' => 'ZZ9 9ZZ',
-        'billing_name' => 'N', 'billing_phone' => '07', 'billing_address' => '1 M St', 'billing_city' => 'Leeds', 'billing_postcode' => 'ZZ9 9ZZ',
+        'name' => 'N', 'phone' => '07123456789', 'email' => 'pickup-guest@example.com', 'address' => '1 M St', 'city' => 'Leeds', 'postcode' => 'ZZ9 9ZZ',
+        'billing_name' => 'N', 'billing_phone' => '07987654321', 'billing_address' => '1 M St', 'billing_city' => 'Leeds', 'billing_postcode' => 'ZZ9 9ZZ',
         'substitution' => 'substitute',
         'delivery_date' => $date, 'delivery_slot_id' => $slotId, 'fulfillment' => $fulfillment,
         'payment_method' => 'cod', 'privacy' => true,
@@ -56,7 +56,7 @@ test('pickup is free and skips the delivery zone check', function () {
     $redirect = $this->postJson(route('checkout.place'), $payload)
         ->assertOk()->json('redirect');
 
-    preg_match('/EGF-\d+/', $redirect, $m);
+    preg_match('/[A-Z]+-\d+/', $redirect, $m);
     $order = Order::where('number', $m[0])->firstOrFail();
     expect($order->fulfillment)->toBe('pickup')
         ->and((float) $order->delivery_fee)->toBe(0.0)
@@ -85,13 +85,13 @@ test('checkout and tracking show the pickup option', function () {
     $this->get('/checkout')->assertOk()->assertSee('Click &amp; Collect', false);
 
     $order = Order::create([
-        'number' => 'EGF-45001', 'name' => 'N', 'phone' => '07', 'email' => 't@example.com',
+        'number' => 'EGF-45001', 'name' => 'N', 'phone' => '07123456789', 'email' => 't@example.com',
         'address' => '1 M St', 'city' => 'Leeds', 'postcode' => 'LS1 1AA',
         'delivery_date' => now()->addDay()->format('Y-m-d'),
         'subtotal' => 10, 'delivery_fee' => 0, 'total' => 10, 'payment_method' => 'cod',
         'payment_status' => 'unpaid', 'fulfillment' => 'pickup',
         'status_id' => OrderStatus::where('slug', 'new')->first()->id, 'status_slug' => 'new',
     ]);
-    $this->post('/track', ['number' => 'EGF-45001', 'phone' => '07'])->assertOk()
+    $this->post('/track', ['number' => 'EGF-45001', 'phone' => '07123456789'])->assertOk()
         ->assertSee('Click &amp; Collect', false);
 });

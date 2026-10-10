@@ -382,6 +382,7 @@ h1, h2, h3, .display {
 .btn-ghost:hover { background: var(--muted); }
 .btn-sm { padding: 0.5rem 1rem; font-size: 13px; }
 .btn-block { width: 100%; }
+.btn svg { width: 16px; height: 16px; flex-shrink: 0; }
 
 /* Hero */
 .hero {
@@ -1123,15 +1124,15 @@ h1, h2, h3, .display {
 }
 .cart-item {
   display: grid;
-  grid-template-columns: 100px 1fr auto;
+  grid-template-columns: 140px 1fr auto;
   gap: 1rem;
   padding: 1.25rem 0;
   border-bottom: 1px solid var(--border);
   align-items: center;
 }
 .cart-item img {
-  width: 100px;
-  height: 100px;
+  width: 140px;
+  height: 140px;
   object-fit: cover;
   border-radius: var(--radius);
   background: var(--muted);
@@ -1513,7 +1514,11 @@ h1, h2, h3, .display {
   .hero-stats { gap: 1.25rem; }
   .product-name { min-height: auto; }
   .cart-item {
-    grid-template-columns: 80px 1fr;
+    grid-template-columns: 96px 1fr;
+  }
+  .cart-item img {
+    width: 96px;
+    height: 96px;
   }
   .cart-item-actions { grid-column: 1 / -1; }
 }
@@ -1781,13 +1786,16 @@ h1, h2, h3, .display {
 }
 .coupon-msg { font-size: 13px; margin-top: 0.4rem; }
 .co-line img.co-thumb {
-  width: 48px;
-  height: 48px;
+  width: 64px;
+  height: 64px;
   object-fit: cover;
   border-radius: 10px;
   flex: none;
   background: var(--muted);
 }
+.co-line { gap: 0.75rem; align-items: center; }
+.co-line > span { line-height: 1.45; }
+.arriving-line { font-size: 15px; background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; border-radius: 10px; padding: 0.6rem 0.9rem; margin: 0 0 0.6rem; }
 /* Payment tiles */
 .pay-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.6rem; }
 .pay-tile {
@@ -2488,8 +2496,11 @@ body.search-open { overflow: hidden; }
 /* Halal promise */
 .halal-promise { background: var(--muted); }
 .halal-inner { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; }
-.halal-seal { width: 64px; height: 64px; border-radius: 999px; background: var(--deep); color: #fff; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.halal-seal svg { width: 32px; height: 32px; }
+.halal-seal { width: 96px; height: 96px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.halal-seal .halal-svg { width: 96px; height: 96px; }
+.halal-badge .halal-svg { width: 20px; height: 20px; flex-shrink: 0; }
+.diet-tag.is-halal, .promo-tag.is-halal { display: inline-flex; align-items: center; gap: 0.25rem; }
+.diet-tag .halal-svg, .promo-tag .halal-svg { width: 14px; height: 14px; }
 .halal-inner > div { flex: 1; min-width: 220px; }
 .halal-inner .section-desc { margin: 0; max-width: 640px; }
 .footer-bottom svg { width: 14px; height: 14px; vertical-align: -2px; }

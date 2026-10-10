@@ -26,7 +26,11 @@
         @if ($p['diets'])
             <div class="product-diets">
                 @foreach ($p['diets'] as $diet)
-                    <span class="diet-tag">{{ $diet }}</span>
+                    @if (strtolower($diet) === 'halal')
+                        <span class="diet-tag is-halal"><x-halal-seal />{{ $diet }}</span>
+                    @else
+                        <span class="diet-tag">{{ $diet }}</span>
+                    @endif
                 @endforeach
             </div>
         @endif

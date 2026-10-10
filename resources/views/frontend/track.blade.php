@@ -15,7 +15,7 @@
             <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
                 <div class="form-group">
                     <label for="tr-number">Order number</label>
-                    <input id="tr-number" type="text" name="number" required maxlength="30" value="{{ old('number', $order?->number) }}" placeholder="EGF-10001" style="text-transform:uppercase;">
+                    <input id="tr-number" type="text" name="number" required maxlength="30" value="{{ old('number', $order?->number) }}" placeholder="AMM-10001" style="text-transform:uppercase;">
                     @error('number')<p style="color:#B91C1C;font-size:13px;margin-top:0.35rem;">{{ $message }}</p>@enderror
                 </div>
                 <div class="form-group">

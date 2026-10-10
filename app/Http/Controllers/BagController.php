@@ -144,11 +144,16 @@ class BagController extends Controller
         if (str_starts_with($path, 'http')) {
             return $path;
         }
-        if (str_starts_with($path, $dir)) {
-            return asset($path);
+        // Stored paths carry a leading slash (e.g. /uploads/products/x.webp),
+        // so normalise before comparing — otherwise the folder gets doubled.
+        // Any path already under uploads/ is used as-is (variant rows may
+        // hold a hero-style path); only bare filenames get the dir prefix.
+        $clean = ltrim($path, '/');
+        if (str_starts_with($clean, 'uploads/')) {
+            return asset($clean);
         }
 
-        return asset($dir.'/'.ltrim($path, '/'));
+        return asset(rtrim($dir, '/').'/'.$clean);
     }
 
     /**

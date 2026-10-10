@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\Order;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -44,6 +45,9 @@ class RegisterController extends Controller
         ]);
 
         auth()->login($user);
+
+        // Late registration: guest orders placed with this email become theirs.
+        Order::claimGuestOrders($user);
 
         // Your bag lives in the session, so it comes with you automatically.
         // Redirects stay on this shop: absolute URLs are never trusted.

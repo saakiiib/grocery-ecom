@@ -62,6 +62,7 @@ Route::post('/webhooks/stripe', [WebhookController::class, 'stripe'])->name('web
 Route::post('/webhooks/paypal', [WebhookController::class, 'paypal'])->name('webhooks.paypal');
 Route::post('/checkout/cancel', [CheckoutController::class, 'cancel'])->name('checkout.cancel');
 Route::get('/order/success/{number}', [CheckoutController::class, 'success'])->name('order.success');
+Route::get('/order/invoice/{number}', [CheckoutController::class, 'invoicePdf'])->name('order.invoice');
 Route::get('/checkout', [FrontendController::class, 'checkout'])->name('checkout');
 Route::get('/account', [AccountController::class, 'index'])->name('account');
 Route::get('/account/loyalty', [AccountController::class, 'loyalty'])->name('account.loyalty');

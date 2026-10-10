@@ -105,13 +105,13 @@ test('checkout totals and snapshots carry the promo', function () {
 
     session()->put('bag', [$f['variant']->id => 3]);
     $redirect = $this->postJson(route('checkout.place'), [
-        'name' => 'N', 'phone' => '07', 'email' => 'bogo-guest@example.com', 'address' => '1 M St', 'city' => 'Leeds', 'postcode' => 'LS1 1AA',
-        'billing_name' => 'N', 'billing_phone' => '07', 'billing_address' => '1 M St', 'billing_city' => 'Leeds', 'billing_postcode' => 'LS1 1AA',
+        'name' => 'N', 'phone' => '07123456789', 'email' => 'bogo-guest@example.com', 'address' => '1 M St', 'city' => 'Leeds', 'postcode' => 'LS1 1AA',
+        'billing_name' => 'N', 'billing_phone' => '07987654321', 'billing_address' => '1 M St', 'billing_city' => 'Leeds', 'billing_postcode' => 'LS1 1AA',
         'substitution' => 'substitute',
         'delivery_date' => array_key_first(DeliverySlot::bookableDates()),
         'delivery_slot_id' => $slot->id, 'payment_method' => 'cod', 'privacy' => true,
     ])->assertOk()->json('redirect');
-    preg_match('/EGF-\d+/', $redirect, $m);
+    preg_match('/[A-Z]+-\d+/', $redirect, $m);
     $order = Order::where('number', $m[0])->firstOrFail();
 
     // 3 × £10 minus 1 free = £20 goods + £2.99 fee.

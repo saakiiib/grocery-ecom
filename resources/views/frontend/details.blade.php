@@ -58,7 +58,11 @@
                 @if ($productJson['diets'])
                     <p style="display:flex;gap:.4rem;flex-wrap:wrap;margin:0 0 .75rem;">
                         @foreach ($productJson['diets'] as $diet)
-                            <span class="promo-tag">{{ $diet }}</span>
+                            @if (strtolower($diet) === 'halal')
+                                <span class="promo-tag is-halal"><x-halal-seal />{{ $diet }}</span>
+                            @else
+                                <span class="promo-tag">{{ $diet }}</span>
+                            @endif
                         @endforeach
                     </p>
                 @endif

@@ -116,7 +116,7 @@ class RepeatRunner
                 'status_id' => $status->id,
                 'status_slug' => $status->slug,
             ]);
-            $order->number = 'EGF-'.(10000 + $order->id);
+            $order->number = 'AMM-'.(10000 + $order->id);
             $order->save();
             foreach ($lines as $line) {
                 $order->items()->create([

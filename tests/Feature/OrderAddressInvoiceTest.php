@@ -68,7 +68,7 @@ function addrPlaceOrder($test, array $f, ?User $user = null): Order
     session()->put('bag', $bag);
     $payload = addrPayload($f['slot']->id, ['email' => 'addr-guest@example.com']);
     $redirect = $test->postJson(route('checkout.place'), $payload)->assertOk()->json('redirect');
-    preg_match('/EGF-\d+/', $redirect, $m);
+    preg_match('/[A-Z]+-\d+/', $redirect, $m);
 
     return Order::where('number', $m[0])->firstOrFail();
 }

@@ -147,7 +147,7 @@ test('guest can place a cash-on-delivery order end to end', function () {
     $response->assertOk()->assertJsonPath('ok', true);
 
     $order = Order::firstOrFail();
-    expect($order->number)->toStartWith('EGF-')
+    expect($order->number)->toStartWith('AMM-')
         ->and($order->user_id)->toBeNull()
         ->and((float) $order->subtotal)->toBe(44.97)
         ->and((float) $order->delivery_fee)->toBe(2.99)
@@ -166,6 +166,65 @@ test('guest can place a cash-on-delivery order end to end', function () {
     expect(session('bag', []))->toBe([]);
     $response->assertJsonPath('redirect', route('order.success', $order->number));
     $this->get(route('order.success', $order->number))->assertOk()->assertSee($order->number, false);
+});
+
+test('shopper can download the invoice from order success, strangers cannot', function () {
+    $f = shopFixtures();
+    $slot = shopSetup()['slot'];
+
+    $this->postJson(route('bag.add'), ['variant_id' => $f['a']->id, 'qty' => 2])->assertOk();
+    $this->postJson(route('checkout.place'), checkoutPayload($slot->id))->assertOk();
+
+    $order = Order::firstOrFail();
+
+    // Success page carries the download button.
+    $this->get(route('order.success', $order->number))->assertOk()
+        ->assertSee(route('order.invoice', $order->number), false)
+        ->assertSee('Download invoice', false);
+
+    // Same session (the guest who just ordered) gets the PDF.
+    $pdf = $this->get(route('order.invoice', $order->number))->assertOk();
+    expect($pdf->headers->get('content-type'))->toContain('application/pdf');
+
+    // A fresh session with no link to the order sees nothing.
+    $this->flushSession();
+    $this->get(route('order.invoice', $order->number))->assertNotFound();
+});
+
+test('checkout shows the arriving day, window and cutoff note', function () {
+    $f = shopFixtures();
+    shopSetup();
+    $this->postJson(route('bag.add'), ['variant_id' => $f['a']->id, 'qty' => 2])->assertOk();
+
+    $this->get(route('checkout'))->assertOk()
+        ->assertSee('Arriving:', false)
+        ->assertSee('co-arriving', false);
+});
+
+test('checkout rejects non-UK phones and bad emails', function () {
+    $f = shopFixtures();
+    $slot = shopSetup()['slot'];
+    $dates = DeliverySlot::bookableDates();
+
+    $payload = checkoutPayload($slot->id);
+    $payload['phone'] = '12345';
+    $this->postJson(route('checkout.place'), $payload)
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('phone');
+
+    $payload = checkoutPayload($slot->id);
+    $payload['email'] = 'not-an-email';
+    $this->postJson(route('checkout.place'), $payload)
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('email');
+
+    // Spaced UK mobile and +44 form both pass validation (fails later only on zone/empty bag, not on phone).
+    $this->postJson(route('bag.add'), ['variant_id' => $f['a']->id, 'qty' => 2])->assertOk();
+    $payload = checkoutPayload($slot->id);
+    $payload['phone'] = '07123 456789';
+    $payload['billing_phone'] = '+447987654321';
+    $this->postJson(route('checkout.place'), $payload)->assertOk();
+    expect(Order::firstOrFail()->phone)->toBe('07123456789');
 });
 
 test('order emails go out on placement and delivery', function () {
@@ -446,6 +505,51 @@ test('shoppers register on the same users table and keep their bag', function ()
     ])->assertSessionHasErrors('email');
 });
 
+test('guest orders are claimed on register and login, then visible as history', function () {
+    $f = shopFixtures();
+    $slot = shopSetup()['slot'];
+
+    // Guest order with no account attached.
+    $this->postJson(route('bag.add'), ['variant_id' => $f['a']->id, 'qty' => 2])->assertOk();
+    $payload = checkoutPayload($slot->id);
+    $payload['email'] = 'late@example.com';
+    $this->postJson(route('checkout.place'), $payload)->assertOk();
+    $order = Order::firstOrFail();
+    expect($order->user_id)->toBeNull();
+
+    // Registering with the same receipt email inherits the order.
+    $this->post(route('register.store'), [
+        'name' => 'Late Shopper', 'email' => 'late@example.com',
+        'password' => 'SecurePass123', 'password_confirmation' => 'SecurePass123',
+    ])->assertRedirect(route('account'));
+    expect($order->refresh()->user_id)->toBe(auth()->id());
+    $this->get(route('account'))->assertOk()->assertSee($order->number, false);
+    $this->get(route('account.order', $order->number))->assertOk();
+
+    // Same for sign-in: another guest order, then login claims it.
+    auth()->logout();
+    session()->put('bag', [$f['b']->id => 1]);
+    $payload = checkoutPayload($slot->id);
+    $payload['email'] = 'late@example.com';
+    $this->postJson(route('checkout.place'), $payload)->assertOk();
+    $second = Order::orderByDesc('id')->firstOrFail();
+    expect($second->user_id)->toBeNull();
+
+    $this->post(route('login'), ['login' => 'late@example.com', 'password' => 'SecurePass123'])
+        ->assertRedirect(route('home'));
+    expect($second->refresh()->user_id)->toBe(auth()->id());
+    $this->get(route('account'))->assertOk()->assertSee($second->number, false);
+
+    // Orders from other emails stay untouched.
+    session()->put('bag', [$f['b']->id => 1]);
+    $payload = checkoutPayload($slot->id);
+    $payload['email'] = 'stranger@example.com';
+    auth()->logout();
+    $this->postJson(route('checkout.place'), $payload)->assertOk();
+    $third = Order::orderByDesc('id')->firstOrFail();
+    expect($third->user_id)->toBeNull();
+});
+
 test('account shows orders, reorders into the bag, and saves profile', function () {
     $f = shopFixtures();
     $slot = shopSetup()['slot'];
@@ -707,7 +811,7 @@ test('anyone can track an order with number plus checkout phone', function () {
     // Wrong phone or number reveals nothing.
     $this->post(route('track.lookup'), ['number' => $order->number, 'phone' => '07000000000'])
         ->assertOk()->assertSee('could not find that order', false);
-    $this->post(route('track.lookup'), ['number' => 'EGF-99999', 'phone' => '07123456789'])
+    $this->post(route('track.lookup'), ['number' => 'AMM-99999', 'phone' => '07123456789'])
         ->assertOk()->assertSee('could not find that order', false);
 });
 

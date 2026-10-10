@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Api\OrderPayload;
 use App\Mail\OrderPlaced;
 use App\Models\CompanyDetails;
@@ -13,6 +14,7 @@ use App\Models\OrderStatus;
 use App\Models\ProductVariant;
 use App\Models\Setting;
 use App\Models\UserPoint;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -142,16 +144,22 @@ class CheckoutController extends Controller
         $pickup = $request->input('fulfillment') === 'pickup';
         $deliveryAddressRule = $pickup ? 'nullable' : 'required';
         $billingRule = $pickup ? 'nullable' : 'required';
+        // Normalise phones before validating: spaces/dashes/brackets carry no
+        // meaning, and an emptied billing phone becomes null (skips the regex).
+        $request->merge([
+            'phone' => static::normalizePhone($request->input('phone')),
+            'billing_phone' => static::normalizePhone($request->input('billing_phone')),
+        ]);
         $data = $request->validate([
             'name' => 'required|string|max:100',
-            'phone' => 'required|string|max:30',
+            'phone' => ['required', 'string', 'max:30', 'regex:/^(?:\+44|0)(?:7\d{9}|[12]\d{9})$/'],
             // Guests must leave an email — otherwise no receipt can reach them.
-            'email' => [auth()->check() ? 'nullable' : 'required', 'email', 'max:255'],
+            'email' => [auth()->check() ? 'nullable' : 'required', 'email:rfc', 'max:255'],
             'address' => [$deliveryAddressRule, 'string', 'max:500'],
             'city' => [$deliveryAddressRule, 'string', 'max:100'],
             'postcode' => [$deliveryAddressRule, 'string', 'max:20'],
             'billing_name' => [$billingRule, 'string', 'max:100'],
-            'billing_phone' => [$billingRule, 'string', 'max:30'],
+            'billing_phone' => [$billingRule, 'string', 'max:30', 'regex:/^(?:\+44|0)(?:7\d{9}|[12]\d{9})$/'],
             'billing_address' => [$billingRule, 'string', 'max:500'],
             'billing_city' => [$billingRule, 'string', 'max:100'],
             'billing_postcode' => [$billingRule, 'string', 'max:20'],
@@ -166,6 +174,9 @@ class CheckoutController extends Controller
             'points_redeem' => 'nullable|integer|min:0|max:1000000',
             'coupon_code' => 'nullable|string|max:50',
             'privacy' => 'accepted',
+        ], [
+            'phone.regex' => 'Enter a valid UK phone number, e.g. 07123 456789 or +44 7123 456789.',
+            'billing_phone.regex' => 'Enter a valid UK billing phone number, e.g. 07123 456789.',
         ]);
 
         if (! array_key_exists($data['delivery_date'], DeliverySlot::bookableDates())) {
@@ -289,7 +300,7 @@ class CheckoutController extends Controller
                     'status_id' => $status->id,
                     'status_slug' => $status->slug,
                 ]);
-                $order->number = 'EGF-'.(10000 + $order->id);
+                $order->number = 'AMM-'.(10000 + $order->id);
                 $order->save();
 
                 if ($pointsRedeem > 0) {
@@ -556,6 +567,20 @@ class CheckoutController extends Controller
         return response()->json(['ok' => true]);
     }
 
+    /** Downloadable invoice PDF for the shopper (owner, or the guest session that just placed it). */
+    public function invoicePdf(string $number)
+    {
+        $order = Order::with(['items', 'status', 'user'])->where('number', $number)->firstOrFail();
+
+        if (! $this->maySee($order)) {
+            abort(404);
+        }
+
+        return Pdf::loadView('admin.orders.invoice', OrderController::invoiceData($order))
+            ->setPaper('a4')
+            ->download('invoice-'.$order->number.'.pdf');
+    }
+
     /** JSON twin of success(): the order a shopper (or the guest who just placed it) may see. */
     public function successJson(string $number): JsonResponse
     {
@@ -575,6 +600,20 @@ class CheckoutController extends Controller
         }
 
         return session('last_order_id') === $order->id;
+    }
+
+    /**
+     * Strip formatting from a phone number (spaces, dashes, brackets).
+     * Empty input becomes null so optional fields skip validation.
+     */
+    private static function normalizePhone(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+        $clean = preg_replace('/[\s\-().]/', '', (string) $value);
+
+        return $clean === '' ? null : $clean;
     }
 
     /* ---------------- Stripe (raw API — no SDK dependency) ---------------- */

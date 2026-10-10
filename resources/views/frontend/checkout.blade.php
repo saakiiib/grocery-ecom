@@ -67,7 +67,7 @@
                         </div>
                         <div class="form-group">
                             <label for="co-phone">Phone</label>
-                            <input type="tel" id="co-phone" name="phone" required maxlength="30" value="{{ old('phone', $defaultDelivery->phone ?? $shopper->phone ?? '') }}" autocomplete="tel">
+                            <input type="tel" id="co-phone" name="phone" required maxlength="30" inputmode="tel" placeholder="e.g. 07123 456789" value="{{ old('phone', $defaultDelivery->phone ?? $shopper->phone ?? '') }}" autocomplete="tel">
                         </div>
                     </div>
                     <div class="form-group">
@@ -190,11 +190,12 @@
                             </select>
                         </div>
                     </div>
+                    <p class="arriving-line" id="co-arriving">Arriving: <strong>{{ reset($dates) }}</strong> · {{ $slots->first()?->label() }} · {{ ($bag['subtotal'] ?? 0) >= $freeOver || ($slots->first()?->fee ?? 0) <= 0 ? 'Free' : '£'.number_format($slots->first()->fee, 2) }}</p>
                     <p class="text-muted" style="font-size:13px;" id="co-cutoff-msg" data-fee-note="Free delivery over £{{ number_format($freeOver, 2) }} · minimum order £{{ number_format($minOrder, 2) }}.">
                         @if ($cutoffStatus['today_available'])
-                            Order before {{ $cutoffStatus['order_by_hour'] }}:00 for delivery today — after that, earliest is tomorrow.
+                            Order in the next few hours (before {{ $cutoffStatus['order_by_hour'] }}:00) for delivery today — after that, earliest is tomorrow.
                         @else
-                            Today's cutoff has passed — earliest delivery {{ $cutoffStatus['earliest'] }}.
+                            Today's cutoff has passed ({{ $cutoffStatus['order_by_hour'] }}:00) — earliest delivery {{ $cutoffStatus['earliest'] }}. Pick any day and time below.
                         @endif
                         Free delivery over £{{ number_format($freeOver, 2) }} · minimum order £{{ number_format($minOrder, 2) }}.
                     </p>
@@ -422,6 +423,26 @@
             errBox.scrollIntoView({ block: 'center', behavior: 'smooth' });
             toast(msg);
         }
+        /* UK phone (07 mobile / 01-02 landline / +44) and email, mirrored server-side. */
+        function validUKPhone(v) {
+            var d = String(v || '').replace(/[\s\-().]/g, '');
+            return /^(?:\+44|0)(?:7\d{9}|[12]\d{9})$/.test(d);
+        }
+        function validEmail(v) {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(v || '').trim());
+        }
+        /* Lock the Place-order button while the order is being placed. */
+        function lockSubmit() {
+            if (!submitBtn) return;
+            if (submitBtn._orig === undefined) submitBtn._orig = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = 'Ordering…';
+        }
+        function unlockSubmit() {
+            if (!submitBtn) return;
+            if (submitBtn._orig !== undefined) submitBtn.innerHTML = submitBtn._orig;
+            submitBtn.disabled = false;
+        }
         function slotFee() {
             var opt = slotSel.options[slotSel.selectedIndex];
             return parseFloat(opt.dataset.fee || 0) || 0;
@@ -451,12 +472,23 @@
                 var feeNote = cutoffMsg.getAttribute('data-fee-note') || '';
                 if (isToday) {
                     var left = orderBy - hour;
-                    cutoffMsg.textContent = 'Order within ' + left + 'h for delivery today — after ' + orderBy + ':00, earliest is tomorrow. ' + feeNote;
+                    cutoffMsg.textContent = 'Order within ' + left + 'h (before ' + orderBy + ':00) for delivery today — after that, earliest is tomorrow. ' + feeNote;
                 } else {
                     cutoffMsg.textContent = cutoffBase;
                 }
             }
             paintTotals();
+        }
+        /* Plain-words confirmation of the chosen day + window + what it costs. */
+        function paintArriving() {
+            var line = document.getElementById('co-arriving');
+            if (!line || !dateSel || !slotSel) return;
+            var dayOpt = dateSel.options[dateSel.selectedIndex];
+            var slotOpt = slotSel.options[slotSel.selectedIndex];
+            var dayText = dayOpt ? dayOpt.text : '';
+            var windowText = slotOpt ? (slotOpt.text || '').split('·')[0].trim() : '';
+            var fee = (fulfillment() === 'pickup' || subtotal >= freeOver) ? 0 : slotFee();
+            line.textContent = (fulfillment() === 'pickup' ? 'Collection: ' : 'Arriving: ') + dayText + ' · ' + windowText + ' · ' + (fee === 0 ? 'Free' : money(fee));
         }
         if (dateSel) dateSel.addEventListener('change', paintCutoff);
         function pointsDiscount() {
@@ -512,8 +544,7 @@
             }
         }
         function paintTotals() {
-            var fee = (fulfillment() === 'pickup' || subtotal >= freeOver) ? 0 : slotFee();
-            var note = document.getElementById('co-pickup-note');
+            var fee = (fulfillment() === 'pickup' || subtotal >= freeOver) ? 0 : slotFee();            var note = document.getElementById('co-pickup-note');
             if (note) note.style.display = fulfillment() === 'pickup' ? '' : 'none';
             var disc = pointsDiscount();
             var total = Math.max(0, subtotal + fee - disc - couponDiscount);
@@ -531,6 +562,7 @@
                 var codeEl = cpnRow.querySelector('[data-co-coupon-code]');
                 if (codeEl && couponHidden) codeEl.textContent = couponHidden.value;
             }
+            paintArriving();
         }
         function couponMessage(text, ok) {
             if (!couponMsg) return;
@@ -657,12 +689,12 @@
             paypalRendered = true;
             window.paypal.Buttons({
                 createOrder: function () {
-                    submitBtn.disabled = true;
+                    lockSubmit();
                     return post('{{ route('checkout.place') }}', payload()).then(function (json) {
                         lastPaypalOrder = json.order_number;
                         return json.paypal_order_id;
                     }).catch(function (err) {
-                        submitBtn.disabled = false;
+                        unlockSubmit();
                         showError((err && err.message) || 'PayPal could not be started.');
                         throw err;
                     });
@@ -673,7 +705,7 @@
                     });
                 },
                 onCancel: function () {
-                    submitBtn.disabled = false;
+                    unlockSubmit();
                     if (lastPaypalOrder) {
                         post('{{ route('checkout.cancel') }}', { order_number: lastPaypalOrder }).catch(function () {});
                         lastPaypalOrder = null;
@@ -681,7 +713,7 @@
                     showError('PayPal was closed — no money moved and no order was kept. Start again whenever you are ready.');
                 },
                 onError: function () {
-                    submitBtn.disabled = false;
+                    unlockSubmit();
                     showError('PayPal ran into a problem — please try again.');
                 }
             }).render('#co-paypal-buttons');
@@ -699,27 +731,39 @@
                 showError('Please agree to the privacy policy and terms first.');
                 return;
             }
-            submitBtn.disabled = true;
+            var phoneEl = document.getElementById('co-phone');
+            if (phoneEl && !validUKPhone(phoneEl.value)) {
+                showError('Enter a valid UK phone number, e.g. 07123 456789.');
+                phoneEl.focus();
+                return;
+            }
+            var emailEl = document.getElementById('co-email');
+            if (emailEl && (emailEl.hasAttribute('required') || emailEl.value.trim() !== '') && !validEmail(emailEl.value)) {
+                showError('Enter a valid email address, e.g. you@example.com.');
+                emailEl.focus();
+                return;
+            }
+            lockSubmit();
             var m = method();
             post('{{ route('checkout.place') }}', payload()).then(function (json) {
                 if (json.redirect) { window.location.href = json.redirect; return; }
                 if (json.stripe) {
-                    if (!stripe || !card) { showError('Card form is not ready — please try again.'); submitBtn.disabled = false; return; }
+                    if (!stripe || !card) { showError('Card form is not ready — please try again.'); unlockSubmit(); return; }
                     stripe.confirmCardPayment(json.client_secret, { payment_method: { card: card } }).then(function (result) {
                         if (result.error) {
                             showError(result.error.message || 'Your card was declined.');
-                            submitBtn.disabled = false;
+                            unlockSubmit();
                             return;
                         }
                         confirmAndGo(json.order_number, 'stripe').catch(function (err) {
                             showError((err && err.message) || 'Payment confirmation failed.');
-                            submitBtn.disabled = false;
+                            unlockSubmit();
                         });
                     });
                     return;
                 }
                 showError('Unexpected response — please try again.');
-                submitBtn.disabled = false;
+                unlockSubmit();
             }).catch(function (err) {
                 var msg = (err && err.message) || 'Something went wrong — please try again.';
                 if (err && err.errors) {
@@ -727,7 +771,7 @@
                     msg = Array.isArray(first) ? first[0] : first;
                 }
                 showError(msg);
-                submitBtn.disabled = false;
+                unlockSubmit();
             });
         });
 

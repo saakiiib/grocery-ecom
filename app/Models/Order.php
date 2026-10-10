@@ -203,6 +203,22 @@ class Order extends Model
         return $this->email ?: $this->user?->email;
     }
 
+    /**
+     * Attach past guest orders to a shopper: orders placed with no account
+     * whose receipt email matches now belong to them, so order history,
+     * tracking, reordering and repeats survive registering late.
+     */
+    public static function claimGuestOrders(User $user): int
+    {
+        if (! $user->email) {
+            return 0;
+        }
+
+        return static::whereNull('user_id')
+            ->where('email', $user->email)
+            ->update(['user_id' => $user->id]);
+    }
+
     /** Fire-and-forget mail — a down mailer must never break orders. */
     public static function sendMail(?string $to, Mailable $mail): void
     {

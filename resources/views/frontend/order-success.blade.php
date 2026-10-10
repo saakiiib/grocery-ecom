@@ -40,6 +40,7 @@
 
         <div style="display:flex;gap:0.75rem;margin-top:1.5rem;flex-wrap:wrap;">
             <a @spa href="{{ route('shop') }}" class="btn btn-dark">Keep shopping</a>
+            <a href="{{ route('order.invoice', $order->number) }}" class="btn btn-ghost"><x-icon name="download" /> Download invoice</a>
             @auth
                 @if (auth()->user()->user_type == 0)
                     <a @spa href="{{ route('account') }}" class="btn btn-ghost">Track in my account</a>
