@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AdminProfileController;
 use App\Http\Controllers\Admin\BogoController;
+use App\Http\Controllers\Admin\BulkPhotoController;
 use App\Http\Controllers\Admin\BundleController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\CompanyDetailsController;
@@ -237,9 +238,13 @@ Route::group(['prefix' => 'admin/', 'middleware' => ['auth', 'is_admin']], funct
     Route::get('/product-sort-list', [ProductController::class, 'sortList'])->name('products.sortList');
     Route::post('/product-sort-update', [ProductController::class, 'sortUpdate'])->name('products.sortUpdate');
     Route::get('/products/export', [ProductExcelController::class, 'export'])->name('products.export');
-    Route::get('/products/image-template', [ProductExcelController::class, 'imageTemplate'])->name('products.imageTemplate');
     Route::post('/products/import', [ProductExcelController::class, 'importPreview'])->name('products.importPreview');
     Route::post('/products/import/confirm', [ProductExcelController::class, 'importConfirm'])->name('products.importConfirm');
+    Route::get('/products/bulk-photos', [BulkPhotoController::class, 'index'])->name('products.bulkPhotos');
+    Route::post('/products/bulk-photos/upload', [BulkPhotoController::class, 'upload'])->name('products.bulkPhotosUpload');
+    Route::get('/products/bulk-photos/file/{token}/{name}', [BulkPhotoController::class, 'file'])->name('products.bulkPhotosFile');
+    Route::get('/products/bulk-photos/search', [BulkPhotoController::class, 'search'])->name('products.bulkPhotosSearch');
+    Route::post('/products/bulk-photos/confirm', [BulkPhotoController::class, 'confirm'])->name('products.bulkPhotosConfirm');
 
     // Product children (per-product workspace tabs)
     Route::get('/products/{product}/images', [ProductImageController::class, 'list'])->name('product-images.list');

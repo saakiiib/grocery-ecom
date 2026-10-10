@@ -289,16 +289,14 @@ class ProductsExport
             ['- Key Points: one per line inside the cell (Alt+Enter). Extra Details: one per line as "Label | value".'],
             ['- MRP is required and must be ≥ 0. Offer Price must be empty or ≤ MRP.'],
             ['- Default: mark the card-price row. If several are marked, the first wins; if none, the first row wins.'],
-            ['- Images are filenames/paths (upload a ZIP separately) or full URLs — stored as written.'],
+            ['- Hero Image / Variant Image cells are for reference only — this import never changes photos. Use Admin → Products → Bulk Photos to change photos.'],
             ['- Allergens: comma-separated exact names from the Reference sheet (Milk, Nuts…). Unknown names are rejected — allergens are a fixed list.'],
             ['- Nutrition columns are optional numbers; blank means "not stated". Origin Country is free text.'],
             ['- "Disable missing variants" (checkbox at import): variants in the shop but absent from the sheet are set to disabled. Off by default.'],
             [''],
-            ['IMAGES (BULK)'],
-            ['- The "Image Slots" sheet lists the exact filename expected for every hero and variant photo.'],
-            ['- Click "Image Template" in Admin → Products to download hero/ + variants/ folders: drop one photo per slot, zip the folders, upload the ZIP together with the Excel.'],
-            ['- Match is by filename only (case-insensitive, jpg/png/webp). Unmatched ZIP files are reported, never guessed.'],
-            ['- Hero Image / Variant Image cells are overrides: a filename there must exist in the ZIP, a full URL is stored as-is, blank means "use the slot file if present".'],
+            ['IMAGES'],
+            ['- Photos are managed on the Bulk Photos page (Admin → Products → Bulk Photos): drop photos, they match by SKU in the filename, review, confirm.'],
+            ['- The "Image Slots" sheet lists every product slug and variant SKU for naming your photo files.'],
         ];
         $sheet->fromArray($lines, null, 'A1');
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);

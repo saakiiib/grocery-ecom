@@ -41,7 +41,7 @@
                 <div style="color:var(--muted-foreground);line-height:1.7;margin-top:1rem;">{!! $company->about_us !!}</div>
             @else
                 <p style="color:var(--muted-foreground);line-height:1.7;margin-top:1rem;">
-                    {{ $siteBrand }} began with a simple idea: great ingredients shouldn't be hard to find.
+                    {{ $siteBrand ?? 'Alam Mini Market' }} began with a simple idea: great ingredients shouldn't be hard to find.
                     We work with growers and makers who care about quality, seasonality, and the people who enjoy their produce.
                 </p>
                 <p style="color:var(--muted-foreground);line-height:1.7;margin-top:1rem;">

@@ -25,6 +25,7 @@ function adminUser(): User
         'email' => 'admin@example.com',
         'password' => bcrypt('password'),
         'user_type' => 1,
+        'status' => 1,
     ]);
 }
 

@@ -26,19 +26,7 @@
         <div class="alert alert-info py-2">New option values to be created: <strong>{{ implode(', ', $stats['values_new']) }}</strong></div>
     @endif
 
-    <div class="card mb-3">
-        <div class="card-header"><h5 class="card-title mb-0">Images {{ $hasZip ? '' : '(no ZIP uploaded)' }}</h5></div>
-        <div class="card-body">
-            @if ($hasZip)
-                <p class="mb-1">ZIP files: <strong>{{ $images['zip_files'] }}</strong> · heroes matched: <strong>{{ $images['hero_matched'] }}</strong> · variant photos matched: <strong>{{ $images['variant_matched'] }}</strong></p>
-                @if ($images['unused'])
-                    <p class="text-muted small mb-0">Unused files (no matching slot — ignored): {{ implode(', ', $images['unused']) }}</p>
-                @endif
-            @else
-                <p class="text-muted small mb-0">Upload a ZIP of photos with the Excel to bulk-load images. Slot filenames are listed in the export's Image Slots sheet.</p>
-            @endif
-        </div>
-    </div>
+    <div class="alert alert-info py-2">Photos are not part of Excel import — manage them on the <a href="{{ route('products.bulkPhotos') }}">Bulk Photos</a> page.</div>
 
     @if ($errors)
         @if (collect($errors)->contains(fn ($e) => ! $e['row']))
