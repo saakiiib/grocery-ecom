@@ -4,7 +4,6 @@
 @section('content')
 
     <div class="container-fluid">
-        @if (session('status'))<div class="alert alert-success">{{ session('status') }}</div>@endif
 
         <div class="card">
             <div class="card-header"><h4 class="card-title mb-0">Stock &amp; Price Alerts <small class="text-muted">— {{ $alerts->total() }} total</small></h4></div>

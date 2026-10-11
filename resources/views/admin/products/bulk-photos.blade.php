@@ -14,9 +14,6 @@
     @if ($errors->any())
         <div class="alert alert-danger">{{ implode(' ', $errors->all()) }}</div>
     @endif
-    @if (session('error'))
-        <div class="alert alert-danger">{{ session('error') }}</div>
-    @endif
 
     <div class="row g-3">
         <div class="col-xl-8">

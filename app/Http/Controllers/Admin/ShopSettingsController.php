@@ -35,6 +35,7 @@ class ShopSettingsController extends Controller
         'paypal_webhook_id' => 'PayPal webhook ID',
         'paypal_mode' => 'PayPal mode (sandbox/live)',
         'messenger_url' => 'Facebook Messenger chat link',
+        'invoice_format' => 'Invoice format (a4/pos)',
         'hygiene_rating' => 'Food hygiene rating (0–5)',
         'google_rating' => 'Google rating (e.g. 4.8)',
         'google_reviews_url' => 'Google reviews link',
@@ -62,6 +63,7 @@ class ShopSettingsController extends Controller
             'announcement_enabled' => $request->input('announcement_enabled', Setting::get('announcement_enabled', '0') ?? '0'),
             'promo_enabled' => $request->input('promo_enabled', Setting::get('promo_enabled', '0') ?? '0'),
             'social_proof_enabled' => $request->input('social_proof_enabled', Setting::get('social_proof_enabled', '1') ?? '1'),
+            'invoice_format' => $request->input('invoice_format', Setting::get('invoice_format', 'a4') ?? 'a4'),
         ]);
         $data = $request->validate([
             'announcement_enabled' => 'required|in:0,1',
@@ -75,6 +77,7 @@ class ShopSettingsController extends Controller
             'promo_button_text' => 'nullable|string|max:60',
             'promo_button_url' => 'nullable|string|max:255',
             'social_proof_enabled' => 'required|in:0,1',
+            'invoice_format' => 'in:a4,pos',
             'delivery_min_order' => 'required|numeric|min:0|max:9999',
             'delivery_free_over' => 'required|numeric|min:0|max:9999',
             'points_per_pound' => 'required|numeric|min:0|max:100',

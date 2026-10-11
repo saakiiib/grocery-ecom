@@ -8,8 +8,6 @@
     </div>
 
     <div class="container-fluid">
-        @if (session('status'))<div class="alert alert-success">{{ session('status') }}</div>@endif
-        @if (session('error'))<div class="alert alert-danger">{{ session('error') }}</div>@endif
 
         <div class="card">
             <div class="card-header"><h4 class="card-title mb-0">Delivery Zones <small class="text-muted">— postcode prefixes we deliver to; empty list means everywhere</small></h4></div>

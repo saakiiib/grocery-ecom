@@ -4,7 +4,6 @@
 @section('content')
 
     <div class="container-fluid">
-        @if (session('status'))<div class="alert alert-success">{{ session('status') }}</div>@endif
 
         <div class="card">
             <div class="card-header"><h4 class="card-title mb-0">Weekly Repeats <small class="text-muted">— {{ $repeats->total() }} total · runs via <code>php artisan app:run-repeats</code></small></h4></div>

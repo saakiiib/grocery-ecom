@@ -4,7 +4,6 @@
 @section('content')
 
     <div class="container-fluid">
-        @if (session('status'))<div class="alert alert-success">{{ session('status') }}</div>@endif
 
         <div class="row justify-content-center">
             <div class="col-xl-8">
@@ -111,6 +110,18 @@
                                 </div>
                             </div>
                             <p class="text-muted mb-4"><small>Points are awarded when an order is Delivered (registered shoppers only) and refunded automatically if the order is Cancelled.</small></p>
+
+                            <h6 class="mb-3">Invoice</h6>
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label">Invoice format</label>
+                                    <select name="invoice_format" class="form-control">
+                                        <option value="a4" @selected(old('invoice_format', $settings['invoice_format'] ?? 'a4') === 'a4')>A4 — full professional invoice</option>
+                                        <option value="pos" @selected(old('invoice_format', $settings['invoice_format'] ?? 'a4') === 'pos')>POS — 80mm thermal till receipt</option>
+                                    </select>
+                                    <small class="text-muted">Applies to the invoice page, the print button and the PDF download.</small>
+                                </div>
+                            </div>
 
                             <h6 class="mb-3">Stripe (card payments)
                                 @if ($sources['stripe'])

@@ -4,7 +4,6 @@
 @section('content')
 
     <div class="container-fluid">
-        @if (session('status'))<div class="alert alert-success">{{ session('status') }}</div>@endif
 
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">

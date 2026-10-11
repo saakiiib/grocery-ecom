@@ -155,6 +155,7 @@ Route::group(['prefix' => 'admin/', 'middleware' => ['auth', 'is_admin']], funct
     Route::get('/orders/{id}/invoice-pdf', [OrderController::class, 'invoicePdf'])->name('orders.invoicePdf');
     Route::post('/orders/{id}/status', [OrderController::class, 'updateStatus'])->name('orders.updateStatus');
     Route::post('/orders/{id}/driver', [OrderController::class, 'assignDriver'])->name('orders.assignDriver');
+    Route::post('/orders/{id}/details', [OrderController::class, 'updateDetails'])->name('orders.details.update');
     Route::post('/orders/{id}/refund', [OrderController::class, 'refund'])->name('orders.refund');
     Route::post('/orders/{orderId}/items/{itemId}/unavailable', [OrderController::class, 'markUnavailable'])->name('orders.items.unavailable');
     Route::post('/orders/{id}/items', [OrderController::class, 'addItem'])->name('orders.items.store');

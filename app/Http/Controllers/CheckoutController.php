@@ -622,7 +622,7 @@ class CheckoutController extends Controller
         }
 
         return Pdf::loadView('admin.orders.invoice', OrderController::invoiceData($order))
-            ->setPaper('a4')
+            ->setPaper(Setting::get('invoice_format', 'a4') === 'pos' ? [0, 0, 226.77, 2000] : 'a4')
             ->download('invoice-'.$order->number.'.pdf');
     }
 

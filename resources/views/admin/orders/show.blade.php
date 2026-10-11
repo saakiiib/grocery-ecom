@@ -4,14 +4,11 @@
 @section('content')
 
     <div class="container-fluid">
-        @if (session('status'))
-            <div class="alert alert-success">{{ session('status') }}</div>
-        @endif
-
         <div class="row">
             <div class="col-xl-8">
                 <div class="card">
                     <div class="card-header d-flex align-items-center">
+                        <a href="{{ route('orders.index') }}" class="btn btn-soft-secondary btn-sm me-2">← Orders</a>
                         <h4 class="card-title mb-0 flex-grow-1">Order {{ $order->number }}</h4>
                         @php $st = $order->status; @endphp
                         <span class="badge fs-6" style="background:{{ $st?->color ?? '#1A2E22' }};">{{ $st?->name ?? ucfirst($order->status_slug) }}</span>
@@ -88,9 +85,9 @@
                                 <div class="card-body">
                                     <form method="POST" action="{{ route('orders.items.store', $order->id) }}" class="row g-2 align-items-end" id="add-item-form">
                                         @csrf
-                                        <div class="col-md-5">
+                                        <div class="col-md-4">
                                             <label class="form-label">Product</label>
-                                            <select class="form-control" id="add-product" required>
+                                            <select class="form-control select2" id="add-product" required>
                                                 <option value="">Choose…</option>
                                                 @foreach ($products as $p)
                                                     <option value="{{ $p->id }}">{{ $p->name }}</option>
@@ -99,7 +96,7 @@
                                         </div>
                                         <div class="col-md-4">
                                             <label class="form-label">Pack</label>
-                                            <select name="variant_id" class="form-control" id="add-variant" required>
+                                            <select name="variant_id" class="form-control select2" id="add-variant" required>
                                                 <option value="">Pick a product first…</option>
                                             </select>
                                         </div>
@@ -107,30 +104,130 @@
                                             <label class="form-label">Qty</label>
                                             <input type="number" name="qty" class="form-control" required min="1" max="99" value="1">
                                         </div>
-                                        <div class="col-md-1">
-                                            <button type="submit" class="btn btn-primary w-100">Add</button>
+                                        <div class="col-md-2">
+                                            <button type="submit" class="btn btn-primary w-100 text-nowrap">Add</button>
                                         </div>
                                     </form>
                                     <script>
                                         (function () {
-                                            var product = document.getElementById('add-product');
-                                            var variant = document.getElementById('add-variant');
-                                            if (!product || !variant) return;
-                                            product.addEventListener('change', function () {
-                                                variant.innerHTML = '<option value="">Loading…</option>';
-                                                if (!product.value) { variant.innerHTML = '<option value="">Pick a product first…</option>'; return; }
-                                                fetch('/admin/products/' + product.value + '/variants', { headers: { 'Accept': 'application/json' } })
-                                                    .then(function (res) { return res.json(); })
-                                                    .then(function (rows) {
-                                                        variant.innerHTML = rows.map(function (v) {
-                                                            var label = (v.combination || v.sku || ('Pack #' + v.id)) + ' · £' + Number(v.mrp).toFixed(2) + (v.in_stock && v.status ? '' : ' (out)');
-                                                            return '<option value="' + v.id + '"' + (v.in_stock && v.status ? '' : ' disabled') + '>' + label + '</option>';
-                                                        }).join('') || '<option value="">No packs</option>';
-                                                    })
-                                                    .catch(function () { variant.innerHTML = '<option value="">Could not load</option>'; });
-                                            });
+                                            // NOTE: bound with jQuery on purpose — Select2 fires change
+                                            // through jQuery, which a vanilla addEventListener never sees.
+                                            function init() {
+                                                var product = document.getElementById('add-product');
+                                                var variant = document.getElementById('add-variant');
+                                                if (!product || !variant || !window.jQuery) return;
+                                                var $ = window.jQuery;
+                                                $('.select2').select2({ width: '100%' });
+                                                $(product).on('change', function () {
+                                                    variant.innerHTML = '<option value="">Loading…</option>';
+                                                    if (!product.value) { variant.innerHTML = '<option value="">Pick a product first…</option>'; return; }
+                                                    fetch('/admin/products/' + product.value + '/variants', { headers: { 'Accept': 'application/json' } })
+                                                        .then(function (res) { return res.json(); })
+                                                        .then(function (rows) {
+                                                            variant.innerHTML = rows.map(function (v) {
+                                                                var label = (v.combination || v.sku || ('Pack #' + v.id)) + ' · £' + Number(v.mrp).toFixed(2) + (v.in_stock && v.status ? '' : ' (out)');
+                                                                return '<option value="' + v.id + '"' + (v.in_stock && v.status ? '' : ' disabled') + '>' + label + '</option>';
+                                                            }).join('') || '<option value="">No packs</option>';
+                                                            $(variant).trigger('change');
+                                                        })
+                                                        .catch(function () { variant.innerHTML = '<option value="">Could not load</option>'; $(variant).trigger('change'); });
+                                                });
+                                            }
+                                            if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', init); }
+                                            else { init(); }
                                         })();
                                     </script>
+                                </div>
+                            </div>
+                        @endif
+
+                        @if ($editable)
+                            <div class="card mt-3">
+                                <div class="card-header"><h6 class="card-title mb-0">Edit details</h6></div>
+                                <div class="card-body">
+                                    <form method="POST" action="{{ route('orders.details.update', $order->id) }}" class="row g-2">
+                                        @csrf
+                                        <div class="col-md-4">
+                                            <label class="form-label">Name</label>
+                                            <input type="text" name="name" class="form-control" required maxlength="100" value="{{ old('name', $order->name) }}">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Phone</label>
+                                            <input type="text" name="phone" class="form-control" required maxlength="30" value="{{ old('phone', $order->phone) }}">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Email</label>
+                                            <input type="email" name="email" class="form-control" maxlength="255" value="{{ old('email', $order->email) }}">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Delivery address</label>
+                                            <input type="text" name="address" class="form-control" required maxlength="500" value="{{ old('address', $order->address) }}">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label">Town / City</label>
+                                            <input type="text" name="city" class="form-control" required maxlength="100" value="{{ old('city', $order->city) }}">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label">Postcode</label>
+                                            <input type="text" name="postcode" class="form-control" required maxlength="20" value="{{ old('postcode', $order->postcode) }}">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Billing name <small class="text-muted">(blank = same)</small></label>
+                                            <input type="text" name="billing_name" class="form-control" maxlength="100" value="{{ old('billing_name', $order->billing_name) }}">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Billing phone <small class="text-muted">(blank = same)</small></label>
+                                            <input type="text" name="billing_phone" class="form-control" maxlength="30" value="{{ old('billing_phone', $order->billing_phone) }}">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Billing postcode <small class="text-muted">(blank = same)</small></label>
+                                            <input type="text" name="billing_postcode" class="form-control" maxlength="20" value="{{ old('billing_postcode', $order->billing_postcode) }}">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Billing address <small class="text-muted">(blank = same)</small></label>
+                                            <input type="text" name="billing_address" class="form-control" maxlength="500" value="{{ old('billing_address', $order->billing_address) }}">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label">Billing city <small class="text-muted">(blank = same)</small></label>
+                                            <input type="text" name="billing_city" class="form-control" maxlength="100" value="{{ old('billing_city', $order->billing_city) }}">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label">Fulfilment</label>
+                                            <select name="fulfillment" class="form-control" required>
+                                                <option value="delivery" @selected(old('fulfillment', $order->fulfillment ?? 'delivery') === 'delivery')>Home delivery</option>
+                                                <option value="pickup" @selected(old('fulfillment', $order->fulfillment ?? 'delivery') === 'pickup')>Click &amp; Collect</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Delivery day</label>
+                                            <input type="date" name="delivery_date" class="form-control" value="{{ old('delivery_date', $order->delivery_date?->format('Y-m-d')) }}">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Time window</label>
+                                            <select name="delivery_slot_id" class="form-control select2">
+                                                <option value="">No slot</option>
+                                                @foreach ($slots as $slot)
+                                                    <option value="{{ $slot->id }}" @selected((int) old('delivery_slot_id', $order->delivery_slot_id) === $slot->id)>{{ $slot->label() }} · {{ $slot->fee > 0 ? '£'.number_format($slot->fee, 2) : 'Free' }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">If unavailable</label>
+                                            <select name="substitution_preference" class="form-control" required>
+                                                <option value="substitute" @selected(old('substitution_preference', $order->substitution_preference) === 'substitute')>Substitute with a similar item</option>
+                                                <option value="refund" @selected(old('substitution_preference', $order->substitution_preference) === 'refund')>Remove it and refund me</option>
+                                                <option value="call" @selected(old('substitution_preference', $order->substitution_preference) === 'call')>Call me first</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Delivery notes</label>
+                                            <input type="text" name="notes" class="form-control" maxlength="1000" value="{{ old('notes', $order->notes) }}">
+                                        </div>
+                                        <div class="col-12">
+                                            <button type="submit" class="btn btn-primary btn-sm">Save details</button>
+                                            <small class="text-muted ms-2">Changing the slot or fulfilment recalculates the delivery fee and total.</small>
+                                        </div>
+                                    </form>
                                 </div>
                             </div>
                         @endif
@@ -220,7 +317,6 @@
                 <div class="card">
                     <div class="card-header"><h4 class="card-title mb-0">Refund</h4></div>
                     <div class="card-body">
-                        @if (session('error'))<div class="alert alert-danger">{{ session('error') }}</div>@endif
                         @if ($order->refunded_amount > 0)<p class="mb-2">Already refunded: <strong>£{{ number_format($order->refunded_amount, 2) }}</strong></p>@endif
                         @if ($refundable > 0)
                             <p class="text-muted">Up to <strong>£{{ number_format($refundable, 2) }}</strong> can go back to the shopper via {{ $order->paymentLabel() }}.</p>

@@ -3,7 +3,6 @@
 
 @section('content')
     <div class="container-fluid">
-        @if (session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
 
         <div class="row justify-content-center">
             <div class="col-xl-8">

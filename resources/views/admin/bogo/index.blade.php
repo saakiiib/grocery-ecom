@@ -4,12 +4,10 @@
 @section('content')
 
     <div class="container-fluid mb-3">
-        <a href="{{ route('bogo.create') }}" class="btn btn-primary"><i class="ri-add-line me-1"></i> Add New Offer</a>
+        <a href="{{ route('bogo.create') }}" class="btn btn-primary"><i class="ri-add-line me-1"></i> Add New BOGO</a>
     </div>
 
     <div class="container-fluid">
-        @if (session('status'))<div class="alert alert-success">{{ session('status') }}</div>@endif
-        @if (session('error'))<div class="alert alert-danger">{{ session('error') }}</div>@endif
 
         <div class="card">
             <div class="card-header"><h4 class="card-title mb-0">BOGO Offers <small class="text-muted">— buy X get Y free on the same item, applied automatically in the bag</small></h4></div>

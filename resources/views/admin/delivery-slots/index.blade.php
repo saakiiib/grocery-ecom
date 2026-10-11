@@ -8,8 +8,6 @@
     </div>
 
     <div class="container-fluid">
-        @if (session('status'))<div class="alert alert-success">{{ session('status') }}</div>@endif
-        @if (session('error'))<div class="alert alert-danger">{{ session('error') }}</div>@endif
 
         <div class="card">
             <div class="card-header"><h4 class="card-title mb-0">Delivery Slots <small class="text-muted">— shoppers pick one at checkout, each with its own fee</small></h4></div>

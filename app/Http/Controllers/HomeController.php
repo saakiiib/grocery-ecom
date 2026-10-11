@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Contact;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\OrderStatus;
+use App\Models\ProductVariant;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 
@@ -34,9 +37,26 @@ class HomeController extends Controller
             'open_orders' => Order::whereIn('status_slug', $openSlugs ?: ['new'])->count(),
             'customers' => User::where('user_type', 0)->count(),
         ];
-        $recent = Order::with('status')->orderByDesc('id')->take(5)->get();
+        $needs = [
+            'unpaid_online' => Order::where('payment_method', '!=', 'cod')
+                ->whereNotIn('payment_status', ['paid', 'partially_refunded'])
+                ->whereNotIn('status_slug', ['cancelled', 'delivered'])
+                ->count(),
+            'out_of_stock' => ProductVariant::where('in_stock', false)->count(),
+            'new_messages' => Contact::where('created_at', '>=', now()->subDays(7))->count(),
+        ];
+        $statusCounts = Order::selectRaw('status_slug, COUNT(*) as c')->groupBy('status_slug')->pluck('c', 'status_slug')->all();
+        $orderStatuses = OrderStatus::ordered();
+        $weekRevenue = (float) Order::where('created_at', '>=', now()->subDays(7))->whereNotIn('status_slug', ['cancelled'])->sum('total');
+        $topProducts = OrderItem::selectRaw('product_name, SUM(qty) as units, SUM(line_total) as revenue')
+            ->where('status', 'ok')
+            ->whereHas('order', fn ($q) => $q->where('created_at', '>=', now()->subDays(7))->whereNotIn('status_slug', ['cancelled']))
+            ->groupBy('product_name')
+            ->orderByDesc('units')
+            ->take(5)
+            ->get();
 
-        return view('admin.pages.dashboard', compact('stats', 'recent'));
+        return view('admin.pages.dashboard', compact('stats', 'needs', 'statusCounts', 'orderStatuses', 'weekRevenue', 'topProducts'));
     }
 
     public function managerHome()

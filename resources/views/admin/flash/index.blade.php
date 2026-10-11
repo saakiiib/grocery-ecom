@@ -8,8 +8,6 @@
     </div>
 
     <div class="container-fluid">
-        @if (session('status'))<div class="alert alert-success">{{ session('status') }}</div>@endif
-        @if (session('error'))<div class="alert alert-danger">{{ session('error') }}</div>@endif
 
         <div class="card">
             <div class="card-header"><h4 class="card-title mb-0">Flash Sales <small class="text-muted">— scheduled prices that beat the shelf price inside their window, then expire on their own</small></h4></div>

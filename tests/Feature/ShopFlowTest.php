@@ -3,6 +3,7 @@
 use App\Http\Controllers\CheckoutController;
 use App\Mail\OrderDelivered;
 use App\Mail\OrderPlaced;
+use App\Models\ApiToken;
 use App\Models\Category;
 use App\Models\Coupon;
 use App\Models\DeliverySlot;
@@ -789,7 +790,11 @@ test('admin dashboard shows live order stats', function () {
     $this->actingAs($admin)->get(route('admin.dashboard'))
         ->assertOk()
         ->assertSee('Orders today', false)
-        ->assertSee('£'.number_format($order->total, 2), false)
+        ->assertSee('£'.number_format($order->total, 2), false);
+    // Latest orders now render through the Yajra server-side table.
+    $this->actingAs($admin)->withHeaders(['X-Requested-With' => 'XMLHttpRequest'])
+        ->getJson(route('orders.index'))
+        ->assertOk()
         ->assertSee($order->number, false);
 });
 
@@ -981,7 +986,7 @@ test('account hardening: remember-me, phone normalize, list gate, invoice link',
     $owner = auth()->user();
     $list = ShoppingList::create(['user_id' => $owner->id, 'name' => 'Weekly']);
     $f['b']->update(['status' => false]);
-    $plain = \App\Models\ApiToken::issue($owner);
+    $plain = ApiToken::issue($owner);
     $this->withHeader('Authorization', 'Bearer '.$plain)
         ->postJson('/api/lists/'.$list->id.'/items', ['variant_id' => $f['b']->id])
         ->assertStatus(422);
@@ -995,4 +1000,78 @@ test('account hardening: remember-me, phone normalize, list gate, invoice link',
     $this->get(route('account.order', $order->number))->assertOk()
         ->assertSee(route('order.invoice', $order->number), false)
         ->assertSee('Download invoice', false);
+});
+
+test('admin can edit order details and slot change recalculates fee', function () {
+    $f = shopFixtures();
+    $slot = shopSetup()['slot'];
+    $admin = shopAdmin();
+    $evening = DeliverySlot::create([
+        'name' => 'Evening', 'starts_at' => '17:00', 'ends_at' => '20:00',
+        'fee' => 4.99, 'cutoff_hour' => 20, 'sort_order' => 1, 'is_active' => true,
+    ]);
+
+    $this->postJson(route('bag.add'), ['variant_id' => $f['b']->id])->assertOk();
+    $this->postJson(route('checkout.place'), checkoutPayload($slot->id))->assertOk();
+    $order = Order::firstOrFail();
+
+    $payload = [
+        'name' => 'Edited Name', 'phone' => '07111111111', 'email' => 'edited@example.com',
+        'address' => '1 Edited Street', 'city' => 'London', 'postcode' => 'E1 6AN',
+        'billing_name' => '', 'billing_phone' => '', 'billing_address' => '', 'billing_city' => '', 'billing_postcode' => '',
+        'fulfillment' => 'delivery', 'delivery_date' => now()->addDay()->format('Y-m-d'),
+        'delivery_slot_id' => $evening->id, 'notes' => 'Ring the bell twice.',
+        'substitution_preference' => 'call',
+    ];
+
+    $this->actingAs($admin)->post(route('orders.details.update', $order->id), $payload)
+        ->assertRedirect(route('orders.show', $order->id));
+
+    $order->refresh();
+    expect($order->address)->toBe('1 Edited Street')
+        ->and($order->notes)->toBe('Ring the bell twice.')
+        ->and($order->delivery_slot_label)->toBe($evening->label())
+        ->and((float) $order->delivery_fee)->toBe(4.99);
+
+    // Delivered orders stay locked.
+    foreach (['packed', 'out_for_delivery', 'delivered'] as $slug) {
+        $order->changeStatus($slug, $admin->id);
+    }
+    $this->actingAs($admin)->post(route('orders.details.update', $order->id), $payload)
+        ->assertSessionHas('error');
+    expect($order->refresh()->address)->toBe('1 Edited Street');
+});
+
+test('admin status modal updates from the list and stays on the list', function () {
+    $f = shopFixtures();
+    shopSetup();
+    $admin = shopAdmin();
+    $this->postJson(route('bag.add'), ['variant_id' => $f['b']->id])->assertOk();
+    $slot = DeliverySlot::firstOrFail();
+    $this->postJson(route('checkout.place'), checkoutPayload($slot->id))->assertOk();
+    $order = Order::firstOrFail();
+
+    $this->actingAs($admin)->post(route('orders.updateStatus', $order->id), [
+        'status' => 'packed', 'note' => 'Packed from the list.', 'return_to' => 'index',
+    ])->assertRedirect(route('orders.index'));
+
+    expect($order->refresh()->status_slug)->toBe('packed')
+        ->and($order->histories()->where('note', 'like', '%Packed from the list.%')->exists())->toBeTrue();
+
+    // Rows carry their status colour for at-a-glance scanning.
+    $this->actingAs($admin)->withHeaders(['X-Requested-With' => 'XMLHttpRequest'])
+        ->getJson(route('orders.index'))
+        ->assertOk()
+        ->assertSee('box-shadow', false);
+});
+
+test('promotion index pages show labelled add buttons', function () {
+    shopFixtures();
+    shopSetup();
+    $admin = shopAdmin();
+
+    $this->actingAs($admin)->get(route('offers.index'))->assertOk()->assertSee('Add New Offer', false);
+    $this->actingAs($admin)->get(route('bogo.index'))->assertOk()->assertSee('Add New BOGO', false);
+    $this->actingAs($admin)->get(route('flash.index'))->assertOk()->assertSee('Add New Flash Sale', false);
+    $this->actingAs($admin)->get(route('bundles.index'))->assertOk()->assertSee('Add New Bundle', false);
 });

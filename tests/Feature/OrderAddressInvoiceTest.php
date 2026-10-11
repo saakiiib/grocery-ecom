@@ -177,3 +177,28 @@ test('admin can view and download the invoice', function () {
     $pdf = $this->actingAs($f['admin'])->get(route('orders.invoicePdf', $order->id))->assertOk();
     expect($pdf->headers->get('content-type'))->toContain('application/pdf');
 });
+
+test('invoice follows the configured format and setting saves', function () {
+    $f = addrFixtures();
+    $order = addrPlaceOrder($this, $f);
+
+    // Default A4 keeps the professional headings.
+    $this->actingAs($f['admin'])->get(route('orders.invoice', $order->id))
+        ->assertOk()->assertSee('Bill to', false)->assertSee('Ship to', false);
+
+    // POS setting renders the till receipt instead.
+    Setting::put('invoice_format', 'pos');
+    $this->actingAs($f['admin'])->get(route('orders.invoice', $order->id))
+        ->assertOk()->assertSee('ORDER RECEIPT', false)->assertSee('TOTAL', false);
+
+    $pdf = $this->actingAs($f['admin'])->get(route('orders.invoicePdf', $order->id))->assertOk();
+    expect($pdf->headers->get('content-type'))->toContain('application/pdf');
+
+    // Saved from shop settings.
+    $this->actingAs($f['admin'])->post(route('shop-settings.update'), [
+        'delivery_min_order' => '15.00', 'delivery_free_over' => '50.00',
+        'points_per_pound' => '1', 'points_value' => '0.01', 'points_min_redeem' => '100',
+        'paypal_mode' => 'sandbox', 'invoice_format' => 'a4',
+    ])->assertRedirect(route('shop-settings.edit'));
+    expect(Setting::get('invoice_format'))->toBe('a4');
+});

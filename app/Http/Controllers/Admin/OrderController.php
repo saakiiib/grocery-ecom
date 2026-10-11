@@ -30,6 +30,13 @@ class OrderController extends Controller
 
             return DataTables::of($orders)
                 ->addIndexColumn()
+                ->setRowAttr([
+                    'style' => function ($row) {
+                        $color = $row->status?->color ?? '#1A2E22';
+
+                        return 'box-shadow: inset 4px 0 0 '.$color.'; background-color: '.$color.'0d;';
+                    },
+                ])
                 ->filterColumn('customer', function ($q, $keyword) {
                     $q->where(fn ($w) => $w->where('name', 'like', "%{$keyword}%")
                         ->orWhere('phone', 'like', "%{$keyword}%")
@@ -53,15 +60,22 @@ class OrderController extends Controller
                 })
                 ->addColumn('date', fn ($row) => $row->created_at->format('d M Y, h:i A').'<br><small class="text-muted">For '.($row->delivery_date ? $row->delivery_date->format('D j M') : '—').'</small>')
                 ->addColumn('action', function ($row) {
-                    return '<a href="'.route('orders.show', $row->id).'" class="btn btn-soft-secondary btn-sm"><i class="ri-eye-fill align-bottom me-1 text-muted"></i> View</a>';
+                    return '<span class="text-nowrap">'
+                        .'<a href="'.route('orders.show', $row->id).'" class="btn btn-soft-secondary btn-sm" title="View order"><i class="ri-eye-fill align-bottom text-muted"></i></a> '
+                        .'<button type="button" class="btn btn-soft-primary btn-sm" title="Change status" data-status-order="'.$row->id.'" data-status-current="'.e($row->status_slug).'" data-status-number="'.e($row->number).'"><i class="ri-refresh-line align-bottom"></i></button> '
+                        .'<a href="'.route('orders.invoicePdf', $row->id).'" class="btn btn-soft-success btn-sm" title="Download invoice"><i class="ri-download-2-line align-bottom"></i></a> '
+                        .'<a href="'.route('orders.invoice', $row->id).'?print=1" target="_blank" rel="noopener" class="btn btn-soft-warning btn-sm" title="Print invoice"><i class="ri-printer-line align-bottom"></i></a>'
+                        .'</span>';
                 })
                 ->rawColumns(['number', 'customer', 'payment', 'status', 'date', 'action'])
                 ->make(true);
         }
 
         $statuses = OrderStatus::ordered();
+        $statusCounts = Order::selectRaw('status_slug, COUNT(*) as c')->groupBy('status_slug')->pluck('c', 'status_slug')->all();
+        $totalOrders = Order::count();
 
-        return view('admin.orders.index', compact('statuses'));
+        return view('admin.orders.index', compact('statuses', 'statusCounts', 'totalOrders'));
     }
 
     public function show(int $id)
@@ -69,8 +83,9 @@ class OrderController extends Controller
         $order = Order::with(['items', 'histories.changer', 'status', 'user'])->findOrFail($id);
         $statuses = OrderStatus::ordered();
         $products = Product::where('status', true)->orderBy('name')->get(['id', 'name']);
+        $slots = DeliverySlot::ordered();
 
-        return view('admin.orders.show', compact('order', 'statuses', 'products'));
+        return view('admin.orders.show', compact('order', 'statuses', 'products', 'slots'));
     }
 
     /** Printable Tesco-style invoice (browser print). */
@@ -85,10 +100,15 @@ class OrderController extends Controller
     public function invoicePdf(int $id)
     {
         $order = Order::with(['items', 'status', 'user'])->findOrFail($id);
+        $pdf = Pdf::loadView('admin.orders.invoice', $this->invoiceData($order));
+        if (Setting::get('invoice_format', 'a4') === 'pos') {
+            // 80mm thermal roll; tall enough for a weekly shop, extra pages only when truly needed.
+            $pdf->setPaper([0, 0, 226.77, 2000]);
+        } else {
+            $pdf->setPaper('a4');
+        }
 
-        return Pdf::loadView('admin.orders.invoice', $this->invoiceData($order))
-            ->setPaper('a4')
-            ->download('invoice-'.$order->number.'.pdf');
+        return $pdf->download('invoice-'.$order->number.'.pdf');
     }
 
     /**
@@ -126,18 +146,23 @@ class OrderController extends Controller
         $data = $request->validate([
             'status' => 'required|string|exists:order_statuses,slug,is_active,1',
             'note' => 'nullable|string|max:255',
+            'return_to' => 'nullable|string|in:index',
         ]);
+        // List-page modal stays on the list; details page returns to itself.
+        $back = ($data['return_to'] ?? null) === 'index'
+            ? redirect()->route('orders.index')
+            : redirect()->route('orders.show', $order->id);
 
         if ($data['status'] === 'cancelled' && $order->refundableAmount() > 0) {
-            return redirect()->route('orders.show', $order->id)->with('error', 'This order still has £'.number_format($order->refundableAmount(), 2).' of online money on it — issue the refund first, then cancel.');
+            return $back->with('error', 'This order still has £'.number_format($order->refundableAmount(), 2).' of online money on it — issue the refund first, then cancel.');
         }
         if ($data['status'] !== $order->status_slug && ! $order->canTransitionTo($data['status'])) {
-            return redirect()->route('orders.show', $order->id)->with('error', 'An order cannot move from '.$order->status_slug.' to '.$data['status'].'. Final orders never move.');
+            return $back->with('error', 'An order cannot move from '.$order->status_slug.' to '.$data['status'].'. Final orders never move.');
         }
 
         $changed = $order->changeStatus($data['status'], auth()->id(), $data['note'] ?? null);
 
-        return redirect()->route('orders.show', $order->id)->with(
+        return $back->with(
             'status',
             $changed ? 'Order moved to '.$changed->toStatus()->name.'.' : 'Order is already '.($order->status?->name ?? $order->status_slug).'.'
         );
@@ -151,6 +176,76 @@ class OrderController extends Controller
         $order->update(['driver_name' => $data['driver_name'] ?: null]);
 
         return redirect()->route('orders.show', $order->id)->with('status', 'Driver updated.');
+    }
+
+    /**
+     * Edit shopper, delivery/billing addresses, slot and notes.
+     * Totals recalculate when the slot or fulfilment changes.
+     */
+    public function updateDetails(Request $request, int $id): RedirectResponse
+    {
+        $order = Order::findOrFail($id);
+        if (in_array($order->status_slug, ['delivered', 'cancelled'], true)) {
+            return redirect()->route('orders.show', $order->id)->with('error', 'That order is already '.$order->status_slug.' — details can no longer change.');
+        }
+        $data = $request->validate([
+            'name' => 'required|string|max:100',
+            'phone' => 'required|string|max:30',
+            'email' => 'nullable|email|max:255',
+            'address' => 'required|string|max:500',
+            'city' => 'required|string|max:100',
+            'postcode' => 'required|string|max:20',
+            'billing_name' => 'nullable|string|max:100',
+            'billing_phone' => 'nullable|string|max:30',
+            'billing_address' => 'nullable|string|max:500',
+            'billing_city' => 'nullable|string|max:100',
+            'billing_postcode' => 'nullable|string|max:20',
+            'fulfillment' => 'required|string|in:delivery,pickup',
+            'delivery_date' => 'nullable|date',
+            'delivery_slot_id' => 'nullable|integer|exists:delivery_slots,id',
+            'notes' => 'nullable|string|max:1000',
+            'substitution_preference' => 'required|string|in:substitute,refund,call',
+        ]);
+
+        DB::transaction(function () use ($order, $data) {
+            $slotChanged = (int) ($data['delivery_slot_id'] ?? 0) !== (int) $order->delivery_slot_id
+                || $data['fulfillment'] !== ($order->fulfillment ?? 'delivery');
+            $order->fill([
+                'name' => $data['name'],
+                'phone' => $data['phone'],
+                'email' => $data['email'] ?? null,
+                'address' => $data['address'],
+                'city' => $data['city'],
+                'postcode' => $data['postcode'],
+                'billing_name' => $data['billing_name'] ?: null,
+                'billing_phone' => $data['billing_phone'] ?: null,
+                'billing_address' => $data['billing_address'] ?: null,
+                'billing_city' => $data['billing_city'] ?: null,
+                'billing_postcode' => $data['billing_postcode'] ?: null,
+                'fulfillment' => $data['fulfillment'],
+                'delivery_date' => $data['delivery_date'] ?: null,
+                'delivery_slot_id' => $data['delivery_slot_id'] ?: null,
+                'notes' => $data['notes'] ?: null,
+                'substitution_preference' => $data['substitution_preference'],
+            ]);
+            if ($order->delivery_slot_id) {
+                $slot = DeliverySlot::find($order->delivery_slot_id);
+                $order->delivery_slot_label = $slot?->label() ?? $order->delivery_slot_label;
+            }
+            if ($slotChanged) {
+                $this->recalculate($order);
+            } else {
+                $order->save();
+            }
+            $order->histories()->create([
+                'from_slug' => $order->status_slug,
+                'to_slug' => $order->status_slug,
+                'changed_by' => auth()->id(),
+                'note' => mb_substr('Details edited (shopper, address, slot).', 0, 255),
+            ]);
+        });
+
+        return redirect()->route('orders.show', $order->id)->with('status', $this->editedMessage($order, 'Details updated.'));
     }
 
     /**
