@@ -48,28 +48,32 @@
                     <a class="btn btn-dark btn-block" style="margin-top:1rem;" href="https://wa.me/{{ preg_replace('/\D/', '', $company->whatsapp) }}" target="_blank" rel="noopener"><x-icon name="message-circle" />Chat on WhatsApp</a>
                 @endif
             </div>
-            <form class="auth-card" style="margin:0;" onsubmit="return handleContactSubmit(event)">
+            <form class="auth-card" style="margin:0;" method="POST" action="{{ route('contact.store') }}" onsubmit="return handleContactSubmit(event)">
+                @csrf
                 <h2 style="font-size:1.25rem;margin-bottom:1.25rem;">Send a message</h2>
+                @if (session('status'))
+                    <div class="auth-card" role="status" style="border-color:#1A2E22;margin-bottom:1rem;">{{ session('status') }}</div>
+                @endif
                 <div id="contact-form-fields">
                     <div class="form-group">
                         <label for="contact-name">Name</label>
-                        <input type="text" id="contact-name" required placeholder="Your name">
+                        <input type="text" id="contact-name" name="name" required maxlength="255" placeholder="Your name" value="{{ old('name') }}">
                     </div>
                     <div class="form-group">
                         <label for="contact-email">Email</label>
-                        <input type="email" id="contact-email" required placeholder="you@example.com">
+                        <input type="email" id="contact-email" name="email" required maxlength="255" placeholder="you@example.com" value="{{ old('email') }}">
                     </div>
                     <div class="form-group">
                         <label for="contact-topic">Topic</label>
-                        <input type="text" id="contact-topic" placeholder="How can we help?">
+                        <input type="text" id="contact-topic" name="topic" maxlength="255" placeholder="How can we help?" value="{{ old('topic') }}">
                     </div>
                     <div class="form-group">
                         <label for="contact-postcode">Postcode</label>
-                        <input type="text" id="contact-postcode" placeholder="e.g. SW1A 1AA">
+                        <input type="text" id="contact-postcode" name="postcode" maxlength="50" placeholder="e.g. SW1A 1AA" value="{{ old('postcode') }}">
                     </div>
                     <div class="form-group">
                         <label for="contact-message">Message</label>
-                        <textarea id="contact-message" required minlength="10" placeholder="Tell us a little more…"></textarea>
+                        <textarea id="contact-message" name="message" required minlength="10" maxlength="5000" placeholder="Tell us a little more…">{{ old('message') }}</textarea>
                     </div>
                     <input type="text" id="contact-website" name="website" value="" autocomplete="off" tabindex="-1" aria-hidden="true" style="position:absolute;left:-9999px;opacity:0;height:0;">
                     <button type="submit" class="btn btn-dark btn-block">Send message</button>
@@ -116,7 +120,7 @@
         }
         document.getElementById('contact-form-fields').style.display = 'none';
         document.getElementById('contact-form-success').style.display = 'block';
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        document.getElementById('contact-form-success').scrollIntoView({ block: 'center', behavior: 'smooth' });
       }).catch(function () {
         if (btn) btn.disabled = false;
         if (window.EGF) EGF.showToast('Something went wrong. Please try again.');

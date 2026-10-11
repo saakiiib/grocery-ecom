@@ -41,8 +41,10 @@
                         @foreach ($gallery as $g)
                             <img src="{{ $g['src'] }}" data-full="{{ $g['full'] ?? $g['src'] }}" alt="{{ $g['caption'] ?? $product->name }}" loading="lazy" decoding="async"
                                 style="width:72px;height:72px;object-fit:cover;border-radius:10px;cursor:pointer;"
+                                tabindex="0" role="button" aria-label="View {{ $g['caption'] ?? $product->name }}"
                                 onerror="this.onerror=null;this.src=this.dataset.full"
-                                onclick="document.querySelector('[data-main-image]').src=this.dataset.full||this.src">
+                                onclick="document.querySelector('[data-main-image]').src=this.dataset.full||this.src"
+                                onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();document.querySelector('[data-main-image]').src=this.dataset.full||this.src}">
                         @endforeach
                     </div>
                 @endif

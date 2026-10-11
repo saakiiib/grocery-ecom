@@ -20,7 +20,7 @@
                 </div>
                 <div class="form-group">
                     <label for="tr-phone">Checkout phone</label>
-                    <input id="tr-phone" type="tel" name="phone" required maxlength="30" placeholder="07…">
+                    <input id="tr-phone" type="tel" name="phone" required maxlength="30" placeholder="07…" value="{{ old('phone') }}" autocomplete="tel">
                     @error('phone')<p style="color:#B91C1C;font-size:13px;margin-top:0.35rem;">{{ $message }}</p>@enderror
                 </div>
             </div>

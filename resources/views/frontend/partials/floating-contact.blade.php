@@ -40,18 +40,29 @@
         </button>
     </div>
     <script>
-        var floatContactOpen = false;
         function toggleFloatContact() {
             var wrap = document.querySelector('[data-float-contact]');
             if (!wrap) return;
             var panel = wrap.querySelector('[data-float-panel]');
             var btn = wrap.querySelector('.float-main');
-            floatContactOpen = !floatContactOpen;
-            panel.hidden = !floatContactOpen;
-            wrap.classList.toggle('open', floatContactOpen);
-            btn.setAttribute('aria-expanded', floatContactOpen ? 'true' : 'false');
-            btn.querySelector('.float-main-open').hidden = floatContactOpen;
-            btn.querySelector('.float-main-close').hidden = !floatContactOpen;
+            if (!panel || !btn) return;
+            // Derive state from the DOM so SPA navigations (which replace the
+            // panel but keep this shared script scope) can never desync it.
+            var willOpen = panel.hidden;
+            panel.hidden = !willOpen;
+            wrap.classList.toggle('open', willOpen);
+            btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+            btn.querySelector('.float-main-open').hidden = willOpen;
+            btn.querySelector('.float-main-close').hidden = !willOpen;
         }
+        document.addEventListener('spa:loaded', function () {
+            var wrap = document.querySelector('[data-float-contact]');
+            if (!wrap) return;
+            var panel = wrap.querySelector('[data-float-panel]');
+            var btn = wrap.querySelector('.float-main');
+            if (panel) panel.hidden = true;
+            wrap.classList.remove('open');
+            if (btn) btn.setAttribute('aria-expanded', 'false');
+        });
     </script>
 @endif

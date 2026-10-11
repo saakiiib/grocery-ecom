@@ -148,12 +148,20 @@
     var nav = document.querySelector('.mobile-nav');
     if (!btn || !nav || nav._egfBound) return;
     nav._egfBound = true;
-    btn.addEventListener('click', function () { nav.classList.add('open'); });
+    function setOpen(open) {
+      nav.classList.toggle('open', open);
+      nav.setAttribute('aria-hidden', open ? 'false' : 'true');
+    }
+    btn.addEventListener('click', function () { setOpen(true); });
     nav.querySelectorAll('[data-close-menu]').forEach(function (b) {
-      b.addEventListener('click', function () { nav.classList.remove('open'); });
+      b.addEventListener('click', function () { setOpen(false); });
     });
     var overlay = nav.querySelector('.mobile-nav-overlay');
-    if (overlay) overlay.addEventListener('click', function () { nav.classList.remove('open'); });
+    if (overlay) overlay.addEventListener('click', function () { setOpen(false); });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') setOpen(false);
+    });
+    document.addEventListener('spa:loaded', function () { setOpen(false); });
   }
 
   /* ---------------- Card pack selects (home / shop / offers / search) ---------------- */
@@ -356,8 +364,9 @@
     if (availabilityMessage) availabilityMessage.style.display = unavailable ? '' : 'none';
     var checkoutAction = document.querySelector('[data-bag-checkout-action]');
     if (checkoutAction) {
+      var deadIds = (data.lines || []).filter(function (item) { return !item.available; }).map(function (item) { return item.variant_id; }).join(',');
       checkoutAction.innerHTML = unavailable
-        ? '<button type="button" class="btn btn-dark btn-block" style="margin-top:1.25rem;opacity:.55;cursor:not-allowed;" disabled>Remove unavailable items to continue</button>'
+        ? '<button type="button" class="btn btn-dark btn-block" style="margin-top:1.25rem;" onclick="egfRemoveUnavailable(this)" data-unavailable="' + deadIds + '">Remove unavailable items to continue</button>'
         : '<a data-spa href="' + r.checkout + '" class="btn btn-dark btn-block" style="margin-top:1.25rem;">Proceed to checkout</a>';
     }
     if (!data.lines || data.lines.length === 0) {
@@ -383,7 +392,7 @@
         '<button type="button" data-bag-minus aria-label="Decrease">−</button>' +
         '<span data-bag-qty>' + item.qty + '</span>' +
         '<button type="button" data-bag-plus aria-label="Increase">+</button></div></div>' +
-        '<div>' + (item.available ? '<div class="cart-item-price">' + formatPrice(item.line_total) + '</div>' : '<div class="cart-item-meta" style="color:#B91C1C">Unavailable</div>') +
+        '<div class="cart-item-actions">' + (item.available ? '<div class="cart-item-price">' + formatPrice(item.line_total) + '</div>' : '<div class="cart-item-meta" style="color:#B91C1C">Unavailable</div>') +
         '<button type="button" class="icon-btn" data-bag-remove aria-label="Remove" title="Remove">' +
         '<svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div></div>';
 
@@ -1097,8 +1106,8 @@
     bar._egfBound = true;
     var choice = null;
     try { choice = window.localStorage.getItem('egf-consent'); } catch (e) { choice = null; }
-    if (choice) return;
-    bar.hidden = false;
+    if (choice) bar.hidden = true;
+    else bar.hidden = false;
     function decide(value) {
       try { window.localStorage.setItem('egf-consent', value); } catch (e) {}
       bar.hidden = true;
@@ -1107,6 +1116,15 @@
     var decline = bar.querySelector('[data-cookie-decline]');
     if (accept) accept.addEventListener('click', function () { decide('accepted'); });
     if (decline) decline.addEventListener('click', function () { decide('declined'); });
+    document.querySelectorAll('[data-cookie-settings]').forEach(function (btn) {
+      if (btn._egfBound) return;
+      btn._egfBound = true;
+      btn.addEventListener('click', function () {
+        try { window.localStorage.removeItem('egf-consent'); } catch (e) {}
+        bar.hidden = false;
+        bar.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      });
+    });
   }
 
   /* ---------------- Favourites (heart toggle, shoppers only) ---------------- */

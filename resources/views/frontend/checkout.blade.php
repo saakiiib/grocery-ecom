@@ -716,11 +716,10 @@
                 },
                 onCancel: function () {
                     unlockSubmit();
-                    if (lastPaypalOrder) {
-                        post('{{ route('checkout.cancel') }}', { order_number: lastPaypalOrder }).catch(function () {});
-                        lastPaypalOrder = null;
-                    }
-                    showError('PayPal was closed — no money moved and no order was kept. Start again whenever you are ready.');
+                    // Keep the order so the shopper can simply retry (matches
+                    // the order-detail pay-resume behaviour).
+                    lastPaypalOrder = null;
+                    showError('PayPal was closed — no money moved. Your order is kept, so you can try again any time.');
                 },
                 onError: function () {
                     unlockSubmit();

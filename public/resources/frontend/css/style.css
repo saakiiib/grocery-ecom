@@ -1520,13 +1520,41 @@ h1, h2, h3, .display {
   .footer-grid { grid-template-columns: 1fr 1fr; gap: 2rem 1.5rem; }
   .footer-grid .footer-brand { grid-column: 1 / -1; }
   .cart-item {
-    grid-template-columns: 96px 1fr;
+    grid-template-columns: 76px 1fr auto;
+    gap: 0.75rem;
+    padding: 0.9rem 0;
+    align-items: start;
+  }
+  .cart-item > div {
+    min-width: 0;
+  }
+  .cart-item-name {
+    font-size: 0.95rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
   .cart-item img {
-    width: 96px;
-    height: 96px;
+    width: 76px;
+    height: 76px;
   }
-  .cart-item-actions { grid-column: 1 / -1; }
+  /* Middle unit price shrinks to a muted note — the right-hand line total
+     is the prominent figure, so the two big red prices stop doubling up. */
+  .cart-item > div:nth-child(2) > .cart-item-price {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted-foreground);
+  }
+  /* Right column: remove on top, line total pinned to the bottom. */
+  .cart-item-actions {
+    grid-column: auto;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-end;
+    align-self: stretch;
+    margin-top: 0;
+  }
 }
 
 /* ============================================================

@@ -14,9 +14,11 @@
             <div class="auth-card" style="border-color:#1A2E22;margin-bottom:1.5rem;">{{ session('bag_notice') }}</div>
         @endif
         @php($hasUnavailable = collect($bag['lines'] ?? [])->contains(fn ($item) => ! $item['available']))
+        @php($unavailableIds = collect($bag['lines'] ?? [])->where(fn ($item) => ! $item['available'])->pluck('variant_id')->values()->all())
         @if ($hasUnavailable)
             <div class="auth-card" data-bag-availability-message role="alert" style="border-color:#B91C1C;margin-bottom:1rem;">
-                Some items in your bag are no longer available. Remove them before continuing to checkout.
+                Some items in your bag are no longer available.
+                <button type="button" class="btn btn-dark btn-sm" style="margin-left:.5rem;" onclick="egfRemoveUnavailable(this)" data-unavailable="{{ implode(',', $unavailableIds) }}">Remove unavailable items</button>
             </div>
         @else
             <div class="auth-card" data-bag-availability-message role="alert" style="display:none;border-color:#B91C1C;margin-bottom:1rem;">
@@ -72,7 +74,7 @@
                 <div class="summary-row total"><span>Total</span><span data-summary-total>£{{ number_format($bag['subtotal'], 2) }}</span></div>
                 <div data-bag-checkout-action>
                     @if ($hasUnavailable)
-                        <button type="button" class="btn btn-dark btn-block" style="margin-top:1.25rem;opacity:.55;cursor:not-allowed;" disabled>Remove unavailable items to continue</button>
+                        <button type="button" class="btn btn-dark btn-block" style="margin-top:1.25rem;" onclick="egfRemoveUnavailable(this)" data-unavailable="{{ implode(',', $unavailableIds) }}">Remove unavailable items to continue</button>
                     @else
                         <a @spa href="{{ route('checkout') }}" class="btn btn-dark btn-block" style="margin-top:1.25rem;">Proceed to checkout</a>
                     @endif
@@ -95,4 +97,29 @@
         @endif
     </div>
 </main>
+@endsection
+
+@section('script')
+<script>
+    /* One-click clear of dead bag lines — var only, SPA re-runnable. */
+    function egfRemoveUnavailable(btn) {
+        var ids = String((btn && btn.getAttribute('data-unavailable')) || '').split(',').filter(function (v) { return v !== ''; });
+        if (!ids.length) return;
+        if (btn) btn.disabled = true;
+        var meta = document.querySelector('meta[name="csrf-token"]');
+        var csrf = meta ? meta.content : '';
+        var routes = window.EGF_ROUTES || {};
+        var done = 0;
+        ids.forEach(function (id) {
+            fetch(routes.bagRemove || '/bag/remove', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+                body: JSON.stringify({ variant_id: parseInt(id, 10) })
+            }).catch(function () {}).finally(function () {
+                done++;
+                if (done >= ids.length) window.location.reload();
+            });
+        });
+    }
+</script>
 @endsection

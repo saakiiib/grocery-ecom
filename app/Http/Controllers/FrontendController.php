@@ -489,6 +489,10 @@ class FrontendController extends Controller
             'subject' => isset($data['topic']) ? strip_tags($data['topic']) : 'Website Enquiry',
         ]);
 
+        if (! $request->expectsJson()) {
+            return redirect()->route('contact')->with('status', 'Message received — we will reply within one working day.');
+        }
+
         return response()->json(['success' => true, 'message' => 'Message received. The shop will reply within one working day.']);
     }
 

@@ -246,7 +246,7 @@
                 <div class="tmn-slider" data-tmn-slider aria-roledescription="carousel" aria-label="Testimonials">
                     @foreach ($testimonialsJson as $i => $t)
                         <figure class="tmn-slide {{ $i === 0 ? 'active' : '' }}">
-                            <div class="tmn-stars" aria-label="Rated 5 out of 5">
+                            <div class="tmn-stars" aria-label="Customer testimonial">
                                 @for ($s = 0; $s < 5; $s++)<x-icon name="star" />@endfor
                             </div>
                             <blockquote>{{ $t['review'] }}</blockquote>

@@ -98,6 +98,7 @@
                 <a @spa href="{{ route('privacy') }}">Privacy Policy</a>
                 <a @spa href="{{ route('terms') }}">Terms of Supply</a>
                 <a @spa href="{{ route('refund') }}">Refund Policy</a>
+                <button type="button" data-cookie-settings style="background:none;border:0;padding:0;color:inherit;font:inherit;cursor:pointer;text-align:left;">Cookie settings</button>
             </div>
             <div class="footer-col">
                 <h4>Orders</h4>

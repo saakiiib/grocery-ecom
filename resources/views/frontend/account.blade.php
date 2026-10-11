@@ -71,7 +71,7 @@
                                 <span style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
                                     <span class="status-pill" @if ($st) style="background:{{ $st->color }}22;color:{{ $st->color }};border:1px solid {{ $st->color }}55;" @endif>{{ $st?->name ?? ucfirst($order->status_slug) }}</span>
                                     <a @spa href="{{ route('account.order', $order->number) }}" class="btn btn-ghost btn-sm">View</a>
-                                    <form method="POST" action="{{ route('account.repeat', $order->number) }}" style="display:inline;">@csrf<button type="submit" class="btn btn-ghost btn-sm" title="Rebuild this order every 7 days">Repeat weekly</button></form>
+                                    <form method="POST" action="{{ route('account.repeat', $order->number) }}" style="display:inline;" onsubmit="return confirm('Repeat {{ $order->number }} every 7 days from current shelf prices? You can cancel the schedule any time below.');">@csrf<button type="submit" class="btn btn-ghost btn-sm" title="Rebuild this order every 7 days from current shelf prices — cancel any time under Weekly repeats">Repeat weekly</button></form>
                                 </span>
                             </div>
                         @endforeach
@@ -302,9 +302,12 @@
         links.forEach(function (l) {
             if (l._egfBound) return;
             l._egfBound = true;
-            /* Instant switch for snappy tabs — the @spa href still SPA-navigates
-               so refresh / back-button / deep-links render the same tab server-side. */
-            l.addEventListener('click', function () { show(l.dataset.portalTab); });
+            /* No optimistic switching: the @spa href SPA-navigates and the
+               server renders the matching tab, so instant show() here would
+               flicker and disagree with the URL on slow navigations. */
+            l.addEventListener('click', function () {
+                links.forEach(function (o) { o.classList.toggle('active', o === l); });
+            });
         });
         show(root.dataset.default || 'orders');
     }
