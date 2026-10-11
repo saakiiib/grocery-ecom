@@ -170,37 +170,25 @@
                     </div>
 
                     <h2 style="font-size:1.25rem;margin:1.5rem 0 1rem;"><span class="co-step">3</span><span id="co-fulfillment-heading">When should it arrive?</span></h2>
-                    @if ($slots->isEmpty())
-                        <div class="auth-card" role="alert" style="border-color:#B91C1C;">
-                            <p style="margin:0;"><strong>No delivery times right now.</strong> <span class="text-muted">The shop has no active slots — please try Click &amp; Collect or check back soon.</span></p>
-                        </div>
-                    @endif
-                    <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
-                        <div class="form-group">
-                            <label for="co-date" id="co-date-label">Delivery day</label>
-                            <select id="co-date" name="delivery_date" required data-today="{{ now()->format('Y-m-d') }}" data-hour="{{ now()->format('H') }}" data-order-by="{{ $cutoffStatus['order_by_hour'] }}">
-                                @foreach ($dates as $value => $label)
-                                    <option value="{{ $value }}">{{ $label }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="co-slot" id="co-slot-label">Time window</label>
-                            <select id="co-slot" name="delivery_slot_id" required>
-                                @foreach ($slots as $slot)
-                                    <option value="{{ $slot->id }}" data-fee="{{ $slot->fee }}" data-cutoff="{{ $slot->cutoff_hour }}">
-                                        {{ $slot->label() }} · {{ $slot->fee > 0 ? '£'.number_format($slot->fee, 2) : 'Free' }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
+                    <div class="pick-grid cols-2" id="co-speed-grid">
+                        @foreach ($delivery as $opt)
+                            <label class="pick-row @if (! $opt['available']) pick-row-off @endif">
+                                <input type="radio" name="delivery_speed" value="{{ $opt['speed'] }}" data-fee="{{ $opt['fee'] }}" data-date="{{ $opt['date'] }}" data-date-label="{{ $opt['date_label'] }}" @checked($opt['speed'] === ($todayAvailable ? 'today' : 'standard')) @disabled(! $opt['available'])>
+                                <span class="pick-box"></span>
+                                <span>
+                                    <strong id="co-speed-{{ $opt['speed'] }}-title">{{ $opt['speed'] === 'today' ? 'Today delivery' : 'Standard shipping' }}</strong><br>
+                                    <span class="text-muted" id="co-speed-{{ $opt['speed'] }}-sub">{{ $opt['date_label'] }} · {{ $opt['fee'] > 0 ? '£'.number_format($opt['fee'], 2) : 'Free' }}</span>
+                                    @if (! $opt['available'])<br><span style="color:#B91C1C;font-size:13px;">Today's cutoff has passed</span>@endif
+                                </span>
+                            </label>
+                        @endforeach
                     </div>
-                    <p class="arriving-line" id="co-arriving">Arriving: <strong>{{ reset($dates) }}</strong> · {{ $slots->first()?->label() }} · {{ ($bag['subtotal'] ?? 0) >= $freeOver || ($slots->first()?->fee ?? 0) <= 0 ? 'Free' : '£'.number_format($slots->first()->fee, 2) }}</p>
-                    <p class="text-muted" style="font-size:13px;" id="co-cutoff-msg" data-fee-note="Free delivery over £{{ number_format($freeOver, 2) }} · minimum order £{{ number_format($minOrder, 2) }}.">
-                        @if ($cutoffStatus['today_available'])
-                            Order in the next few hours (before {{ $cutoffStatus['order_by_hour'] }}:00) for delivery today — after that, earliest is tomorrow.
+                    <p class="arriving-line" id="co-arriving">Arriving: <strong>{{ $todayAvailable ? $delivery[0]['date_label'] : $delivery[1]['date_label'] }}</strong> · {{ ($bag['subtotal'] ?? 0) >= $freeOver ? 'Free' : '£'.number_format($todayAvailable ? $todayFee : $standardFee, 2) }}</p>
+                    <p class="text-muted" style="font-size:13px;" id="co-cutoff-msg" data-fee-note="Free delivery over £{{ number_format($freeOver, 2) }} · minimum order £{{ number_format($minOrder, 2) }}." data-cutoff="{{ $cutoffTime }}" data-today-available="{{ $todayAvailable ? '1' : '0' }}">
+                        @if ($todayAvailable)
+                            Order before {{ $cutoffTime }} for delivery today — after that, earliest is next working day.
                         @else
-                            Today's cutoff has passed ({{ $cutoffStatus['order_by_hour'] }}:00) — earliest delivery {{ $cutoffStatus['earliest'] }}. Pick any day and time below.
+                            Today's cutoff has passed ({{ $cutoffTime }}) — only next working day delivery is available.
                         @endif
                         Free delivery over £{{ number_format($freeOver, 2) }} · minimum order £{{ number_format($minOrder, 2) }}.
                     </p>
@@ -296,7 +284,7 @@
                         <span class="pick-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
                         <span>I agree to the <a @spa href="{{ route('privacy') }}">privacy policy</a> and <a @spa href="{{ route('terms') }}">terms of service</a></span>
                     </label>
-                    <button type="submit" id="co-submit" class="btn btn-dark btn-block" @disabled($slots->isEmpty())>Place order · <span data-co-total>£{{ number_format($bag['subtotal'], 2) }}</span></button>
+                    <button type="submit" id="co-submit" class="btn btn-dark btn-block">Place order · <span data-co-total>£{{ number_format($bag['subtotal'], 2) }}</span></button>
                     <a @spa href="{{ route('bag') }}" class="btn btn-ghost btn-block" style="margin-top:0.75rem;">Back to bag</a>
                 </aside>
             </form>
@@ -324,8 +312,6 @@
         var freeOver = parseFloat('{{ $freeOver }}') || 0;
         var pointsValue = parseFloat('{{ $pointsValue }}') || 0;
         var pointsBalance = parseInt('{{ $pointsBalance }}', 10) || 0;
-        var slotSel = document.getElementById('co-slot');
-        var dateSel = document.getElementById('co-date');
         var cutoffMsg = document.getElementById('co-cutoff-msg');
         var cutoffBase = cutoffMsg ? cutoffMsg.textContent : '';
         var pointsInput = document.getElementById('co-points');
@@ -448,56 +434,34 @@
             if (submitBtn._orig !== undefined) submitBtn.innerHTML = submitBtn._orig;
             submitBtn.disabled = false;
         }
-        function slotFee() {
-            if (!slotSel || !slotSel.options || slotSel.selectedIndex < 0) return 0;
-            var opt = slotSel.options[slotSel.selectedIndex];
-            if (!opt) return 0;
-            return parseFloat(opt.dataset.fee || 0) || 0;
+        function speed() {
+            var checked = form.querySelector('input[name="delivery_speed"]:checked');
+            return checked ? checked.value : 'standard';
         }
-        /* Same-day cutoff: past-cutoff windows drop out when today is picked. */
-        function paintCutoff() {
-            if (!dateSel || !slotSel) return;
-            if (fulfillment() === 'pickup') {
-                if (cutoffMsg) cutoffMsg.textContent = 'Choose a collection day and time. Collection is free.';
-                paintTotals();
-                return;
-            }
-            var today = dateSel.getAttribute('data-today') || '';
-            var hour = parseInt(dateSel.getAttribute('data-hour') || '0', 10) || 0;
-            var orderBy = parseInt(dateSel.getAttribute('data-order-by') || '20', 10) || 20;
-            var isToday = dateSel.value === today;
-            var firstOpen = null;
-            Array.prototype.forEach.call(slotSel.options, function (opt) {
-                var closed = isToday && (parseInt(opt.getAttribute('data-cutoff') || '99', 10) || 99) <= hour;
-                opt.disabled = closed;
-                if (!closed && !firstOpen) firstOpen = opt;
-            });
-            if (slotSel.options[slotSel.selectedIndex] && slotSel.options[slotSel.selectedIndex].disabled && firstOpen) {
-                slotSel.value = firstOpen.value;
-            }
-            if (cutoffMsg) {
-                var feeNote = cutoffMsg.getAttribute('data-fee-note') || '';
-                if (isToday) {
-                    var left = orderBy - hour;
-                    cutoffMsg.textContent = 'Order within ' + left + 'h (before ' + orderBy + ':00) for delivery today — after that, earliest is tomorrow. ' + feeNote;
-                } else {
-                    cutoffMsg.textContent = cutoffBase;
-                }
-            }
-            paintTotals();
+        function speedFee() {
+            var checked = form.querySelector('input[name="delivery_speed"]:checked');
+            return checked ? (parseFloat(checked.getAttribute('data-fee') || 0) || 0) : 0;
         }
-        /* Plain-words confirmation of the chosen day + window + what it costs. */
+        /* Plain-words confirmation of the chosen speed + what it costs. */
         function paintArriving() {
             var line = document.getElementById('co-arriving');
-            if (!line || !dateSel || !slotSel) return;
-            var dayOpt = dateSel.options[dateSel.selectedIndex];
-            var slotOpt = slotSel.options[slotSel.selectedIndex];
-            var dayText = dayOpt ? dayOpt.text : '';
-            var windowText = slotOpt ? (slotOpt.text || '').split('·')[0].trim() : '';
-            var fee = (fulfillment() === 'pickup' || subtotal >= freeOver) ? 0 : slotFee();
-            line.textContent = (fulfillment() === 'pickup' ? 'Collection: ' : 'Arriving: ') + dayText + ' · ' + windowText + ' · ' + (fee === 0 ? 'Free' : money(fee));
+            if (!line) return;
+            var checked = form.querySelector('input[name="delivery_speed"]:checked');
+            var dayText = checked ? (checked.getAttribute('data-date-label') || '') : '';
+            var fee = (fulfillment() === 'pickup' || subtotal >= freeOver) ? 0 : speedFee();
+            line.textContent = (fulfillment() === 'pickup' ? 'Collection: ' : 'Arriving: ') + dayText + ' · ' + (fee === 0 ? 'Free' : money(fee));
         }
-        if (dateSel) dateSel.addEventListener('change', paintCutoff);
+        /* Collection is always free — repaint the option sub-labels on fulfillment switch. */
+        function paintSpeedSubs() {
+            var pickup = fulfillment() === 'pickup';
+            form.querySelectorAll('input[name="delivery_speed"]').forEach(function (radio) {
+                var sub = document.getElementById('co-speed-' + radio.value + '-sub');
+                if (!sub) return;
+                var fee = parseFloat(radio.getAttribute('data-fee') || 0) || 0;
+                var show = (pickup || subtotal >= freeOver) ? 'Free' : money(fee);
+                sub.textContent = (radio.getAttribute('data-date-label') || '') + ' · ' + show;
+            });
+        }
         function pointsDiscount() {
             if (!pointsInput) return 0;
             var pts = Math.max(0, Math.min(parseInt(pointsInput.value, 10) || 0, pointsBalance));
@@ -527,15 +491,16 @@
                 disableFields(billingBlock, pickup || billingSame.checked);
             }
             var heading = document.getElementById('co-fulfillment-heading');
-            var dateLabel = document.getElementById('co-date-label');
-            var slotLabel = document.getElementById('co-slot-label');
             var feeLabel = document.querySelector('[data-co-fulfillment-fee-label]');
             var cashNote = document.getElementById('co-cash-note');
             if (heading) heading.textContent = pickup ? 'When can you collect?' : 'When should it arrive?';
-            if (dateLabel) dateLabel.textContent = pickup ? 'Collection day' : 'Delivery day';
-            if (slotLabel) slotLabel.textContent = pickup ? 'Collection time' : 'Time window';
             if (feeLabel) feeLabel.textContent = pickup ? 'Collection' : 'Delivery';
             if (cashNote) cashNote.textContent = pickup ? 'Pay on collection' : 'Pay at door';
+            var todayTitle = document.getElementById('co-speed-today-title');
+            var standardTitle = document.getElementById('co-speed-standard-title');
+            if (todayTitle) todayTitle.textContent = pickup ? 'Collect today' : 'Today delivery';
+            if (standardTitle) standardTitle.textContent = pickup ? 'Collect next working day' : 'Standard shipping';
+            paintSpeedSubs();
             var progress = document.getElementById('co-delivery-progress');
             if (progress) progress.style.display = pickup ? 'none' : '';
             if (pickup) {
@@ -545,13 +510,12 @@
             } else if (fulfillmentChanged && postcodeEl && postcodeEl.value.trim().length >= 3) {
                 postcodeEl.dispatchEvent(new Event('input', { bubbles: true }));
             }
-            if (cutoffMsg) {
-                if (pickup) cutoffMsg.textContent = 'Choose a collection day and time. Collection is free.';
-                else paintCutoff();
-            }
+            if (cutoffMsg && !pickup) cutoffMsg.textContent = cutoffBase;
+            if (cutoffMsg && pickup) cutoffMsg.textContent = 'Choose today or next working day for collection. Collection is free.';
+            paintTotals();
         }
         function paintTotals() {
-            var fee = (fulfillment() === 'pickup' || subtotal >= freeOver) ? 0 : slotFee();            var note = document.getElementById('co-pickup-note');
+            var fee = (fulfillment() === 'pickup' || subtotal >= freeOver) ? 0 : speedFee();            var note = document.getElementById('co-pickup-note');
             if (note) note.style.display = fulfillment() === 'pickup' ? '' : 'none';
             var disc = pointsDiscount();
             var total = Math.max(0, subtotal + fee - disc - couponDiscount);
@@ -605,7 +569,9 @@
         }
         var removeBtn = document.querySelector('[data-co-coupon-remove]');
         if (removeBtn) removeBtn.addEventListener('click', clearCoupon);
-        slotSel.addEventListener('change', paintTotals);
+        form.querySelectorAll('input[name="delivery_speed"]').forEach(function (radio) {
+            radio.addEventListener('change', paintTotals);
+        });
         if (pointsInput) pointsInput.addEventListener('input', paintTotals);
         form.querySelectorAll('input[name="fulfillment"]').forEach(function (radio) {
             radio.addEventListener('change', function () {
@@ -614,7 +580,7 @@
             });
         });
         syncFulfillmentUI();
-        paintCutoff();
+        paintTotals();
 
         function method() {
             var checked = form.querySelector('input[name="payment_method"]:checked');
@@ -679,8 +645,7 @@
                 substitution: sub ? sub.value : 'substitute',
                 fulfillment: fulfillment(),
                 notes: document.getElementById('co-notes').value,
-                delivery_date: document.getElementById('co-date').value,
-                delivery_slot_id: slotSel.value,
+                delivery_speed: speed(),
                 payment_method: method(),
                 points_redeem: pointsInput ? (parseInt(pointsInput.value, 10) || 0) : 0,
                 coupon_code: couponHidden ? couponHidden.value : '',
@@ -732,7 +697,7 @@
             e.preventDefault();
             errBox.style.display = 'none';
             if (typeof postcodeOk !== 'undefined' && !postcodeOk) {
-                showError(postcodeMsg && postcodeMsg.textContent ? postcodeMsg.textContent : 'Sorry — we don\'t deliver to that postcode yet.');
+                showError(postcodeMsg && postcodeMsg.textContent ? postcodeMsg.textContent : 'Sorry — that postcode is outside our delivery area.');
                 return;
             }
             var privacy = document.getElementById('co-privacy');

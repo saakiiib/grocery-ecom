@@ -5,13 +5,13 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\Controller;
 use App\Models\CompanyDetails;
-use App\Models\DeliverySlot;
 use App\Models\FlashSale;
 use App\Models\Order;
 use App\Models\OrderStatus;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Setting;
+use App\Support\Delivery;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -83,9 +83,8 @@ class OrderController extends Controller
         $order = Order::with(['items', 'histories.changer', 'status', 'user'])->findOrFail($id);
         $statuses = OrderStatus::ordered();
         $products = Product::where('status', true)->orderBy('name')->get(['id', 'name']);
-        $slots = DeliverySlot::ordered();
 
-        return view('admin.orders.show', compact('order', 'statuses', 'products', 'slots'));
+        return view('admin.orders.show', compact('order', 'statuses', 'products'));
     }
 
     /** Printable Tesco-style invoice (browser print). */
@@ -179,8 +178,8 @@ class OrderController extends Controller
     }
 
     /**
-     * Edit shopper, delivery/billing addresses, slot and notes.
-     * Totals recalculate when the slot or fulfilment changes.
+     * Edit shopper, delivery/billing addresses, fulfilment, day and notes.
+     * The fee re-derives from Shop Settings (today vs next working day).
      */
     public function updateDetails(Request $request, int $id): RedirectResponse
     {
@@ -202,14 +201,20 @@ class OrderController extends Controller
             'billing_postcode' => 'nullable|string|max:20',
             'fulfillment' => 'required|string|in:delivery,pickup',
             'delivery_date' => 'nullable|date',
-            'delivery_slot_id' => 'nullable|integer|exists:delivery_slots,id',
+            'delivery_speed' => 'nullable|string|in:today,standard',
             'notes' => 'nullable|string|max:1000',
             'substitution_preference' => 'required|string|in:substitute,refund,call',
         ]);
 
         DB::transaction(function () use ($order, $data) {
-            $slotChanged = (int) ($data['delivery_slot_id'] ?? 0) !== (int) $order->delivery_slot_id
+            $pickup = $data['fulfillment'] === 'pickup';
+            $date = $data['delivery_date'] ?: null;
+            if (! $date && ! empty($data['delivery_speed'])) {
+                $date = Delivery::dateFor($data['delivery_speed']);
+            }
+            $slotChanged = ($date ?? '') !== (string) ($order->delivery_date?->format('Y-m-d') ?? '')
                 || $data['fulfillment'] !== ($order->fulfillment ?? 'delivery');
+            $speed = $date && $date === Delivery::todayDate() ? Delivery::SPEED_TODAY : Delivery::SPEED_STANDARD;
             $order->fill([
                 'name' => $data['name'],
                 'phone' => $data['phone'],
@@ -223,15 +228,12 @@ class OrderController extends Controller
                 'billing_city' => $data['billing_city'] ?: null,
                 'billing_postcode' => $data['billing_postcode'] ?: null,
                 'fulfillment' => $data['fulfillment'],
-                'delivery_date' => $data['delivery_date'] ?: null,
-                'delivery_slot_id' => $data['delivery_slot_id'] ?: null,
+                'delivery_date' => $date,
+                'delivery_slot_id' => null,
+                'delivery_slot_label' => Delivery::labelFor($speed, $pickup),
                 'notes' => $data['notes'] ?: null,
                 'substitution_preference' => $data['substitution_preference'],
             ]);
-            if ($order->delivery_slot_id) {
-                $slot = DeliverySlot::find($order->delivery_slot_id);
-                $order->delivery_slot_label = $slot?->label() ?? $order->delivery_slot_label;
-            }
             if ($slotChanged) {
                 $this->recalculate($order);
             } else {
@@ -241,7 +243,7 @@ class OrderController extends Controller
                 'from_slug' => $order->status_slug,
                 'to_slug' => $order->status_slug,
                 'changed_by' => auth()->id(),
-                'note' => mb_substr('Details edited (shopper, address, slot).', 0, 255),
+                'note' => mb_substr('Details edited (shopper, address, delivery).', 0, 255),
             ]);
         });
 
@@ -507,8 +509,9 @@ class OrderController extends Controller
     }
 
     /**
-     * Rebuild money from the lines: subtotal, delivery fee (free-over rule),
-     * total, VAT. Discounts and paid money are never rewritten by edits.
+     * Rebuild money from the lines: subtotal, delivery fee (Shop Settings
+     * today/standard rule), total, VAT. Discounts and paid money are never
+     * rewritten by edits.
      */
     private function recalculate(Order $order): void
     {
@@ -517,10 +520,10 @@ class OrderController extends Controller
         if (($order->fulfillment ?? 'delivery') === 'pickup') {
             $fee = 0.0;
         } else {
-            $slot = $order->delivery_slot_id ? DeliverySlot::find($order->delivery_slot_id) : null;
-            if ($slot) {
-                $fee = $subtotal >= Setting::money('delivery_free_over', 50.00) ? 0.0 : (float) $slot->fee;
-            }
+            $speed = ($order->delivery_date?->format('Y-m-d') ?? '') === Delivery::todayDate()
+                ? Delivery::SPEED_TODAY
+                : Delivery::SPEED_STANDARD;
+            $fee = $subtotal >= Setting::money('delivery_free_over', 50.00) ? 0.0 : Delivery::feeFor($speed, $subtotal);
         }
         $order->subtotal = $subtotal;
         $order->delivery_fee = round($fee, 2);

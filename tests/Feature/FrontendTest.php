@@ -333,7 +333,7 @@ test('native selects stay server-rendered for pretty-select enhancement', functi
 
     $variant = $product->variants()->firstOrFail();
     $this->postJson(route('bag.add'), ['variant_id' => $variant->id, 'qty' => 1])->assertOk();
-    $this->get('/checkout')->assertOk()->assertSee('id="co-slot"', false)->assertSee('id="co-date"', false);
+    $this->get('/checkout')->assertOk()->assertSee('name="delivery_speed"', false)->assertSee('Today delivery', false)->assertSee('Standard shipping', false);
 });
 
 test('contact form validates and stores into contacts inbox', function () {

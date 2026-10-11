@@ -83,6 +83,19 @@
 
                             <h6 class="mb-3">Delivery rules</h6>
                             <div class="row g-3 mb-4">
+                                <div class="col-md-4">
+                                    <label class="form-label">Today-delivery cutoff</label>
+                                    <input type="time" name="delivery_cutoff_time" class="form-control" required value="{{ old('delivery_cutoff_time', $settings['delivery_cutoff_time'] ?? '20:00') }}">
+                                    <small class="text-muted">Last time a Today order can be placed. After this, only Next working day shows.</small>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Today delivery charge (£)</label>
+                                    <input type="number" name="delivery_today_fee" class="form-control" required step="0.01" min="0" value="{{ old('delivery_today_fee', $settings['delivery_today_fee'] ?? '2.99') }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Standard charge — next working day (£)</label>
+                                    <input type="number" name="delivery_standard_fee" class="form-control" required step="0.01" min="0" value="{{ old('delivery_standard_fee', $settings['delivery_standard_fee'] ?? '2.99') }}">
+                                </div>
                                 <div class="col-md-6">
                                     <label class="form-label">Minimum order for delivery (£)</label>
                                     <input type="number" name="delivery_min_order" class="form-control" required step="0.01" min="0" value="{{ old('delivery_min_order', $settings['delivery_min_order']) }}">
@@ -90,6 +103,17 @@
                                 <div class="col-md-6">
                                     <label class="form-label">Free delivery over (£)</label>
                                     <input type="number" name="delivery_free_over" class="form-control" required step="0.01" min="0" value="{{ old('delivery_free_over', $settings['delivery_free_over']) }}">
+                                    <small class="text-muted">Frees both Today and Standard.</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Store postcode</label>
+                                    <input type="text" name="store_postcode" class="form-control" maxlength="20" value="{{ old('store_postcode', $settings['store_postcode'] ?? '') }}" placeholder="e.g. LS1 1AA">
+                                    <small class="text-muted">Delivery centre. Leave blank for open delivery (everywhere).</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Delivery radius (miles)</label>
+                                    <input type="number" name="delivery_radius_miles" class="form-control" required step="0.5" min="1" max="100" value="{{ old('delivery_radius_miles', $settings['delivery_radius_miles'] ?? '10') }}">
+                                    <small class="text-muted">Straight-line miles from the store postcode, looked up automatically.</small>
                                 </div>
                             </div>
 

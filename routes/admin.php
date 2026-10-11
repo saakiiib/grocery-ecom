@@ -8,8 +8,6 @@ use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\CompanyDetailsController;
 use App\Http\Controllers\Admin\ContactController;
 use App\Http\Controllers\Admin\CouponController;
-use App\Http\Controllers\Admin\DeliverySlotController;
-use App\Http\Controllers\Admin\DeliveryZoneController;
 use App\Http\Controllers\Admin\FaqCategoryController;
 use App\Http\Controllers\Admin\FaqController;
 use App\Http\Controllers\Admin\FlashSaleController;
@@ -161,24 +159,6 @@ Route::group(['prefix' => 'admin/', 'middleware' => ['auth', 'is_admin']], funct
     Route::post('/orders/{id}/items', [OrderController::class, 'addItem'])->name('orders.items.store');
     Route::post('/orders/{id}/items/save', [OrderController::class, 'updateItems'])->name('orders.items.save');
     Route::delete('/orders/{orderId}/items/{itemId}', [OrderController::class, 'removeItem'])->name('orders.items.delete');
-
-    // Delivery slots (checkout time windows + fees)
-    Route::get('/delivery-slots', [DeliverySlotController::class, 'index'])->name('delivery-slots.index');
-    Route::get('/delivery-slots/create', [DeliverySlotController::class, 'create'])->name('delivery-slots.create');
-    Route::post('/delivery-slots', [DeliverySlotController::class, 'store'])->name('delivery-slots.store');
-    Route::get('/delivery-slots/{id}/edit', [DeliverySlotController::class, 'edit'])->name('delivery-slots.edit');
-    Route::post('/delivery-slots/update', [DeliverySlotController::class, 'update'])->name('delivery-slots.update');
-    Route::delete('/delivery-slots/{id}', [DeliverySlotController::class, 'destroy'])->name('delivery-slots.delete');
-    Route::post('/delivery-slots/toggle-status', [DeliverySlotController::class, 'toggleStatus'])->name('delivery-slots.toggleStatus');
-
-    // Delivery zones (postcode eligibility — empty list means everywhere)
-    Route::get('/delivery-zones', [DeliveryZoneController::class, 'index'])->name('delivery-zones.index');
-    Route::get('/delivery-zones/create', [DeliveryZoneController::class, 'create'])->name('delivery-zones.create');
-    Route::post('/delivery-zones', [DeliveryZoneController::class, 'store'])->name('delivery-zones.store');
-    Route::get('/delivery-zones/{id}/edit', [DeliveryZoneController::class, 'edit'])->name('delivery-zones.edit');
-    Route::post('/delivery-zones/update', [DeliveryZoneController::class, 'update'])->name('delivery-zones.update');
-    Route::delete('/delivery-zones/{id}', [DeliveryZoneController::class, 'destroy'])->name('delivery-zones.delete');
-    Route::post('/delivery-zones/toggle-status', [DeliveryZoneController::class, 'toggleStatus'])->name('delivery-zones.toggleStatus');
 
     // Offers (parent campaigns — BOGO / flash / bundle items tuck underneath)
     Route::get('/offers', [OfferController::class, 'index'])->name('offers.index');

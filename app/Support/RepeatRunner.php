@@ -4,7 +4,6 @@ namespace App\Support;
 
 use App\Mail\OrderPlaced;
 use App\Models\CompanyDetails;
-use App\Models\DeliverySlot;
 use App\Models\FlashSale;
 use App\Models\Order;
 use App\Models\OrderStatus;
@@ -74,12 +73,8 @@ class RepeatRunner
             return null;
         }
 
-        $slot = DeliverySlot::ordered()->first();
-        $dates = DeliverySlot::bookableDates();
-        if (! $slot || $dates === []) {
-            return null;
-        }
-        $fee = $subtotal >= Setting::money('delivery_free_over', 50.00) ? 0.0 : (float) $slot->fee;
+        $date = Delivery::standardDate();
+        $fee = Delivery::feeFor(Delivery::SPEED_STANDARD, $subtotal);
         $total = round($subtotal + $fee, 2);
         $vatPercent = (float) (CompanyDetails::cached()->vat_percent ?? 0);
         $status = OrderStatus::where('slug', 'new')->where('is_active', true)->first();
@@ -87,7 +82,7 @@ class RepeatRunner
             return null;
         }
 
-        return DB::transaction(function () use ($schedule, $lines, $subtotal, $fee, $total, $vatPercent, $slot, $dates, $status) {
+        return DB::transaction(function () use ($schedule, $lines, $subtotal, $fee, $total, $vatPercent, $date, $status) {
             $order = Order::create([
                 'number' => 'PENDING',
                 'user_id' => $schedule->user_id,
@@ -103,9 +98,9 @@ class RepeatRunner
                 'billing_city' => $schedule->city,
                 'billing_postcode' => $schedule->postcode,
                 'substitution_preference' => 'substitute',
-                'delivery_date' => array_key_first($dates),
-                'delivery_slot_id' => $slot->id,
-                'delivery_slot_label' => $slot->label(),
+                'delivery_date' => $date,
+                'delivery_slot_id' => null,
+                'delivery_slot_label' => Delivery::labelFor(Delivery::SPEED_STANDARD),
                 'subtotal' => round($subtotal, 2),
                 'delivery_fee' => round($fee, 2),
                 'total' => $total,

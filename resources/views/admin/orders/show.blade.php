@@ -201,14 +201,13 @@
                                         <div class="col-md-4">
                                             <label class="form-label">Delivery day</label>
                                             <input type="date" name="delivery_date" class="form-control" value="{{ old('delivery_date', $order->delivery_date?->format('Y-m-d')) }}">
+                                            <small class="text-muted">Today = today charge, any other day = standard charge (Shop Settings).</small>
                                         </div>
                                         <div class="col-md-4">
-                                            <label class="form-label">Time window</label>
-                                            <select name="delivery_slot_id" class="form-control select2">
-                                                <option value="">No slot</option>
-                                                @foreach ($slots as $slot)
-                                                    <option value="{{ $slot->id }}" @selected((int) old('delivery_slot_id', $order->delivery_slot_id) === $slot->id)>{{ $slot->label() }} · {{ $slot->fee > 0 ? '£'.number_format($slot->fee, 2) : 'Free' }}</option>
-                                                @endforeach
+                                            <label class="form-label">Delivery speed</label>
+                                            <select name="delivery_speed" class="form-control">
+                                                <option value="today" @selected(old('delivery_speed', ($order->delivery_date?->format('Y-m-d') ?? '') === now()->format('Y-m-d') ? 'today' : 'standard') === 'today')>Today delivery</option>
+                                                <option value="standard" @selected(old('delivery_speed', ($order->delivery_date?->format('Y-m-d') ?? '') === now()->format('Y-m-d') ? 'today' : 'standard') === 'standard')>Standard — next working day</option>
                                             </select>
                                         </div>
                                         <div class="col-md-4">
@@ -225,7 +224,7 @@
                                         </div>
                                         <div class="col-12">
                                             <button type="submit" class="btn btn-primary btn-sm">Save details</button>
-                                            <small class="text-muted ms-2">Changing the slot or fulfilment recalculates the delivery fee and total.</small>
+                                            <small class="text-muted ms-2">Changing the speed, day or fulfilment recalculates the delivery fee and total.</small>
                                         </div>
                                     </form>
                                 </div>
@@ -237,7 +236,7 @@
                                 <h6>Ship to</h6>
                                 <p class="mb-1"><strong>{{ $order->name }}</strong> · {{ $order->phone }}</p>
                                 <p class="mb-1">{{ $order->address }}, {{ $order->city }} {{ $order->postcode }}</p>
-                                <p class="mb-1">Slot: <strong>{{ $order->delivery_date ? $order->delivery_date->format('D j M Y') : '—' }}</strong> · {{ $order->delivery_slot_label }}</p>
+                                <p class="mb-1">Delivery: <strong>{{ $order->delivery_date ? $order->delivery_date->format('D j M Y') : '—' }}</strong> · {{ $order->delivery_slot_label }}</p>
                                 <p class="mb-1">Fulfilment: <strong>{{ ($order->fulfillment ?? 'delivery') === 'pickup' ? 'Click & Collect' : 'Home delivery' }}</strong>@if ($order->driver_name) · Driver: <strong>{{ $order->driver_name }}</strong>@endif</p>
                                 @if ($order->notes)<p class="mb-1 text-muted">Note: {{ $order->notes }}</p>@endif
                                 <p class="mb-1">If unavailable: <strong>{{ $order->substitutionLabel() }}</strong></p>

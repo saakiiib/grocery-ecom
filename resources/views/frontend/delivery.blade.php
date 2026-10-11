@@ -7,7 +7,7 @@
         <div class="container">
             <p class="section-label">Good to know</p>
             <h1>Delivery information</h1>
-            <p>When we deliver, what it costs, and how to pick your slot.</p>
+            <p>When we deliver, what it costs, and where we deliver.</p>
         </div>
     </div>
     <div class="container" style="padding-bottom:4rem;max-width:860px;">
@@ -19,24 +19,23 @@
             <div class="summary-row" style="align-items:center;border-bottom:0;">
                 <span><strong>Free delivery</strong><br><span class="text-muted">On all orders over £{{ number_format($freeOver, 2) }}.</span></span>
             </div>
+            @if ($storePostcode !== '')
+            <div class="summary-row" style="align-items:center;border-bottom:0;">
+                <span><strong>Delivery area</strong><br><span class="text-muted">Within {{ number_format($radiusMiles, 1) }} miles of {{ strtoupper($storePostcode) }} — checked automatically from your postcode.</span></span>
+            </div>
+            @endif
         </div>
         <div class="auth-card" style="margin-bottom:1.5rem;">
-            <h2 style="font-size:1.25rem;margin-bottom:1rem;">Time windows</h2>
-            @if ($slots->isNotEmpty())
-                @foreach ($slots as $slot)
-                    <div class="summary-row" style="align-items:center;">
-                        <span>{{ $slot->label() }}</span>
-                        <span style="font-weight:700;">{{ $slot->fee > 0 ? '£' . number_format($slot->fee, 2) : 'Free' }}</span>
-                    </div>
-                @endforeach
-            @else
-                <p class="text-muted">Slots are being set up — check back soon.</p>
-            @endif
-            @if ($slots->isNotEmpty() && $slots->min('cutoff_hour') !== null)
-            <p class="text-muted" style="font-size:14px;margin-top:1rem;">Order before {{ (int) $slots->min('cutoff_hour') }}:00 for next-day slots. Everything travels cold-packed.</p>
-            @else
-            <p class="text-muted" style="font-size:14px;margin-top:1rem;">Everything travels cold-packed.</p>
-            @endif
+            <h2 style="font-size:1.25rem;margin-bottom:1rem;">Delivery options</h2>
+            <div class="summary-row" style="align-items:center;">
+                <span><strong>Today delivery</strong><br><span class="text-muted">Order before {{ $cutoffTime }} — arrives today.</span></span>
+                <span style="font-weight:700;">{{ $todayFee > 0 ? '£'.number_format($todayFee, 2) : 'Free' }}</span>
+            </div>
+            <div class="summary-row" style="align-items:center;">
+                <span><strong>Standard shipping</strong><br><span class="text-muted">Next working day delivery.</span></span>
+                <span style="font-weight:700;">{{ $standardFee > 0 ? '£'.number_format($standardFee, 2) : 'Free' }}</span>
+            </div>
+            <p class="text-muted" style="font-size:14px;margin-top:1rem;">After {{ $cutoffTime }}, only next working day delivery is available. Free delivery over £{{ number_format($freeOver, 2) }} applies to both. Everything travels cold-packed.</p>
         </div>
         <div class="text-center">
             <a @spa href="{{ route('shop') }}" class="btn btn-dark">Start shopping</a>

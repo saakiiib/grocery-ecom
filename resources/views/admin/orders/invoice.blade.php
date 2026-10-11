@@ -78,7 +78,7 @@
             <tr><td>Order:</td><td class="r b">{{ $order->number }}</td></tr>
             <tr><td>Date:</td><td class="r">{{ $order->created_at->format('d/m/Y H:i') }}</td></tr>
             <tr><td>Type:</td><td class="r">{{ $isPickup ? 'Click+Collect' : 'Home Delivery' }}</td></tr>
-            <tr><td>Slot:</td><td class="r">{{ $order->delivery_date ? $order->delivery_date->format('D j M') : '—' }} {{ $order->delivery_slot_label }}</td></tr>
+            <tr><td>When:</td><td class="r">{{ $order->delivery_date ? $order->delivery_date->format('D j M') : '—' }} {{ $order->delivery_slot_label }}</td></tr>
             <tr><td>Name:</td><td class="r">{{ $order->name }}</td></tr>
             @if (! $isPickup)<tr><td>Addr:</td><td class="r">{{ $order->address }}, {{ $order->postcode }}</td></tr>@endif
         </table>

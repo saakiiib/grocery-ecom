@@ -393,7 +393,7 @@ test('checkout rejects empty bag, minimum order, bad slot and bad date', functio
     // Add enough for the minimum first.
     $this->postJson(route('bag.add'), ['variant_id' => ProductVariant::where('sku', 'LAMB-1KG')->first()->id])->assertOk();
     $this->postJson(route('checkout.place'), $payload)
-        ->assertStatus(422)->assertJsonPath('message', 'Please choose a delivery slot.');
+        ->assertStatus(422)->assertJsonPath('message', 'Please choose a delivery option.');
 
     $payload = checkoutPayload($slot->id);
     $payload['delivery_date'] = '2000-01-01';
@@ -652,15 +652,10 @@ test('admin manages orders, statuses write history, settings and slots save', fu
     // Shoppers are kept out of admin (bounced to sign-in).
     $this->actingAs(shopperUser())->get(route('orders.index'))->assertRedirect(route('login'));
 
-    // Delivery slots + shop settings.
-    $this->actingAs($admin)->post(route('delivery-slots.store'), [
-        'name' => 'Night', 'starts_at' => '18:00', 'ends_at' => '21:00',
-        'fee' => 4.99, 'cutoff_hour' => 20, 'is_active' => true,
-    ])->assertRedirect(route('delivery-slots.index'));
-    expect(DeliverySlot::where('name', 'Night')->exists())->toBeTrue();
-
+    // Delivery charges + shop settings (single cutoff, two fixed fees).
     $this->actingAs($admin)->post(route('shop-settings.update'), [
         'delivery_min_order' => '20.00', 'delivery_free_over' => '60.00',
+        'delivery_cutoff_time' => '19:30', 'delivery_today_fee' => '3.49', 'delivery_standard_fee' => '1.99',
         'points_per_pound' => '1', 'points_value' => '0.01', 'points_min_redeem' => '100',
         'paypal_mode' => 'sandbox',
     ])->assertRedirect(route('shop-settings.edit'));
@@ -1002,14 +997,12 @@ test('account hardening: remember-me, phone normalize, list gate, invoice link',
         ->assertSee('Download invoice', false);
 });
 
-test('admin can edit order details and slot change recalculates fee', function () {
+test('admin can edit order details and speed change recalculates fee', function () {
     $f = shopFixtures();
     $slot = shopSetup()['slot'];
     $admin = shopAdmin();
-    $evening = DeliverySlot::create([
-        'name' => 'Evening', 'starts_at' => '17:00', 'ends_at' => '20:00',
-        'fee' => 4.99, 'cutoff_hour' => 20, 'sort_order' => 1, 'is_active' => true,
-    ]);
+    Setting::put('delivery_today_fee', '2.99');
+    Setting::put('delivery_standard_fee', '4.99');
 
     $this->postJson(route('bag.add'), ['variant_id' => $f['b']->id])->assertOk();
     $this->postJson(route('checkout.place'), checkoutPayload($slot->id))->assertOk();
@@ -1020,7 +1013,7 @@ test('admin can edit order details and slot change recalculates fee', function (
         'address' => '1 Edited Street', 'city' => 'London', 'postcode' => 'E1 6AN',
         'billing_name' => '', 'billing_phone' => '', 'billing_address' => '', 'billing_city' => '', 'billing_postcode' => '',
         'fulfillment' => 'delivery', 'delivery_date' => now()->addDay()->format('Y-m-d'),
-        'delivery_slot_id' => $evening->id, 'notes' => 'Ring the bell twice.',
+        'delivery_speed' => 'standard', 'notes' => 'Ring the bell twice.',
         'substitution_preference' => 'call',
     ];
 
@@ -1030,7 +1023,7 @@ test('admin can edit order details and slot change recalculates fee', function (
     $order->refresh();
     expect($order->address)->toBe('1 Edited Street')
         ->and($order->notes)->toBe('Ring the bell twice.')
-        ->and($order->delivery_slot_label)->toBe($evening->label())
+        ->and($order->delivery_slot_label)->toBe('Standard Delivery')
         ->and((float) $order->delivery_fee)->toBe(4.99);
 
     // Delivered orders stay locked.

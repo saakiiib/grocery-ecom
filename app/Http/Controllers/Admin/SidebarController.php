@@ -86,20 +86,6 @@ class SidebarController
             ],
             [
                 'type' => 'item',
-                'icon' => 'ri-time-line',
-                'label' => 'Delivery Slots',
-                'route' => 'delivery-slots.*',
-                'href' => route('delivery-slots.index'),
-            ],
-            [
-                'type' => 'item',
-                'icon' => 'ri-map-pin-line',
-                'label' => 'Delivery Zones',
-                'route' => 'delivery-zones.*',
-                'href' => route('delivery-zones.index'),
-            ],
-            [
-                'type' => 'item',
                 'icon' => 'ri-mail-line',
                 'label' => 'Contacts',
                 'route' => 'admin.contacts.*',

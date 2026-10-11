@@ -8,12 +8,13 @@ use App\Mail\OrderPlaced;
 use App\Models\CompanyDetails;
 use App\Models\Coupon;
 use App\Models\DeliverySlot;
-use App\Models\DeliveryZone;
 use App\Models\Order;
 use App\Models\OrderStatus;
 use App\Models\ProductVariant;
 use App\Models\Setting;
 use App\Models\UserPoint;
+use App\Support\Delivery;
+use App\Support\DeliveryRadius;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -98,11 +99,12 @@ class CheckoutController extends Controller
 
     /**
      * Validate the session bag and price the order from the database.
-     * Returns [lines, subtotal, fee, total, slot] or an error response array.
+     * $speedOrSlot accepts the new 'today'/'standard' speed or a legacy
+     * delivery_slots id (old app clients, old tests).
      *
-     * @return array{ok: bool, message?: string, lines?: array, subtotal?: float, fee?: float, total?: float, slot?: DeliverySlot}
+     * @return array{ok: bool, message?: string, lines?: array, subtotal?: float, fee?: float, total?: float, slot?: DeliverySlot|null, speed?: string, date?: string, label?: string}
      */
-    public static function priceBag(int $slotId, bool $pickup = false): array
+    public static function priceBag(int|string $speedOrSlot = 'standard', bool $pickup = false): array
     {
         $bag = BagController::detailed();
 
@@ -128,12 +130,33 @@ class CheckoutController extends Controller
             return ['ok' => false, 'message' => 'The minimum order for delivery is £'.number_format($min, 2).'.'];
         }
 
-        $slot = DeliverySlot::where('is_active', true)->find($slotId);
-        if (! $slot) {
-            return ['ok' => false, 'message' => 'Please choose a delivery slot.'];
+        $slot = null;
+        $speed = is_string($speedOrSlot) && in_array($speedOrSlot, Delivery::speeds(), true)
+            ? $speedOrSlot
+            : null;
+
+        if ($speed === null) {
+            // Legacy path: numeric delivery_slots id from old clients/tests.
+            $slot = DeliverySlot::where('is_active', true)->find($speedOrSlot);
+            if (! $slot) {
+                return ['ok' => false, 'message' => 'Please choose a delivery option.'];
+            }
+            $fee = ($pickup || $subtotal >= Setting::money('delivery_free_over', 50.00)) ? 0.0 : (float) $slot->fee;
+
+            return [
+                'ok' => true,
+                'lines' => $bag['lines'],
+                'subtotal' => round($subtotal, 2),
+                'fee' => round($fee, 2),
+                'total' => round($subtotal + $fee, 2),
+                'slot' => $slot,
+                'speed' => null,
+                'date' => null,
+                'label' => $slot->label(),
+            ];
         }
 
-        $fee = ($pickup || $subtotal >= Setting::money('delivery_free_over', 50.00)) ? 0.0 : (float) $slot->fee;
+        $fee = Delivery::feeFor($speed, $subtotal, $pickup);
 
         return [
             'ok' => true,
@@ -141,7 +164,10 @@ class CheckoutController extends Controller
             'subtotal' => round($subtotal, 2),
             'fee' => round($fee, 2),
             'total' => round($subtotal + $fee, 2),
-            'slot' => $slot,
+            'slot' => null,
+            'speed' => $speed,
+            'date' => Delivery::dateFor($speed),
+            'label' => Delivery::labelFor($speed, $pickup),
         ];
     }
 
@@ -174,8 +200,9 @@ class CheckoutController extends Controller
             'save_label' => 'nullable|string|max:50',
             'substitution' => 'required|in:substitute,refund,call',
             'notes' => 'nullable|string|max:1000',
-            'delivery_date' => 'required|date_format:Y-m-d',
-            'delivery_slot_id' => 'required|integer',
+            'delivery_speed' => 'nullable|in:today,standard',
+            'delivery_date' => 'nullable|date_format:Y-m-d',
+            'delivery_slot_id' => 'nullable|integer',
             'fulfillment' => 'nullable|in:delivery,pickup',
             'payment_method' => 'required|in:cod,stripe,paypal',
             'points_redeem' => 'nullable|integer|min:0|max:1000000',
@@ -186,18 +213,43 @@ class CheckoutController extends Controller
             'billing_phone.regex' => 'Enter a valid UK billing phone number, e.g. 07123 456789.',
         ]);
 
-        if (! array_key_exists($data['delivery_date'], DeliverySlot::bookableDates())) {
-            return response()->json(['message' => 'Please choose a valid delivery day.'], 422);
-        }
+        // New two-speed flow (Today / Next working day). Legacy slot+date
+        // payloads from old app clients still take the old branch below.
+        $speed = $data['delivery_speed'] ?? null;
+        $deliveryDate = null;
+        $deliveryLabel = null;
+        $priceKey = null;
+        if ($speed !== null) {
+            $pickup = ($data['fulfillment'] ?? 'delivery') === 'pickup';
+            if ($speed === Delivery::SPEED_TODAY && ! Delivery::todayAvailable()) {
+                return response()->json(['message' => "Today's cutoff has passed (".Delivery::cutoffTime().') — please choose Next working day.'], 422);
+            }
+            $deliveryDate = Delivery::dateFor($speed);
+            $deliveryLabel = Delivery::labelFor($speed, $pickup);
+            $priceKey = $speed;
+        } else {
+            if (empty($data['delivery_date']) || empty($data['delivery_slot_id'])) {
+                return response()->json(['message' => 'Please choose a delivery option.'], 422);
+            }
+            if (! array_key_exists($data['delivery_date'], DeliverySlot::bookableDates())) {
+                return response()->json(['message' => 'Please choose a valid delivery day.'], 422);
+            }
 
-        $chosenSlot = DeliverySlot::where('is_active', true)->find($data['delivery_slot_id']);
-        if ($chosenSlot && $chosenSlot->cutoffPassed($data['delivery_date'])) {
-            return response()->json(['message' => 'That time window just closed for today — please pick tomorrow or another slot.'], 422);
+            $chosenSlot = DeliverySlot::where('is_active', true)->find($data['delivery_slot_id']);
+            if ($chosenSlot && $chosenSlot->cutoffPassed($data['delivery_date'])) {
+                return response()->json(['message' => 'That time window just closed for today — please pick tomorrow or another slot.'], 422);
+            }
+            $deliveryDate = $data['delivery_date'];
+            $deliveryLabel = $chosenSlot?->label();
+            $priceKey = (int) $data['delivery_slot_id'];
         }
 
         $pickup = ($data['fulfillment'] ?? 'delivery') === 'pickup';
-        if (! $pickup && ! DeliveryZone::serves($data['postcode'])) {
-            return response()->json(['message' => 'Sorry — we don\'t deliver to '.$data['postcode'].' yet.'], 422);
+        if (! $pickup) {
+            $area = DeliveryRadius::check($data['postcode']);
+            if (! $area['ok']) {
+                return response()->json(['message' => $area['message']], 422);
+            }
         }
 
         if ($data['payment_method'] === 'stripe' && ! static::stripeConfigured()) {
@@ -207,7 +259,7 @@ class CheckoutController extends Controller
             return response()->json(['message' => 'PayPal is not available right now — please choose another method.'], 422);
         }
 
-        $priced = static::priceBag($data['delivery_slot_id'], $pickup);
+        $priced = static::priceBag($priceKey ?? Delivery::SPEED_STANDARD, $pickup);
         if (! $priced['ok']) {
             return response()->json(['message' => $priced['message']], 422);
         }
@@ -233,7 +285,7 @@ class CheckoutController extends Controller
         }
 
         try {
-            $order = DB::transaction(function () use ($data, $priced, $pointsRedeem, $pointsDiscount, $pickup) {
+            $order = DB::transaction(function () use ($data, $priced, $pointsRedeem, $pointsDiscount, $pickup, $deliveryDate, $deliveryLabel) {
                 // Lock existing ledger rows and recheck the balance inside the
                 // transaction so two simultaneous checkouts cannot spend the
                 // same points twice.
@@ -299,9 +351,9 @@ class CheckoutController extends Controller
                     'billing_postcode' => $pickup ? null : $data['billing_postcode'],
                     'notes' => $data['notes'] ?? null,
                     'substitution_preference' => $data['substitution'],
-                    'delivery_date' => $data['delivery_date'],
-                    'delivery_slot_id' => $priced['slot']->id,
-                    'delivery_slot_label' => $priced['slot']->label(),
+                    'delivery_date' => $deliveryDate,
+                    'delivery_slot_id' => $priced['slot']?->id,
+                    'delivery_slot_label' => $deliveryLabel ?? $priced['label'] ?? $priced['slot']?->label(),
                     'subtotal' => $priced['subtotal'],
                     'delivery_fee' => $priced['fee'],
                     'total' => $total,
@@ -491,21 +543,21 @@ class CheckoutController extends Controller
 
     /**
      * Live postcode eligibility for the checkout form (JSON, never trusted —
-     * place() rechecks against the database).
+     * place() rechecks the radius).
      */
     public function postcode(Request $request): JsonResponse
     {
         $data = $request->validate(['postcode' => 'required|string|max:20']);
 
-        $zone = DeliveryZone::matching($data['postcode']);
-        if ($zone === null && DeliveryZone::exists()) {
-            return response()->json(['ok' => false, 'message' => 'Sorry — we don\'t deliver to '.$data['postcode'].' yet.'], 422);
+        $area = DeliveryRadius::check($data['postcode']);
+        if (! $area['ok']) {
+            return response()->json(['ok' => false, 'message' => $area['message']], 422);
         }
 
         return response()->json([
             'ok' => true,
-            'zone' => $zone?->name,
-            'message' => $zone ? 'Good news — we deliver to '.$data['postcode'].' ('.$zone->name.').' : 'Good news — we deliver to '.$data['postcode'].'.',
+            'distance' => $area['distance'] === null ? null : round($area['distance'], 1),
+            'message' => $area['message'],
         ]);
     }
 

@@ -2,6 +2,7 @@
 
 use App\Models\Category;
 use App\Models\DeliverySlot;
+use App\Models\Order;
 use App\Models\OrderStatus;
 use App\Models\Product;
 use App\Models\ProductVariant;
@@ -109,6 +110,86 @@ test('api checkout init carries cutoff data', function () {
             ->assertJsonPath('slots.0.cutoff_hour', 20)
             ->assertJsonPath('cutoff_status.today_available', true)
             ->assertJsonPath('cutoff_status.order_by_hour', 20);
+    } finally {
+        Carbon::setTestNow();
+    }
+});
+
+function speedPayload(string $speed): array
+{
+    return [
+        'name' => 'N', 'phone' => '07123456789', 'email' => 'speed-guest@example.com', 'address' => '1 M St', 'city' => 'Leeds', 'postcode' => 'LS1 1AA',
+        'billing_name' => 'N', 'billing_phone' => '07987654321', 'billing_address' => '1 M St', 'billing_city' => 'Leeds', 'billing_postcode' => 'LS1 1AA',
+        'substitution' => 'substitute',
+        'delivery_speed' => $speed, 'payment_method' => 'cod', 'privacy' => true,
+    ];
+}
+
+test('two-speed checkout prices today and standard from settings', function () {
+    Carbon::setTestNow('2026-10-08 10:00');
+    try {
+        $f = seedCutoffGrocery();
+        foreach (['new', 'confirmed'] as $i => $slug) {
+            OrderStatus::create(['slug' => $slug, 'name' => ucfirst($slug), 'color' => '#111', 'sort_order' => $i, 'is_active' => true]);
+        }
+        Setting::put('delivery_cutoff_time', '20:00');
+        Setting::put('delivery_today_fee', '2.99');
+        Setting::put('delivery_standard_fee', '1.99');
+
+        session()->put('bag', [$f['variant']->id => 1]);
+        $this->postJson(route('checkout.place'), speedPayload('today'))->assertOk();
+        $today = Order::orderByDesc('id')->firstOrFail();
+        expect($today->delivery_slot_label)->toBe('Today Delivery')
+            ->and((float) $today->delivery_fee)->toBe(2.99)
+            ->and($today->delivery_date->format('Y-m-d'))->toBe('2026-10-08');
+
+        session()->put('bag', [$f['variant']->id => 1]);
+        $this->postJson(route('checkout.place'), speedPayload('standard'))->assertOk();
+        $std = Order::orderByDesc('id')->firstOrFail();
+        expect($std->delivery_slot_label)->toBe('Standard Delivery')
+            ->and((float) $std->delivery_fee)->toBe(1.99)
+            ->and($std->delivery_date->format('Y-m-d'))->toBe('2026-10-09');
+    } finally {
+        Carbon::setTestNow();
+    }
+});
+
+test('today speed is rejected after the cutoff, standard still works', function () {
+    Carbon::setTestNow('2026-10-08 21:30');
+    try {
+        $f = seedCutoffGrocery();
+        foreach (['new', 'confirmed'] as $i => $slug) {
+            OrderStatus::create(['slug' => $slug, 'name' => ucfirst($slug), 'color' => '#111', 'sort_order' => $i, 'is_active' => true]);
+        }
+        Setting::put('delivery_cutoff_time', '20:00');
+
+        session()->put('bag', [$f['variant']->id => 1]);
+        $this->postJson(route('checkout.place'), speedPayload('today'))
+            ->assertStatus(422)
+            ->assertJsonFragment(['message' => "Today's cutoff has passed (20:00) — please choose Next working day."]);
+
+        session()->put('bag', [$f['variant']->id => 1]);
+        $this->postJson(route('checkout.place'), speedPayload('standard'))->assertOk();
+
+        session()->put('bag', [$f['variant']->id => 1]);
+        $this->get('/checkout')->assertOk()
+            ->assertSee("Today's cutoff has passed", false)
+            ->assertSee('Standard shipping', false);
+    } finally {
+        Carbon::setTestNow();
+    }
+});
+
+test('free-over threshold frees both speeds', function () {
+    Carbon::setTestNow('2026-10-08 10:00');
+    try {
+        $f = seedCutoffGrocery(60.00);
+        foreach (['new', 'confirmed'] as $i => $slug) {
+            OrderStatus::create(['slug' => $slug, 'name' => ucfirst($slug), 'color' => '#111', 'sort_order' => $i, 'is_active' => true]);
+        }
+        session()->put('bag', [$f['variant']->id => 1]);
+        $this->postJson(route('checkout.place'), speedPayload('today'))->assertOk();
+        expect((float) Order::orderByDesc('id')->firstOrFail()->delivery_fee)->toBe(0.0);
     } finally {
         Carbon::setTestNow();
     }

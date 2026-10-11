@@ -2,13 +2,14 @@
 
 use App\Models\Category;
 use App\Models\DeliverySlot;
-use App\Models\DeliveryZone;
 use App\Models\Order;
 use App\Models\OrderStatus;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Setting;
+use App\Support\DeliveryRadius;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 
 uses(RefreshDatabase::class);
 
@@ -41,11 +42,11 @@ function pickupPayload(int $slotId, string $date, string $fulfillment = 'pickup'
     ];
 }
 
-test('pickup is free and skips the delivery zone check', function () {
+test('pickup is free and skips the delivery radius check', function () {
     $f = seedPickupGrocery();
     Setting::put('delivery_min_order', '15.00');
-    DeliveryZone::create(['name' => 'Leeds only', 'is_active' => true])
-        ->postcodes()->create(['prefix' => 'LS']);
+    Setting::put('store_postcode', 'LS1 1AA');
+    Setting::put('delivery_radius_miles', '10');
 
     session()->put('bag', [$f['variant']->id => 1]);
     $date = array_key_first(DeliverySlot::bookableDates());
@@ -66,23 +67,36 @@ test('pickup is free and skips the delivery zone check', function () {
         ->and($order->paymentLabel())->toBe('Cash on Collection');
 });
 
-test('delivery still enforces the zone', function () {
+test('delivery still enforces the radius', function () {
     $f = seedPickupGrocery();
-    DeliveryZone::create(['name' => 'Leeds only', 'is_active' => true])
-        ->postcodes()->create(['prefix' => 'LS']);
+    Setting::put('store_postcode', 'LS1 1AA');
+    Setting::put('delivery_radius_miles', '10');
+    Http::fake(function ($request) {
+        $tail = strtoupper(str_replace([' ', '+', '%20'], '', urldecode($request->url())));
+        if (str_ends_with($tail, 'LS11AA')) {
+            return Http::response(['status' => 200, 'result' => ['postcode' => 'LS1 1AA', 'latitude' => 53.7960, 'longitude' => -1.5430]], 200);
+        }
+        if (str_ends_with($tail, 'ZZ99ZZ')) {
+            return Http::response(['status' => 200, 'result' => ['postcode' => 'ZZ9 9ZZ', 'latitude' => 51.5074, 'longitude' => -0.1278]], 200);
+        }
+
+        return Http::response(['status' => 404, 'error' => 'Postcode not found'], 404);
+    });
 
     session()->put('bag', [$f['variant']->id => 1]);
     $date = array_key_first(DeliverySlot::bookableDates());
+    $miles = DeliveryRadius::distanceMiles(53.7960, -1.5430, 51.5074, -0.1278);
     $this->postJson(route('checkout.place'), pickupPayload($f['slot']->id, $date, 'delivery'))
         ->assertStatus(422)
-        ->assertJsonFragment(['message' => "Sorry — we don't deliver to ZZ9 9ZZ yet."]);
+        ->assertJsonFragment(['message' => 'Sorry — ZZ9 9ZZ is '.number_format($miles, 1).' miles away; we deliver within 10.0 miles of our store.']);
 });
 
 test('checkout and tracking show the pickup option', function () {
     $f = seedPickupGrocery();
     session()->put('bag', [$f['variant']->id => 1]);
 
-    $this->get('/checkout')->assertOk()->assertSee('Click &amp; Collect', false);
+    $this->get('/checkout')->assertOk()->assertSee('Click &amp; Collect', false)
+        ->assertSee('data-date-label', false)->assertSee('Today delivery', false)->assertSee('Standard shipping', false);
 
     $order = Order::create([
         'number' => 'EGF-45001', 'name' => 'N', 'phone' => '07123456789', 'email' => 't@example.com',

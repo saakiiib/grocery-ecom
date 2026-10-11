@@ -28,6 +28,7 @@ use App\Models\StockAlert;
 use App\Models\Subscriber;
 use App\Models\Testimonial;
 use App\Models\UserPoint;
+use App\Support\Delivery;
 use App\Support\Discovery;
 use App\Support\PairsWell;
 use App\Support\SitePromo;
@@ -565,16 +566,21 @@ class FrontendController extends Controller
         return spa('frontend.loyalty', compact('rates', 'balance'));
     }
 
-    /** Delivery info — live fees, minimums and bookable windows, no checkout required. */
+    /** Delivery info — live fees, minimums and the daily cutoff, no checkout required. */
     public function delivery()
     {
         $this->seo('delivery');
 
         $minOrder = Setting::money('delivery_min_order', 15.00);
         $freeOver = Setting::money('delivery_free_over', 50.00);
+        $cutoffTime = Delivery::cutoffTime();
+        $todayFee = Delivery::todayFee();
+        $standardFee = Delivery::standardFee();
+        $storePostcode = trim((string) (Setting::get('store_postcode', '') ?? ''));
+        $radiusMiles = Setting::money('delivery_radius_miles', 10.0);
         $slots = DeliverySlot::ordered();
 
-        return spa('frontend.delivery', compact('minOrder', 'freeOver', 'slots'));
+        return spa('frontend.delivery', compact('minOrder', 'freeOver', 'cutoffTime', 'todayFee', 'standardFee', 'storePostcode', 'radiusMiles', 'slots'));
     }
 
     public function bag()
@@ -636,9 +642,17 @@ class FrontendController extends Controller
         $coAddressBook = $addresses->mapWithKeys(fn ($a) => [
             $a->id => $a->only(['name', 'phone', 'address', 'city', 'postcode']),
         ])->all();
+        $delivery = Delivery::options((float) ($bag['subtotal'] ?? 0));
+        $cutoffTime = Delivery::cutoffTime();
+        $todayAvailable = Delivery::todayAvailable();
+        $todayFee = Delivery::todayFee();
+        $standardFee = Delivery::standardFee();
+        // Legacy keys kept for old app clients; the storefront uses $delivery.
+        $slots = DeliverySlot::ordered();
+        $dates = DeliverySlot::bookableDates();
         $cutoffStatus = DeliverySlot::todayStatus();
 
-        return spa('frontend.checkout', compact('bag', 'slots', 'dates', 'minOrder', 'freeOver', 'stripeOn', 'paypalOn', 'paypalClient', 'shopper', 'pointsBalance', 'pointsValue', 'pointsMin', 'addresses', 'defaultDelivery', 'defaultBilling', 'coAddressBook', 'cutoffStatus'));
+        return spa('frontend.checkout', compact('bag', 'slots', 'dates', 'minOrder', 'freeOver', 'stripeOn', 'paypalOn', 'paypalClient', 'shopper', 'pointsBalance', 'pointsValue', 'pointsMin', 'addresses', 'defaultDelivery', 'defaultBilling', 'coAddressBook', 'cutoffStatus', 'delivery', 'cutoffTime', 'todayAvailable', 'todayFee', 'standardFee'));
     }
 
     /** Guest order tracking: order number + the phone given at checkout. */
