@@ -13,7 +13,11 @@
         <div class="auth-card" style="margin-bottom:1.5rem;">
             <h2 style="font-size:1.25rem;margin-bottom:1rem;">When will it arrive?</h2>
             <p style="font-size:1.05rem;">{{ ($order->fulfillment ?? 'delivery') === 'pickup' ? 'Pickup' : 'Arriving' }} <strong>{{ $order->delivery_date ? $order->delivery_date->format('l j F') : '—' }}</strong> · {{ $order->delivery_slot_label }}</p>
+            @if (($order->fulfillment ?? 'delivery') === 'pickup')
+            <p class="text-muted">Click &amp; Collect from <strong>{{ trim((\App\Models\CompanyDetails::cached()->address1 ?? '').' '.(\App\Models\CompanyDetails::cached()->address2 ?? '').' '.(\App\Models\CompanyDetails::cached()->address3 ?? '')) ?: 'our store' }}</strong> · {{ $order->phone }}</p>
+            @else
             <p class="text-muted">Delivering to {{ $order->address }}, {{ $order->city }} {{ $order->postcode }} · {{ $order->phone }}</p>
+            @endif
             @if ($order->notes)<p class="text-muted">Note: {{ $order->notes }}</p>@endif
         </div>
 

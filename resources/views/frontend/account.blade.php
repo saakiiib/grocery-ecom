@@ -5,7 +5,8 @@
     $pwErrors = $errors->has('current_password') || $errors->has('password');
     $profileErrors = $errors->has('name') || $errors->has('phone');
     $addressErrors = $errors->has('label');
-    $defaultTab = $pwErrors ? 'password' : ($addressErrors ? 'addresses' : ($profileErrors ? 'details' : ($defaultTab ?? 'orders')));
+    $listErrors = $errors->lists->has('name');
+    $defaultTab = $pwErrors ? 'password' : ($addressErrors ? 'addresses' : ($listErrors ? 'lists' : ($profileErrors ? 'details' : ($defaultTab ?? 'orders'))));
 @endphp
 
 @section('content')
@@ -95,10 +96,11 @@
                         @csrf
                         <div class="form-group" style="flex:1;min-width:200px;margin:0;">
                             <label for="list-name">New list</label>
-                            <input id="list-name" type="text" name="name" required maxlength="100" placeholder="Weekly shop">
+                            <input id="list-name" type="text" name="name" required maxlength="100" placeholder="Weekly shop" value="{{ old('name') }}">
                         </div>
                         <button type="submit" class="btn btn-dark">Create list</button>
                     </form>
+                    @error('name', 'lists')<p class="text-danger" style="margin:-.5rem 0 1rem;"><small>{{ $message }}</small></p>@enderror
 
                     @forelse ($lists as $list)
                         <div style="border-top:1px solid var(--border);padding:1rem 0;">

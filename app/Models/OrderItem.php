@@ -12,6 +12,7 @@ class OrderItem extends Model
     protected function casts(): array
     {
         return [
+            'qty' => 'integer',
             'unit_price' => 'decimal:2',
             'line_total' => 'decimal:2',
         ];
@@ -20,6 +21,11 @@ class OrderItem extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
+    }
+
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class, 'product_id');
     }
 
     public function variant(): BelongsTo

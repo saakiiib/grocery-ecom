@@ -4,7 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Allergen;
+use App\Models\BogoOffer;
+use App\Models\BundleOffer;
 use App\Models\Category;
+use App\Models\FlashSale;
 use App\Models\OptionGroup;
 use App\Models\Product;
 use Illuminate\Http\Request;
@@ -230,6 +233,11 @@ class ProductController extends Controller
     public function destroy($id)
     {
         $product = Product::findOrFail($id);
+        if (BogoOffer::where('product_id', $product->id)->exists()
+            || FlashSale::where('product_id', $product->id)->exists()
+            || BundleOffer::whereHas('variants', fn ($q) => $q->where('product_variants.product_id', $product->id))->exists()) {
+            return response()->json(['message' => 'This product is used by a live promotion — remove the promotion first.'], 422);
+        }
         $this->deleteFile($product->hero_image);
         $this->deleteFile($product->meta_image);
         foreach ($product->images as $img) {

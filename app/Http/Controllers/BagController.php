@@ -124,7 +124,7 @@ class BagController extends Controller
 
         return array_merge([
             'lines' => $lines,
-            'count' => array_sum($bag),
+            'count' => collect($lines)->where('available', true)->sum('qty'),
             'subtotal' => round($subtotal, 2),
             'bogo_discount' => round($bogoDiscount, 2),
             'bundle_discount' => round($bundleDiscount, 2),
@@ -251,6 +251,18 @@ class BagController extends Controller
 
         if (! array_key_exists($data['variant_id'], $bag)) {
             return response()->json(['message' => 'Item is not in your bag.'], 422);
+        }
+
+        if ($data['qty'] > 0) {
+            $variant = ProductVariant::with('product')->findOrFail($data['variant_id']);
+            if (! $variant->product || ! $variant->product->status || ! $variant->status || ! $variant->in_stock) {
+                unset($bag[$data['variant_id']]);
+                session()->put(self::SESSION_KEY, $bag);
+                static::reconcile();
+                static::snapshot();
+
+                return response()->json(['message' => 'Sorry, that item is no longer available — it was removed from your bag.'], 422);
+            }
         }
 
         if ($data['qty'] === 0) {

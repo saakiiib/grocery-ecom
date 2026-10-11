@@ -11,8 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasColumn('orders', 'driver_name')) {
+            return;
+        }
         Schema::table('orders', function (Blueprint $table) {
-            $table->string('driver_name', 100)->nullable()->after('fulfillment');
+            if (Schema::hasColumn('orders', 'fulfillment')) {
+                $table->string('driver_name', 100)->nullable()->after('fulfillment');
+            } else {
+                $table->string('driver_name', 100)->nullable();
+            }
         });
     }
 

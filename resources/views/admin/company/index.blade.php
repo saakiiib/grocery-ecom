@@ -256,13 +256,13 @@
                                         <label>{{ 'Currency' }}</label>
                                         <select class="form-control select2" id="currency" name="currency">
                                             <option value="" selected>{{ 'Please choose currency' }}</option>
-                                            <option value="$" @if (!empty($data->currency) && $data->currency == '$') selected @endif>$
+                                            <option value="$" @if ($data->currency && $data->currency == '$') selected @endif>$
                                             </option>
-                                            <option value="£" @if (!empty($data->currency) && $data->currency == '£') selected @endif>£
+                                            <option value="£" @if ($data->currency && $data->currency == '£') selected @endif>£
                                             </option>
-                                            <option value="€" @if (!empty($data->currency) && $data->currency == '€') selected @endif>€
+                                            <option value="€" @if ($data->currency && $data->currency == '€') selected @endif>€
                                             </option>
-                                            <option value="৳" @if (!empty($data->currency) && $data->currency == '৳') selected @endif>৳
+                                            <option value="৳" @if ($data->currency && $data->currency == '৳') selected @endif>৳
                                             </option>
                                         </select>
                                     </div>
@@ -353,7 +353,7 @@
                                             </span>
                                         @enderror
 
-                                        @if (!empty($data->fav_icon))
+                                        @if ($data->fav_icon)
                                             <div class="mt-2 d-flex align-items-center gap-2">
                                                 <img src="{{ asset('uploads/company/' . $data->fav_icon) }}"
                                                     alt="Current favicon" width="32" height="32"
@@ -387,7 +387,7 @@
                                             </span>
                                         @enderror
 
-                                        @if (!empty($data->company_logo))
+                                        @if ($data->company_logo)
                                             <div class="mt-2 d-flex align-items-center gap-2">
                                                 <img src="{{ asset('uploads/company/' . $data->company_logo) }}"
                                                     alt="Current company logo" width="100" class="img-thumbnail">
@@ -420,7 +420,7 @@
                                             </span>
                                         @enderror
 
-                                        @if (!empty($data->footer_logo))
+                                        @if ($data->footer_logo)
                                             <div class="mt-2 d-flex align-items-center gap-2">
                                                 <img src="{{ asset('uploads/company/' . $data->footer_logo) }}"
                                                     alt="Current footer logo" width="100" class="img-thumbnail">
@@ -470,7 +470,7 @@
                                         <label>Meta Image</label>
                                         <input type="file" class="form-control" name="meta_image" accept="image/*"
                                             onchange="previewImage(event, '#meta_image_preview')">
-                                        @if (!empty($data->meta_image))
+                                        @if ($data->meta_image)
                                             <div class="mt-2 d-flex align-items-center gap-2">
                                                 <div class="form-check ms-2">
                                                     <input type="checkbox" class="form-check-input"

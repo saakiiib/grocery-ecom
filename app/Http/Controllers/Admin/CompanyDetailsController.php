@@ -261,6 +261,28 @@ class CompanyDetailsController extends Controller
         return redirect()->back()->with('success', 'Terms and conditions updated successfully.');
     }
 
+    public function refundPolicy()
+    {
+        $companyDetails = CompanyDetails::select('refund_policy')->first();
+
+        return view('admin.company.refund', compact('companyDetails'));
+    }
+
+    public function refundPolicyUpdate(Request $request)
+    {
+        $request->validate([
+            'refund_policy' => 'required|string',
+        ]);
+
+        $companyDetails = CompanyDetails::firstOrCreate();
+        $companyDetails->refund_policy = $request->refund_policy;
+        $companyDetails->save();
+
+        Cache::forget('company_refund');
+
+        return redirect()->back()->with('success', 'Refund policy updated successfully.');
+    }
+
     public function mailBody()
     {
         $companyDetails = CompanyDetails::select('mail_body')->first();

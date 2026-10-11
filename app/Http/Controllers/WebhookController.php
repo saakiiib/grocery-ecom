@@ -6,6 +6,7 @@ use App\Mail\OrderPlaced;
 use App\Models\Order;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 
 /**
@@ -50,7 +51,10 @@ class WebhookController extends Controller
 
         if ($type === 'payment_intent.payment_failed') {
             $order = $this->findStripeOrder($object);
-            if ($order && ! $order->isPaid() && $order->status_slug === 'new') {
+            $intentId = $object['id'] ?? null;
+            if ($order && ! $order->isPaid() && $order->status_slug === 'new'
+                && is_string($intentId) && is_string($order->payment_reference)
+                && $order->payment_reference !== '' && hash_equals($order->payment_reference, $intentId)) {
                 $order->changeStatus('cancelled', null, 'Card payment failed (webhook).');
             }
 
@@ -142,7 +146,11 @@ class WebhookController extends Controller
 
         if ($type === 'PAYMENT.CAPTURE.DENIED') {
             $captureId = $resource['id'] ?? null;
+            $paypalOrderId = data_get($resource, 'supplementary_data.related_ids.order_id');
             $order = $captureId ? Order::where('payment_method', 'paypal')->where('payment_reference', $captureId)->first() : null;
+            if (! $order && $paypalOrderId) {
+                $order = Order::where('payment_method', 'paypal')->where('payment_reference', $paypalOrderId)->first();
+            }
             if ($order && ! $order->isPaid() && $order->status_slug === 'new') {
                 $order->changeStatus('cancelled', null, 'PayPal payment denied (webhook).');
             }
@@ -197,27 +205,34 @@ class WebhookController extends Controller
     /**
      * Mark a gateway-paid order confirmed exactly once. Replays, races with
      * the synchronous confirm, and unknown orders all end here safely.
+     * Row-locked so a sync+webhook race mails OrderPlaced only once.
      */
     private function confirmPaid(Order $order, string $method, string $note): bool
     {
-        if ($order->payment_method !== $method) {
-            return false;
-        }
-        if ($order->isPaid()) {
+        return (bool) DB::transaction(function () use ($order, $method, $note) {
+            $fresh = Order::whereKey($order->id)->lockForUpdate()->first();
+            if (! $fresh || $fresh->payment_method !== $method) {
+                return false;
+            }
+            if ($fresh->isPaid()) {
+                return true;
+            }
+            if (in_array($fresh->status_slug, ['cancelled', 'delivered'], true)) {
+                return false;
+            }
+
+            $fresh->payment_status = 'paid';
+            $fresh->amount_paid = $fresh->total;
+            $fresh->save();
+            $changed = null;
+            if ($fresh->status_slug === 'new') {
+                $changed = $fresh->changeStatus('confirmed', null, $note);
+            }
+            if ($changed) {
+                Order::sendMail($fresh->receiptEmail(), new OrderPlaced($fresh));
+            }
+
             return true;
-        }
-        if (in_array($order->status_slug, ['cancelled', 'delivered'], true)) {
-            return false;
-        }
-
-        $order->payment_status = 'paid';
-        $order->amount_paid = $order->total;
-        $order->save();
-        if ($order->status_slug === 'new') {
-            $order->changeStatus('confirmed', null, $note);
-            Order::sendMail($order->receiptEmail(), new OrderPlaced($order));
-        }
-
-        return true;
+        });
     }
 }

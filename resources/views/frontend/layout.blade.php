@@ -13,7 +13,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="author" content="{{ $siteBrand }}">
     <link rel="canonical" href="{{ url()->current() }}">
-    <title>@yield('title', config('app.name'))</title>
+    <meta name="theme-color" content="#1A2E22">
+    <meta property="og:site_name" content="{{ $siteBrand }}">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ url()->current() }}">
+    <meta name="twitter:card" content="summary_large_image">
+    <title>@yield('title', config('app.name')) — {{ $siteBrand }}</title>
     {!! SEOMeta::generate() !!}
     {!! OpenGraph::generate() !!}
     {!! Twitter::generate() !!}

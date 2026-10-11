@@ -4,12 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Models\BogoOffer;
 use App\Models\BundleOffer;
+use App\Models\CompanyDetails;
 use App\Models\Favourite;
 use App\Models\FlashSale;
+use App\Models\PageSeo;
 use App\Models\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use OpenGraph;
+use SEOMeta;
+use Twitter;
 
 class FavouriteController extends Controller
 {
@@ -21,6 +26,8 @@ class FavouriteController extends Controller
     /** Saved items, newest first. */
     public function index()
     {
+        $this->seo('favourites');
+
         $userId = auth()->id();
         $products = Product::with(['category', 'images', 'variants.values.group'])
             ->withReviewSummary()
@@ -98,5 +105,36 @@ class FavouriteController extends Controller
         $controller = app(FrontendController::class);
 
         return $controller->productCard($product, $maps[0] ?? null, $maps[1] ?? null, $maps[2] ?? null);
+    }
+
+    private function seo(string $pageKey): void
+    {
+        $company = CompanyDetails::cached();
+        $pageSeo = PageSeo::where('page_key', $pageKey)->first();
+
+        $title = $pageSeo?->meta_title ?: $company?->meta_title;
+        $description = $pageSeo?->meta_description ?: $company?->meta_description;
+        $keywords = $pageSeo?->meta_keywords ?: $company?->meta_keywords;
+        $image = $pageSeo?->meta_image
+            ? (str_starts_with($pageSeo->meta_image, 'http') ? $pageSeo->meta_image : asset($pageSeo->meta_image))
+            : ($company?->meta_image ? asset('uploads/company/'.$company->meta_image) : null);
+
+        if ($title) {
+            SEOMeta::setTitle($title);
+            OpenGraph::setTitle($title);
+            Twitter::setTitle($title);
+        }
+        if ($description) {
+            SEOMeta::setDescription($description);
+            OpenGraph::setDescription($description);
+            Twitter::setDescription($description);
+        }
+        if ($keywords) {
+            SEOMeta::setKeywords($keywords);
+        }
+        if ($image) {
+            OpenGraph::addImage($image);
+            Twitter::setImage($image);
+        }
     }
 }

@@ -74,8 +74,9 @@ class AccountController extends Controller
 
         $payPublishable = CheckoutController::stripePublishable();
         $payPaypalClient = CheckoutController::paypalClientId();
+        $user = auth()->user();
 
-        return spa('frontend.order-detail', ['order' => $order, 'user' => auth()->user(), 'payPublishable' => $payPublishable, 'payPaypalClient' => $payPaypalClient]);
+        return spa('frontend.order-detail', compact('order', 'user', 'payPublishable', 'payPaypalClient'));
     }
 
     /** Weekly repeat: rebuild this order every 7 days from current shelf prices. */
@@ -92,6 +93,14 @@ class AccountController extends Controller
         ])->filter(fn ($row) => $row['variant_id'])->values()->all();
         if ($items === []) {
             return redirect()->route('account')->with('status', 'That order has nothing repeatable.');
+        }
+        // Idempotency: a double-click must not spawn twin schedules.
+        $recent = RepeatSchedule::where('user_id', auth()->id())
+            ->where('is_active', true)
+            ->where('created_at', '>', now()->subMinutes(2))
+            ->latest()->first();
+        if ($recent && $recent->items == $items) {
+            return redirect()->route('account')->with('status', 'Weekly repeat is already on for that order.');
         }
         RepeatSchedule::create([
             'user_id' => auth()->id(),
@@ -153,6 +162,7 @@ class AccountController extends Controller
     {
         $user = auth()->user();
 
+        $request->merge(['phone' => self::normalizePhone($request->input('phone'))]);
         $data = $request->validate([
             'name' => 'required|string|max:100',
             'phone' => 'nullable|string|max:30|unique:users,phone,'.$user->id,
@@ -177,6 +187,7 @@ class AccountController extends Controller
         ]);
 
         auth()->user()->update(['password' => Hash::make($data['password'])]);
+        $request->session()->regenerate();
 
         return redirect()->route('account.password.form')->with('status', 'Your password was changed.');
     }
@@ -186,7 +197,7 @@ class AccountController extends Controller
     {
         $order = $this->ownOrder($number);
 
-        if ($order->isPaid() || in_array($order->status_slug, ['cancelled', 'delivered'], true)) {
+        if ($order->isPaid() || ! in_array($order->status_slug, ['new', 'confirmed'], true)) {
             return response()->json(['message' => 'That order does not need payment.'], 422);
         }
         if ((float) $order->refunded_amount > 0) {
@@ -287,5 +298,15 @@ class AccountController extends Controller
     private function ownOrder(string $number): Order
     {
         return Order::where('number', $number)->where('user_id', auth()->id())->firstOrFail();
+    }
+
+    private static function normalizePhone(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+        $clean = (string) preg_replace('/[\s\-().]/', '', $value);
+
+        return $clean === '' ? null : $clean;
     }
 }

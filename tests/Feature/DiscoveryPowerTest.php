@@ -30,7 +30,7 @@ test('search finds packs by SKU on web and api', function () {
     $this->get('/shop?q=CHK-BRST')->assertOk()->assertSee('Chicken Breast', false);
     $this->getJson('/api/search?q=chk-brst-500')->assertOk()->assertJsonCount(1, 'results');
     $this->getJson('/api/trending-searches')->assertOk()->assertJsonFragment(['chk-brst-500']);
-    $this->get('/shop')->assertOk()->assertSee('Trending:', false)->assertSee('chk-brst-500', false);
+    $this->get('/shop')->assertOk()->assertDontSee('Trending:', false);
 });
 
 test('short queries are never logged', function () {

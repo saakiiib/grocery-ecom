@@ -16,7 +16,7 @@ class ShoppingListController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $data = $request->validate(['name' => 'required|string|max:100']);
+        $data = $request->validateWithBag('lists', ['name' => 'required|string|max:100']);
         ShoppingList::create(['user_id' => auth()->id(), 'name' => $data['name']]);
 
         return redirect()->route('lists.index')->with('status', 'List created.');

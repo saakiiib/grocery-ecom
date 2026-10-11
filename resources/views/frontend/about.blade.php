@@ -19,7 +19,7 @@
             <div class="trust-grid">
                 <div class="trust-item">
                     <div class="trust-icon"><x-icon name="truck" /></div>
-                    <div><strong>Delivered to your door</strong><span>Free delivery over £50</span></div>
+                    <div><strong>Delivered to your door</strong><span>Free delivery over £{{ number_format(\App\Models\Setting::money('delivery_free_over', 50), 0) }}</span></div>
                 </div>
                 <div class="trust-item">
                     <div class="trust-icon"><x-icon name="leaf" /></div>

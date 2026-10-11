@@ -77,7 +77,7 @@ class FrontendController extends Controller
                 'count' => $products->whereIn('category_id', $ids)->count(),
             ];
         })->values();
-        $offerCards = $products->filter(fn ($p) => $this->hasDeal($p, $flashMap))
+        $offerCards = $products->filter(fn ($p) => $this->hasDeal($p, $flashMap, $bogoLive, $bundleCover))
             ->take(4)->values()->map(fn ($p) => $this->productCard($p, $bundleCover, $flashMap, $bogoLive))->values();
         $faqsJson = $this->faqsJson();
         $faqCatsJson = $this->faqCatsJson();
@@ -206,7 +206,7 @@ class FrontendController extends Controller
         $bogoLive = BogoOffer::liveAll();
         $withFloors = $products
             ->when($descendantIds, fn ($c) => $c->filter(fn ($p) => in_array($p->category_id, $descendantIds, true))->values())
-            ->when($onlyOffers, fn ($c) => $c->filter(fn ($p) => $this->hasDeal($p, $flashMap))->values())
+            ->when($onlyOffers, fn ($c) => $c->filter(fn ($p) => $this->hasDeal($p, $flashMap, $bogoLive, $bundleCover))->values())
             ->when($diets !== [], fn ($c) => $c->filter(fn ($p) => collect($diets)->every(fn ($d) => (bool) $p->{'is_'.$d}))->values())
             ->when($freeFrom !== [], fn ($c) => $c->filter(fn ($p) => $p->allergens->pluck('slug')->intersect($freeFrom)->isEmpty())->values())
             ->when($search !== '', function ($c) use ($search) {
@@ -246,19 +246,31 @@ class FrontendController extends Controller
                 return true;
             })->values();
         }
-        $saveOf = function ($p) use ($flashMap) {
-            $d = $p->defaultVariant();
-            if (! $d) {
-                return 0;
+        $saveOf = function ($p) use ($flashMap, $bogoLive, $bundleCover) {
+            $best = 0;
+            foreach ($p->variants as $d) {
+                if (! $d->status) {
+                    continue;
+                }
+                $selling = $d->sellingPrice();
+                $hit = FlashSale::priceFor($d->id, $p->id, $flashMap);
+                if ($hit && $hit['price'] < $selling) {
+                    $selling = $hit['price'];
+                }
+                $mrp = (float) $d->mrp;
+                $pct = ($mrp && $selling < $mrp) ? (int) round((($mrp - $selling) / $mrp) * 100) : 0;
+                if ($pct === 0 && $bogoLive !== null && BogoOffer::matchIn($bogoLive, $d->id, $p->id)) {
+                    $pct = 10;
+                }
+                if ($pct === 0 && $bundleCover !== null && isset($bundleCover[$d->id])) {
+                    $pct = 5;
+                }
+                if ($pct > $best) {
+                    $best = $pct;
+                }
             }
-            $selling = $d->sellingPrice();
-            $hit = FlashSale::priceFor($d->id, $p->id, $flashMap);
-            if ($hit && $hit['price'] < $selling) {
-                $selling = $hit['price'];
-            }
-            $mrp = (float) $d->mrp;
 
-            return ($mrp && $selling < $mrp) ? (int) round((($mrp - $selling) / $mrp) * 100) : 0;
+            return $best;
         };
         $sorted = match ($sort) {
             'price_asc' => $withFloors->sortBy(fn ($row) => $row['floor'] ?? PHP_FLOAT_MAX)->values(),
@@ -460,16 +472,21 @@ class FrontendController extends Controller
     public function contactStore(Request $request)
     {
         $data = $request->validate([
-            'name' => 'required|string|max:255',
+            'name' => 'required|string|min:2|max:255',
             'email' => 'required|email|max:255',
             'topic' => 'nullable|string|max:255',
             'postcode' => 'nullable|string|max:50',
-            'message' => 'required|string|max:5000',
+            'message' => 'required|string|min:10|max:5000',
+            'website' => 'nullable|string|max:0',
         ]);
 
         Contact::create([
-            ...$data,
-            'subject' => $data['topic'] ?? 'Website Enquiry',
+            'name' => strip_tags($data['name']),
+            'email' => $data['email'],
+            'topic' => isset($data['topic']) ? strip_tags($data['topic']) : null,
+            'postcode' => isset($data['postcode']) ? strip_tags($data['postcode']) : null,
+            'message' => strip_tags($data['message']),
+            'subject' => isset($data['topic']) ? strip_tags($data['topic']) : 'Website Enquiry',
         ]);
 
         return response()->json(['success' => true, 'message' => 'Message received. The shop will reply within one working day.']);
@@ -650,7 +667,7 @@ class FrontendController extends Controller
         if (! $order) {
             return spa('frontend.track', ['order' => null])->withErrors([
                 'number' => 'We could not find that order — check the number and the phone used at checkout.',
-            ])->withInput($request->only('number'));
+            ])->withInput($request->only('number', 'phone'));
         }
 
         return spa('frontend.track', compact('order'));
@@ -713,8 +730,8 @@ class FrontendController extends Controller
         return $p->priceRange() ?? 'On request';
     }
 
-    /** A product counts as an offer when any variant has an offer price or a live flash below mrp. */
-    protected function hasDeal(Product $p, array $flashMap): bool
+    /** A product counts as an offer when any variant has an offer price, a live flash below mrp, a live BOGO, or bundle cover. */
+    protected function hasDeal(Product $p, array $flashMap, $bogoLive = null, ?array $bundleCover = null): bool
     {
         foreach ($p->variants as $v) {
             if (! $v->status) {
@@ -725,6 +742,12 @@ class FrontendController extends Controller
             }
             $hit = FlashSale::priceFor($v->id, $p->id, $flashMap);
             if ($hit && $hit['price'] < (float) $v->mrp) {
+                return true;
+            }
+            if ($bogoLive !== null && BogoOffer::matchIn($bogoLive, $v->id, $p->id)) {
+                return true;
+            }
+            if ($bundleCover !== null && isset($bundleCover[$v->id])) {
                 return true;
             }
         }

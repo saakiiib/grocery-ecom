@@ -91,6 +91,8 @@ class CategoryController extends Controller
             'parent_id' => 'nullable|exists:categories,id',
             'option_group_ids' => 'nullable|array',
             'option_group_ids.*' => 'exists:option_groups,id',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
+            'meta_image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
         ], [
             'name.required' => 'Category name is required',
             'name.unique' => 'This category already exists',
@@ -187,6 +189,8 @@ class CategoryController extends Controller
             'parent_id' => 'nullable|exists:categories,id',
             'option_group_ids' => 'nullable|array',
             'option_group_ids.*' => 'exists:option_groups,id',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
+            'meta_image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
         ], [
             'name.required' => 'Category name is required',
             'name.unique' => 'This category already exists',
@@ -323,7 +327,7 @@ class CategoryController extends Controller
 
     public function toggleStatus(Request $request)
     {
-        $category = Category::find($request->category_id);
+        $category = Category::find($request->input('id', $request->input('category_id')));
 
         if (! $category) {
             return response()->json([
@@ -398,10 +402,21 @@ class CategoryController extends Controller
         $request->validate([
             'ids' => 'required|array',
             'ids.*' => 'integer|distinct|exists:categories,id',
+            'scope' => 'nullable|in:parent,children',
+            'parent_id' => 'nullable|exists:categories,id',
         ]);
 
+        $query = Category::query();
+        if (($request->input('scope') ?? 'parent') === 'children') {
+            $query->where('parent_id', $request->input('parent_id'));
+        } else {
+            $query->whereNull('parent_id');
+        }
+        $allowed = $query->pluck('id')->all();
         foreach ($request->ids as $index => $id) {
-            Category::where('id', $id)->update(['sort_order' => $index]);
+            if (in_array($id, $allowed, true)) {
+                Category::where('id', $id)->update(['sort_order' => $index]);
+            }
         }
 
         return response()->json(['message' => 'Sort order updated successfully']);

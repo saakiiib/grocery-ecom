@@ -16,6 +16,11 @@ class User extends Authenticatable
 
     protected $guarded = [];
 
+    protected $attributes = [
+        'status' => 1,
+        'user_type' => 0,
+    ];
+
     protected $hidden = [
         'password',
         'remember_token',
@@ -26,6 +31,8 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'status' => 'boolean',
+            'user_type' => 'integer',
         ];
     }
 

@@ -27,7 +27,7 @@ class FlashSaleController extends Controller
         $products = Product::where('status', true)->orderBy('name')->get(['id', 'name']);
         $offers = Offer::orderBy('sort_order')->orderBy('id')->get(['id', 'name']);
 
-        return view('admin.flash.manage', ['sale' => new FlashSale(['status' => true]), 'products' => $products, 'offers' => $offers]);
+        return view('admin.flash.manage', ['sale' => new FlashSale(['status' => true, 'offer_id' => request('offer_id')]), 'products' => $products, 'offers' => $offers]);
     }
 
     public function store(Request $request): RedirectResponse

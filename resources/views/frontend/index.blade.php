@@ -13,11 +13,19 @@
                         <div class="container">
                             <div class="hero-content">
                                 @if ($s['badge'])<span class="hero-badge">{{ $s['badge'] }}</span>@endif
-                                @if ($s['title'])<h1>{!! nl2br(e($s['title'])) !!}</h1>@endif
+                                @if ($s['title'])
+                                    @if ($i === 0)<h1>{!! nl2br(e($s['title'])) !!}</h1>@else<h2 class="hero-title">{!! nl2br(e($s['title'])) !!}</h2>@endif
+                                @endif
                                 @if ($s['subtitle'])<p>{{ $s['subtitle'] }}</p>@endif
                                 <div class="hero-ctas">
-                                    @if ($s['btn_text'])<a @spa href="{{ $s['btn_url'] ?: route('shop') }}" class="btn btn-primary">{{ $s['btn_text'] }} <span aria-hidden="true">→</span></a>@endif
-                                    @if ($s['btn_text2'])<a @spa href="{{ $s['btn_url2'] ?: route('shop') }}" class="btn btn-outline">{{ $s['btn_text2'] }}</a>@endif
+                                    @if ($s['btn_text'])
+                                        <?php $u1 = $s['btn_url'] ?: route('shop'); ?>
+                                        @if (is_string($u1) && str_starts_with($u1, 'http') && ! str_starts_with($u1, url('/')))<a href="{{ $u1 }}" class="btn btn-primary">{{ $s['btn_text'] }} <span aria-hidden="true">→</span></a>@else<a @spa href="{{ $u1 }}" class="btn btn-primary">{{ $s['btn_text'] }} <span aria-hidden="true">→</span></a>@endif
+                                    @endif
+                                    @if ($s['btn_text2'])
+                                        <?php $u2 = $s['btn_url2'] ?: route('shop'); ?>
+                                        @if (is_string($u2) && str_starts_with($u2, 'http') && ! str_starts_with($u2, url('/')))<a href="{{ $u2 }}" class="btn btn-outline">{{ $s['btn_text2'] }}</a>@else<a @spa href="{{ $u2 }}" class="btn btn-outline">{{ $s['btn_text2'] }}</a>@endif
+                                    @endif
                                 </div>
                             </div>
                         </div>
@@ -27,7 +35,7 @@
             <div class="container hero-slide-spacer" aria-hidden="true">
                 <div class="hero-content">
                     <span class="hero-badge">.</span>
-                    <h1>{{ $slidersJson[0]['title'] ?? '' }}</h1>
+                    <div class="hero-title">{{ $slidersJson[0]['title'] ?? '' }}</div>
                     <p>Placeholder for consistent hero height.</p>
                 </div>
             </div>
@@ -46,7 +54,7 @@
             <div class="trust-grid">
                 <div class="trust-item">
                     <div class="trust-icon"><x-icon name="truck" /></div>
-                    <div><strong>Delivered to your door</strong><span>Free delivery over £50</span></div>
+                    <div><strong>Delivered to your door</strong><span>Free delivery over £{{ number_format(\App\Models\Setting::money('delivery_free_over', 50), 0) }}</span></div>
                 </div>
                 <div class="trust-item">
                     <div class="trust-icon"><x-icon name="leaf" /></div>

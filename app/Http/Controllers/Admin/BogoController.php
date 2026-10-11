@@ -26,7 +26,7 @@ class BogoController extends Controller
         $products = Product::where('status', true)->orderBy('name')->get(['id', 'name']);
         $offers = Offer::orderBy('sort_order')->orderBy('id')->get(['id', 'name']);
 
-        return view('admin.bogo.manage', ['offer' => new BogoOffer(['buy_qty' => 2, 'free_qty' => 1, 'status' => true]), 'products' => $products, 'offers' => $offers]);
+        return view('admin.bogo.manage', ['offer' => new BogoOffer(['buy_qty' => 2, 'free_qty' => 1, 'status' => true, 'offer_id' => request('offer_id')]), 'products' => $products, 'offers' => $offers]);
     }
 
     public function store(Request $request): RedirectResponse

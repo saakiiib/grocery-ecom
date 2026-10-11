@@ -234,7 +234,20 @@
     }
 
     function paint(v) {
-      if (!v) return;
+      if (!v) {
+        if (priceEl) priceEl.textContent = 'Unavailable';
+        if (oldEl) oldEl.style.display = 'none';
+        if (saveEl) saveEl.style.display = 'none';
+        if (packNote) packNote.textContent = 'That combination is not available — please choose another.';
+        if (addBtn) {
+          addBtn.dataset.variantId = '';
+          addBtn.dataset.price = '';
+          addBtn.disabled = true;
+          addBtn.textContent = 'Unavailable';
+        }
+        if (stockNote) stockNote.style.display = 'none';
+        return;
+      }
       if (priceEl) priceEl.textContent = formatPrice(v.selling);
       if (oldEl) {
         if (v.old) { oldEl.textContent = formatPrice(v.old); oldEl.style.display = ''; }
@@ -254,6 +267,7 @@
         else { expiresNote.style.display = 'none'; }
       }
       if (mainImg && v.image) mainImg.src = v.image;
+      document.querySelectorAll('[data-notify][data-variant]').forEach(function (n) { n.dataset.variant = v.id; });
       var listVariant = document.querySelector('[data-list-variant]');
       var listSave = document.querySelector('[data-list-save]');
       if (listVariant) listVariant.value = v.id;
@@ -350,7 +364,7 @@
       container.innerHTML =
         '<div class="empty-state"><h2>Your bag is empty</h2>' +
         '<p>Browse the market and add some fresh finds.</p>' +
-        '<a href="' + r.shop + '" class="btn btn-dark">Shop groceries</a></div>';
+        '<a data-spa href="' + r.shop + '" class="btn btn-dark">Shop groceries</a></div>';
       updateBagSummary(data);
       return;
     }
@@ -732,7 +746,7 @@
     }
     if (!list.length) {
       results.innerHTML = '<div class="search-empty"><h3>Nothing matched "' + esc(q.trim()) + '"</h3>' +
-        '<p>Try a different word, or <a href="' + routes().shop + '">browse all groceries</a>.</p></div>';
+        '<p>Try a different word, or <a data-spa href="' + routes().shop + '">browse all groceries</a>.</p></div>';
       return;
     }
     var capped = term ? list.slice(0, 5) : list;
@@ -889,6 +903,15 @@
     if (q && q.value.trim()) params.set('q', q.value.trim());
     var offers = form.querySelector('input[name="only_offers"]');
     if (offers && offers.value) params.set('only_offers', offers.value);
+    form.querySelectorAll('input[name="diet[]"]').forEach(function (el) {
+      if (el.value) params.append('diet[]', el.value);
+    });
+    var freeFrom = form.querySelector('select[name="free_from[]"]');
+    if (freeFrom) {
+      Array.prototype.forEach.call(freeFrom.selectedOptions || [], function (opt) {
+        if (opt.value) params.append('free_from[]', opt.value);
+      });
+    }
     if (min && min.value !== '' && Number(min.value) >= 0) params.set('min_price', min.value);
     if (max && max.value !== '' && Number(max.value) >= 0) params.set('max_price', max.value);
     if (sort && sort.value && sort.value !== 'featured') params.set('sort', sort.value);
@@ -1100,7 +1123,12 @@
         headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf(), 'Accept': 'application/json' },
         body: JSON.stringify({ product_id: parseInt(pid, 10) })
       }).then(function (res) {
-        if (res.status === 401) {
+        if (res.status === 401 || (res.redirected && res.url.indexOf('/login') !== -1)) {
+          window.location.href = routes().login || '/login';
+          return null;
+        }
+        var contentType = res.headers.get('content-type') || '';
+        if (contentType.indexOf('application/json') === -1) {
           window.location.href = routes().login || '/login';
           return null;
         }

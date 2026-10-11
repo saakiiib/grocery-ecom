@@ -148,6 +148,10 @@ class SidebarController
                 'id' => 'sidebarSettings',
                 'children' => [
                     ['label' => 'Company Details', 'route' => 'admin.companyDetails', 'href' => route('admin.companyDetails')],
+                    ['label' => 'About Us', 'route' => 'admin.content.about', 'href' => route('admin.content.about')],
+                    ['label' => 'Privacy Policy', 'route' => 'admin.content.privacy', 'href' => route('admin.content.privacy')],
+                    ['label' => 'Terms & Supply', 'route' => 'admin.content.terms', 'href' => route('admin.content.terms')],
+                    ['label' => 'Refund Policy', 'route' => 'admin.content.refund', 'href' => route('admin.content.refund')],
                     ['label' => 'Shop Settings', 'route' => 'shop-settings.*', 'href' => route('shop-settings.edit')],
                     ['label' => 'Order Statuses', 'route' => 'order-statuses.*', 'href' => route('order-statuses.index')],
                     ['label' => 'Page SEO', 'route' => 'page-seo.*', 'href' => route('page-seo.index')],

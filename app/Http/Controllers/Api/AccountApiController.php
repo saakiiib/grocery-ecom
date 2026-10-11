@@ -202,6 +202,8 @@ class AccountApiController extends Controller
 
     private function addressData(Request $request): array
     {
+        $request->merge(['phone' => self::normalizePhone($request->input('phone'))]);
+
         return $request->validate([
             'label' => 'required|string|max:50',
             'name' => 'required|string|max:100',
@@ -226,6 +228,16 @@ class AccountApiController extends Controller
             $user->addresses()->where('id', '!=', $address->id)->update(['is_default_billing' => false]);
         }
         $address->update(['is_default_delivery' => $delivery, 'is_default_billing' => $billing]);
+    }
+
+    private static function normalizePhone(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+        $clean = (string) preg_replace('/[\s\-().]/', '', $value);
+
+        return $clean === '' ? null : $clean;
     }
 
     /* ---------------- Favourites ---------------- */
@@ -313,6 +325,10 @@ class AccountApiController extends Controller
             'variant_id' => 'required|integer|exists:product_variants,id',
             'qty' => 'nullable|integer|min:1|max:99',
         ]);
+        $variant = ProductVariant::with('product')->findOrFail($data['variant_id']);
+        if (! $variant->product || ! $variant->product->status || ! $variant->status || ! $variant->in_stock) {
+            return response()->json(['message' => 'Sorry, that item is out of stock.'], 422);
+        }
         $list->items()->updateOrCreate(
             ['product_variant_id' => $data['variant_id']],
             ['qty' => $data['qty'] ?? 1]

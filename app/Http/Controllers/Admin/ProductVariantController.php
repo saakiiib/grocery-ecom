@@ -3,12 +3,15 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\BogoOffer;
+use App\Models\FlashSale;
 use App\Models\OptionValue;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\StockAlert;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Intervention\Image\Facades\Image;
 
 class ProductVariantController extends Controller
@@ -93,6 +96,11 @@ class ProductVariantController extends Controller
     public function destroy($id)
     {
         $variant = ProductVariant::findOrFail($id);
+        if (BogoOffer::where('product_variant_id', $variant->id)->exists()
+            || FlashSale::where('product_variant_id', $variant->id)->exists()
+            || DB::table('bundle_offer_variants')->where('product_variant_id', $variant->id)->exists()) {
+            return response()->json(['message' => 'This pack is used by a live promotion — remove the promotion first.'], 422);
+        }
         $wasDefault = $variant->is_default;
         $this->deleteFile($variant->image);
         $variant->delete();

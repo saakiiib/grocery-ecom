@@ -61,6 +61,16 @@ class Order extends Model
         return $this->belongsTo(DeliverySlot::class, 'delivery_slot_id');
     }
 
+    public function coupon(): BelongsTo
+    {
+        return $this->belongsTo(Coupon::class, 'coupon_id');
+    }
+
+    public function deliverySlot(): BelongsTo
+    {
+        return $this->belongsTo(DeliverySlot::class, 'delivery_slot_id');
+    }
+
     public function itemCount(): int
     {
         return $this->items->sum('qty');

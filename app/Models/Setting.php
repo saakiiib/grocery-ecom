@@ -37,6 +37,11 @@ class Setting extends Model
     /** Shop money rules with safe numeric fallbacks. */
     public static function money(string $key, float $default): float
     {
-        return (float) (static::get($key, (string) $default) ?? $default);
+        $raw = static::get($key, (string) $default);
+        if (! is_numeric($raw)) {
+            return $default;
+        }
+
+        return (float) $raw;
     }
 }

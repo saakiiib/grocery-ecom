@@ -5,8 +5,8 @@
 <main>
     <div class="page-hero">
         <div class="container">
-            <h1>Your bag</h1>
-            <p>Review your items before checkout.</p>
+            <h1>Checkout</h1>
+            <p>Where and when should we deliver your groceries?</p>
         </div>
     </div>
     <div class="container" style="padding-bottom:4rem;">
@@ -170,6 +170,11 @@
                     </div>
 
                     <h2 style="font-size:1.25rem;margin:1.5rem 0 1rem;"><span class="co-step">3</span><span id="co-fulfillment-heading">When should it arrive?</span></h2>
+                    @if ($slots->isEmpty())
+                        <div class="auth-card" role="alert" style="border-color:#B91C1C;">
+                            <p style="margin:0;"><strong>No delivery times right now.</strong> <span class="text-muted">The shop has no active slots — please try Click &amp; Collect or check back soon.</span></p>
+                        </div>
+                    @endif
                     <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
                         <div class="form-group">
                             <label for="co-date" id="co-date-label">Delivery day</label>
@@ -291,7 +296,7 @@
                         <span class="pick-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
                         <span>I agree to the <a @spa href="{{ route('privacy') }}">privacy policy</a> and <a @spa href="{{ route('terms') }}">terms of service</a></span>
                     </label>
-                    <button type="submit" id="co-submit" class="btn btn-dark btn-block">Place order · <span data-co-total>£{{ number_format($bag['subtotal'], 2) }}</span></button>
+                    <button type="submit" id="co-submit" class="btn btn-dark btn-block" @disabled($slots->isEmpty())>Place order · <span data-co-total>£{{ number_format($bag['subtotal'], 2) }}</span></button>
                     <a @spa href="{{ route('bag') }}" class="btn btn-ghost btn-block" style="margin-top:0.75rem;">Back to bag</a>
                 </aside>
             </form>
@@ -426,7 +431,7 @@
         /* UK phone (07 mobile / 01-02 landline / +44) and email, mirrored server-side. */
         function validUKPhone(v) {
             var d = String(v || '').replace(/[\s\-().]/g, '');
-            return /^(?:\+44|0)(?:7\d{9}|[12]\d{9})$/.test(d);
+            return /^(?:\+44|0)(?:7\d{9}|[1235789]\d{9})$/.test(d);
         }
         function validEmail(v) {
             return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(v || '').trim());
@@ -444,7 +449,9 @@
             submitBtn.disabled = false;
         }
         function slotFee() {
+            if (!slotSel || !slotSel.options || slotSel.selectedIndex < 0) return 0;
             var opt = slotSel.options[slotSel.selectedIndex];
+            if (!opt) return 0;
             return parseFloat(opt.dataset.fee || 0) || 0;
         }
         /* Same-day cutoff: past-cutoff windows drop out when today is picked. */
@@ -642,8 +649,11 @@
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
                 body: JSON.stringify(payload)
             }).then(function (res) {
-                return res.json().then(function (json) {
-                    if (!res.ok) throw json;
+                return res.json().catch(function () { return {}; }).then(function (json) {
+                    if (!res.ok) {
+                        if (res.status === 419) throw { message: 'Your session expired — please reload the page and try again.' };
+                        throw (json && json.message) ? json : { message: 'Something went wrong — please try again.' };
+                    }
                     return json;
                 });
             });

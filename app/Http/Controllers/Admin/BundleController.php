@@ -24,7 +24,7 @@ class BundleController extends Controller
     public function create()
     {
         return view('admin.bundles.manage', [
-            'bundle' => new BundleOffer(['required_qty' => 3, 'status' => true]),
+            'bundle' => new BundleOffer(['required_qty' => 3, 'status' => true, 'offer_id' => request('offer_id')]),
             ...$this->formData(),
         ]);
     }

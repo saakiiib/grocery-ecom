@@ -179,7 +179,7 @@ class OptionGroupController extends Controller
 
     public function toggleStatus(Request $request)
     {
-        $group = OptionGroup::find($request->group_id);
+        $group = OptionGroup::find($request->input('id', $request->input('group_id')));
 
         if (! $group) {
             return response()->json([
@@ -326,7 +326,7 @@ class OptionGroupController extends Controller
 
     public function toggleValueStatus(Request $request)
     {
-        $value = OptionValue::find($request->value_id);
+        $value = OptionValue::find($request->input('id', $request->input('value_id')));
 
         if (! $value) {
             return response()->json([

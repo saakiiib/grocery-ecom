@@ -32,7 +32,11 @@
             @else
                 <p class="text-muted">Slots are being set up — check back soon.</p>
             @endif
-            <p class="text-muted" style="font-size:14px;margin-top:1rem;">Order before 8pm for next-day slots. Everything travels cold-packed.</p>
+            @if ($slots->isNotEmpty() && $slots->min('cutoff_hour') !== null)
+            <p class="text-muted" style="font-size:14px;margin-top:1rem;">Order before {{ (int) $slots->min('cutoff_hour') }}:00 for next-day slots. Everything travels cold-packed.</p>
+            @else
+            <p class="text-muted" style="font-size:14px;margin-top:1rem;">Everything travels cold-packed.</p>
+            @endif
         </div>
         <div class="text-center">
             <a @spa href="{{ route('shop') }}" class="btn btn-dark">Start shopping</a>

@@ -72,7 +72,10 @@ class GalleryController extends Controller
     public function update(Request $request)
     {
         $g = Gallery::findOrFail($request->id);
-        $request->validate(['gallery_category_id' => 'nullable|exists:gallery_categories,id']);
+        $request->validate([
+            'gallery_category_id' => 'nullable|exists:gallery_categories,id',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
+        ]);
         $data = $request->only(['gallery_category_id', 'caption']);
         if ($request->hasFile('image')) {
             if ($g->image && file_exists(public_path($g->image))) {

@@ -37,19 +37,19 @@ Route::middleware(['api_session', 'api_auth:optional'])->group(function () {
     Route::get('/track', [CatalogApiController::class, 'trackOrder'])->middleware('throttle:20,1');
 
     // Bag
-    Route::get('/bag', [CatalogApiController::class, 'bag']);
-    Route::post('/bag/add', [BagController::class, 'add']);
-    Route::post('/bag/update', [BagController::class, 'update']);
-    Route::post('/bag/remove', [BagController::class, 'remove']);
+    Route::get('/bag', [CatalogApiController::class, 'bag'])->middleware('throttle:60,1');
+    Route::post('/bag/add', [BagController::class, 'add'])->middleware('throttle:60,1');
+    Route::post('/bag/update', [BagController::class, 'update'])->middleware('throttle:60,1');
+    Route::post('/bag/remove', [BagController::class, 'remove'])->middleware('throttle:60,1');
 
     // Checkout (guests allowed, same as web)
     Route::get('/checkout/init', [CatalogApiController::class, 'checkoutInit']);
-    Route::post('/checkout/postcode', [CheckoutController::class, 'postcode']);
+    Route::post('/checkout/postcode', [CheckoutController::class, 'postcode'])->middleware('throttle:60,1');
     Route::post('/checkout/coupon', [CheckoutController::class, 'coupon'])->middleware('throttle:20,1');
     Route::post('/checkout/place', [CheckoutController::class, 'place'])->middleware('throttle:10,1');
     Route::post('/checkout/payment-confirm', [CheckoutController::class, 'paymentConfirm'])->middleware('throttle:30,1');
     Route::get('/checkout/success/{number}', [CheckoutController::class, 'successJson']);
-    Route::post('/checkout/cancel', [CheckoutController::class, 'cancel']);
+    Route::post('/checkout/cancel', [CheckoutController::class, 'cancel'])->middleware('throttle:20,1');
 
     // Shopper-only
     Route::middleware('api_auth')->group(function () {

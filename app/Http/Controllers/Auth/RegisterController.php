@@ -23,6 +23,10 @@ class RegisterController extends Controller
 
     public function register(Request $request)
     {
+        // Normalize before validating so login (which strips separators for
+        // lookup) matches what is stored, and `unique` cannot be bypassed
+        // by retyping the same number with different spacing.
+        $request->merge(['phone' => self::normalizePhone($request->input('phone'))]);
         $data = $request->validate([
             'name' => 'required|string|max:100',
             'email' => 'required|email|max:150|unique:users,email',
@@ -46,6 +50,8 @@ class RegisterController extends Controller
 
         auth()->login($user);
 
+        $request->session()->regenerate();
+
         // Late registration: guest orders placed with this email become theirs.
         Order::claimGuestOrders($user);
 
@@ -57,5 +63,15 @@ class RegisterController extends Controller
         }
 
         return redirect()->route('account');
+    }
+
+    private static function normalizePhone(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+        $clean = (string) preg_replace('/[\s\-().]/', '', $value);
+
+        return $clean === '' ? null : $clean;
     }
 }

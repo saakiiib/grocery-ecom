@@ -13,6 +13,7 @@ use App\Models\OrderStatus;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Setting;
+use App\Models\ShoppingList;
 use App\Models\User;
 use App\Models\UserPoint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -436,14 +437,27 @@ test('online methods are refused without keys, then work with faked gateways', f
                 return Http::response(['id' => 'pi_123', 'client_secret' => 'cs_123', 'status' => 'requires_payment_method'], 200);
             }
 
-            return Http::response(['id' => 'pi_123', 'status' => 'succeeded'], 200);
+            $order = Order::where('payment_reference', 'pi_123')->first() ?? Order::orderByDesc('id')->first();
+            $cents = $order ? (int) round((float) $order->total * 100) : 0;
+
+            return Http::response(['id' => 'pi_123', 'status' => 'succeeded', 'currency' => 'gbp', 'amount_received' => $cents, 'metadata' => ['order_number' => $order?->number]], 200);
         }
         if (str_contains($url, '/v1/oauth2/token')) {
             return Http::response(['access_token' => 'tok'], 200);
         }
         if (str_contains($url, '/capture')) {
+            $order = Order::where('payment_method', 'paypal')->orderByDesc('id')->first() ?? Order::orderByDesc('id')->first();
+
             return Http::response([
-                'purchase_units' => [['payments' => ['captures' => [['id' => 'CAP-1', 'status' => 'COMPLETED']]]]],
+                'purchase_units' => [[
+                    'reference_id' => $order?->number,
+                    'amount' => ['currency_code' => 'GBP', 'value' => number_format((float) ($order?->total ?? 0), 2, '.', '')],
+                    'payments' => ['captures' => [[
+                        'id' => 'CAP-1',
+                        'status' => 'COMPLETED',
+                        'amount' => ['currency_code' => 'GBP', 'value' => number_format((float) ($order?->total ?? 0), 2, '.', '')],
+                    ]]],
+                ]],
             ], 200);
         }
 
@@ -685,8 +699,18 @@ test('abandoned paypal orders cancel cleanly, paid ones never do', function () {
             return Http::response(['access_token' => 'tok'], 200);
         }
         if (str_contains($url, '/capture')) {
+            $order = Order::where('payment_method', 'paypal')->orderByDesc('id')->first() ?? Order::orderByDesc('id')->first();
+
             return Http::response([
-                'purchase_units' => [['payments' => ['captures' => [['id' => 'CAP-9', 'status' => 'COMPLETED']]]]],
+                'purchase_units' => [[
+                    'reference_id' => $order?->number,
+                    'amount' => ['currency_code' => 'GBP', 'value' => number_format((float) ($order?->total ?? 0), 2, '.', '')],
+                    'payments' => ['captures' => [[
+                        'id' => 'CAP-9',
+                        'status' => 'COMPLETED',
+                        'amount' => ['currency_code' => 'GBP', 'value' => number_format((float) ($order?->total ?? 0), 2, '.', '')],
+                    ]]],
+                ]],
             ], 200);
         }
 
@@ -721,7 +745,10 @@ test('shoppers can pay again for unpaid orders and cancel untouched ones', funct
             return Http::response(['id' => 'pi_retry', 'client_secret' => 'cs_retry'], 200);
         }
 
-        return Http::response(['id' => 'pi_retry', 'status' => 'succeeded'], 200);
+        $order = Order::where('payment_reference', 'pi_retry')->first() ?? Order::orderByDesc('id')->first();
+        $cents = $order ? (int) round((float) $order->total * 100) : 0;
+
+        return Http::response(['id' => 'pi_retry', 'status' => 'succeeded', 'currency' => 'gbp', 'amount_received' => $cents, 'metadata' => ['order_number' => $order?->number]], 200);
     });
 
     // Unpaid stripe order (payment abandoned at checkout).
@@ -893,4 +920,79 @@ test('order statuses cover the full grocery lifecycle', function () {
     expect(OrderStatus::ordered()->pluck('slug')->all())->toBe([
         'new', 'confirmed', 'packed', 'out_for_delivery', 'delivered', 'cancelled',
     ]);
+});
+
+test('order numbers are not enumerable by strangers', function () {
+    $f = shopFixtures();
+    $slot = shopSetup()['slot'];
+    $owner = shopperUser();
+
+    $this->actingAs($owner);
+    session()->put('bag', [$f['a']->id => 2]);
+    $this->postJson(route('checkout.place'), checkoutPayload($slot->id))->assertOk();
+    $order = Order::firstOrFail();
+
+    // Another signed-in shopper sees an identical 404 on every order URL.
+    $stranger = User::create([
+        'name' => 'Stranger', 'email' => 'stranger2@example.com',
+        'password' => bcrypt('password'), 'user_type' => 0,
+    ]);
+    $this->actingAs($stranger);
+    $this->flushSession();
+    $this->actingAs($stranger);
+    $this->get(route('account.order', $order->number))->assertNotFound();
+    $this->get(route('order.invoice', $order->number))->assertNotFound();
+    $this->get(route('order.success', $order->number))->assertNotFound();
+    $this->post(route('account.reorder', $order->number))->assertNotFound();
+    $this->post(route('account.cancel', $order->number))->assertNotFound();
+
+    // Guests are sent to sign in for account pages, and see nothing elsewhere.
+    auth()->logout();
+    $this->flushSession();
+    $this->get(route('account.order', $order->number))->assertRedirect(route('login'));
+    $this->get(route('order.invoice', $order->number))->assertNotFound();
+    $this->get(route('order.success', $order->number))->assertNotFound();
+
+    // The owner still sees everything.
+    $this->actingAs($owner);
+    $this->get(route('account.order', $order->number))->assertOk();
+    $this->get(route('order.success', $order->number))->assertOk();
+});
+
+test('account hardening: remember-me, phone normalize, list gate, invoice link', function () {
+    $f = shopFixtures();
+    shopSetup();
+
+    // Phones normalize at register and match at login with any spacing.
+    $this->post(route('register'), [
+        'name' => 'Call Me', 'email' => 'callme@example.com', 'phone' => '07123 456-789',
+        'password' => 'SecurePass123', 'password_confirmation' => 'SecurePass123',
+    ])->assertRedirect(route('account'));
+    expect(User::where('email', 'callme@example.com')->firstOrFail()->phone)->toBe('07123456789');
+
+    auth()->logout();
+    $this->post(route('login'), ['login' => '(07123) 456789', 'password' => 'SecurePass123', 'remember' => '1'])
+        ->assertRedirect(route('home'));
+    $this->assertAuthenticated();
+    $queued = array_map(fn ($c) => $c->getName(), $this->app['cookie']->getQueuedCookies());
+    expect(collect($queued)->first(fn ($n) => str_starts_with($n, 'remember')))->not->toBeNull();
+
+    // API lists reject dead variants like the web form does.
+    $owner = auth()->user();
+    $list = ShoppingList::create(['user_id' => $owner->id, 'name' => 'Weekly']);
+    $f['b']->update(['status' => false]);
+    $plain = \App\Models\ApiToken::issue($owner);
+    $this->withHeader('Authorization', 'Bearer '.$plain)
+        ->postJson('/api/lists/'.$list->id.'/items', ['variant_id' => $f['b']->id])
+        ->assertStatus(422);
+    $f['b']->update(['status' => true]);
+
+    // Order detail links the invoice.
+    session()->put('bag', [$f['a']->id => 2]);
+    $slot = DeliverySlot::firstOrFail();
+    $this->postJson(route('checkout.place'), checkoutPayload($slot->id))->assertOk();
+    $order = Order::orderByDesc('id')->firstOrFail();
+    $this->get(route('account.order', $order->number))->assertOk()
+        ->assertSee(route('order.invoice', $order->number), false)
+        ->assertSee('Download invoice', false);
 });

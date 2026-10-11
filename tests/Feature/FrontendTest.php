@@ -342,7 +342,7 @@ test('contact form validates and stores into contacts inbox', function () {
 
     $this->postJson(route('contact.store'), [
         'name' => 'Jane Smith', 'email' => 'jane@example.co.uk',
-        'topic' => 'Callback request', 'postcode' => 'GL54 3AA', 'message' => 'Hi',
+        'topic' => 'Callback request', 'postcode' => 'GL54 3AA', 'message' => 'Hi, please call me back about my order, thanks.',
     ])->assertOk()->assertJson(['success' => true]);
 
     $c = Contact::where('email', 'jane@example.co.uk')->firstOrFail();

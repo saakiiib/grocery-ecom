@@ -43,6 +43,16 @@ Route::group(['prefix' => 'admin/', 'middleware' => ['auth', 'is_admin']], funct
     Route::get('/company-details', [CompanyDetailsController::class, 'index'])->name('admin.companyDetails');
     Route::post('/company-details', [CompanyDetailsController::class, 'update'])->name('admin.companyDetails');
 
+    // Content pages (About / Privacy / Terms / Refund — bodies shown on the storefront)
+    Route::get('/content/about', [CompanyDetailsController::class, 'aboutUs'])->name('admin.content.about');
+    Route::post('/content/about', [CompanyDetailsController::class, 'aboutUsUpdate'])->name('admin.content.about.update');
+    Route::get('/content/privacy', [CompanyDetailsController::class, 'privacyPolicy'])->name('admin.content.privacy');
+    Route::post('/content/privacy', [CompanyDetailsController::class, 'privacyPolicyUpdate'])->name('admin.content.privacy.update');
+    Route::get('/content/terms', [CompanyDetailsController::class, 'termsAndConditions'])->name('admin.content.terms');
+    Route::post('/content/terms', [CompanyDetailsController::class, 'termsAndConditionsUpdate'])->name('admin.content.terms.update');
+    Route::get('/content/refund', [CompanyDetailsController::class, 'refundPolicy'])->name('admin.content.refund');
+    Route::post('/content/refund', [CompanyDetailsController::class, 'refundPolicyUpdate'])->name('admin.content.refund.update');
+
     // Category CRUD
     Route::get('/category', [CategoryController::class, 'index'])->name('allcategory');
     Route::get('/parent-categories', [CategoryController::class, 'parentCategories'])->name('parent.categories');

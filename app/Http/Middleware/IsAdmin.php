@@ -10,11 +10,13 @@ class IsAdmin
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (auth()->check() && auth()->user()->status == 1 && auth()->user()->user_type == '1') {
+        $user = auth()->user();
+
+        if (auth()->check() && (int) $user->user_type === 1 && ($user->status === null || (bool) $user->status)) {
             return $next($request);
         }
 
-        if (auth()->check() && auth()->user()->status != 1) {
+        if (auth()->check() && $user->status !== null && ! (bool) $user->status) {
             auth()->logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();

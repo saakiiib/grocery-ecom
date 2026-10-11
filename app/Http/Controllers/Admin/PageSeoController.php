@@ -17,7 +17,6 @@ class PageSeoController extends Controller
         'gallery' => 'Gallery',
         'cart' => 'Shopping Bag',
         'checkout' => 'Checkout',
-        'account' => 'My Account',
         'faq' => 'FAQ',
         'contact' => 'Contact Us',
         'privacy' => 'Privacy Policy',
@@ -25,6 +24,7 @@ class PageSeoController extends Controller
         'refund' => 'Refund Policy',
         'loyalty' => 'Loyalty Points',
         'delivery' => 'Delivery Information',
+        'track' => 'Track Order',
         'favourites' => 'Favourites',
     ];
 

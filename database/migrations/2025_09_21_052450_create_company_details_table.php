@@ -33,6 +33,7 @@ return new class extends Migration
             $table->longText('home_footer')->nullable();
             $table->longText('privacy_policy')->nullable();
             $table->longText('terms_and_conditions')->nullable();
+            $table->longText('refund_policy')->nullable();
             $table->longText('mail_body')->nullable();
             $table->longText('copyright')->nullable();
             $table->string('whatsapp')->nullable();

@@ -38,6 +38,14 @@ class Product extends Model
             'is_halal' => 'boolean',
             'is_organic' => 'boolean',
             'is_gluten_free' => 'boolean',
+            'energy_kcal' => 'decimal:2',
+            'fat_g' => 'decimal:2',
+            'saturates_g' => 'decimal:2',
+            'carbs_g' => 'decimal:2',
+            'sugars_g' => 'decimal:2',
+            'fibre_g' => 'decimal:2',
+            'protein_g' => 'decimal:2',
+            'salt_g' => 'decimal:2',
         ];
     }
 

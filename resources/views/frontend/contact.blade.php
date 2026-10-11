@@ -69,8 +69,9 @@
                     </div>
                     <div class="form-group">
                         <label for="contact-message">Message</label>
-                        <textarea id="contact-message" required placeholder="Tell us a little more…"></textarea>
+                        <textarea id="contact-message" required minlength="10" placeholder="Tell us a little more…"></textarea>
                     </div>
+                    <input type="text" id="contact-website" name="website" value="" autocomplete="off" tabindex="-1" aria-hidden="true" style="position:absolute;left:-9999px;opacity:0;height:0;">
                     <button type="submit" class="btn btn-dark btn-block">Send message</button>
                 </div>
                 <div id="contact-form-success" style="display:none;text-align:center;padding:2rem 0;">
@@ -103,6 +104,7 @@
           topic: document.getElementById('contact-topic').value,
           postcode: document.getElementById('contact-postcode').value,
           message: document.getElementById('contact-message').value,
+          website: document.getElementById('contact-website').value,
         }),
       }).then(function (r) {
         if (btn) btn.disabled = false;

@@ -42,7 +42,7 @@
                             <img src="{{ $g['src'] }}" data-full="{{ $g['full'] ?? $g['src'] }}" alt="{{ $g['caption'] ?? $product->name }}" loading="lazy" decoding="async"
                                 style="width:72px;height:72px;object-fit:cover;border-radius:10px;cursor:pointer;"
                                 onerror="this.onerror=null;this.src=this.dataset.full"
-                                onclick="document.querySelector('[data-main-image]').src=this.src">
+                                onclick="document.querySelector('[data-main-image]').src=this.dataset.full||this.src">
                         @endforeach
                     </div>
                 @endif
@@ -237,7 +237,7 @@
                 <div class="delivery-notes">
                     <div>
                         <x-icon name="truck" />
-                        Free delivery when your order reaches £50
+                        Free delivery when your order reaches £{{ number_format(\App\Models\Setting::money('delivery_free_over', 50.00), 2) }}
                     </div>
                     <div>
                         <x-icon name="leaf" />

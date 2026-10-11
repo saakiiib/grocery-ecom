@@ -39,15 +39,18 @@ class LoginController extends Controller
 
         $input = $request->only(['login', 'password', 'redirect']);
         $field = filter_var($input['login'], FILTER_VALIDATE_EMAIL) ? 'email' : 'phone';
+        $lookup = $field === 'phone' ? (string) preg_replace('/[\s\-().]/', '', $input['login']) : $input['login'];
 
-        $user = User::where($field, $input['login'])->first();
+        $user = User::where($field, $lookup)->first();
 
         // One message for every failure: no account / inactive / wrong password oracle.
-        if (! $user || $user->status != 1 || ! auth()->attempt(['email' => $user->email, 'password' => $input['password']])) {
+        if (! $user || $user->status != 1 || ! auth()->attempt(['email' => $user->email, 'password' => $input['password']], $request->boolean('remember'))) {
             return redirect()->back()
                 ->withInput($request->only('login'))
                 ->withErrors(['login' => 'These credentials do not match our records.']);
         }
+
+        $request->session()->regenerate();
 
         // Shoppers who ordered as guests inherit that history on sign-in.
         if (auth()->user()->user_type == 0) {

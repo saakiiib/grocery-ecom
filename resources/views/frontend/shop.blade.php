@@ -66,7 +66,7 @@
 
     <div class="container" style="padding-bottom: 4rem;">
         @php
-            $activeFilterCount = ($activeCategory !== 'All' ? 1 : 0) + ($onlyOffers ? 1 : 0) + count($diets) + count($freeFrom);
+            $activeFilterCount = ($activeCategory !== 'All' ? 1 : 0) + ($onlyOffers ? 1 : 0) + count($diets);
         @endphp
         <button type="button" class="shop-filters-toggle" data-shop-filters-toggle aria-expanded="false">
             <x-icon name="sliders-horizontal" />
@@ -107,11 +107,6 @@
                     class="child-chip {{ in_array($key, $diets) ? 'active' : '' }}">{{ $label }}{{ in_array($key, $diets) ? ' ×' : '' }}</a>
             @endforeach
             @endif
-            @foreach ($freeFrom as $ff)
-                @php $cleared = array_values(array_diff($freeFrom, [$ff])); @endphp
-                <a @spa href="{{ $shopUrl(array_merge($keepParams, ['free_from' => $cleared !== [] ? $cleared : null])) }}"
-                    class="child-chip active">No {{ $ff }} ×</a>
-            @endforeach
         </div>
         </div>
 
@@ -129,14 +124,6 @@
                 <input type="search" name="q" value="{{ $search }}" placeholder="Search the market — try a name or SKU" aria-label="Search" data-shop-search>
                 <button type="submit" class="btn btn-dark btn-sm">Go</button>
             </div>
-            @if (empty($search) && ! empty($trendingSearches))
-                <div class="trend-row">
-                    <span class="text-muted">Trending:</span>
-                    @foreach ($trendingSearches as $term)
-                        <a @spa href="{{ route('shop', ['q' => $term]) }}" class="child-chip">{{ $term }}</a>
-                    @endforeach
-                </div>
-            @endif
             @if ($priceCeil > $priceFloor)
                 <div class="price-slider" data-price-slider data-floor="{{ $priceFloor }}" data-ceil="{{ $priceCeil }}">
                     <input type="hidden" name="min_price" value="{{ $minPrice ?? $priceFloor }}" data-price-min>
@@ -156,12 +143,6 @@
             @endif
             <div class="flex items-center gap-2">
                 <span class="text-muted" style="font-size:13px;">{{ $total > $perPage ? "Showing $shown of $total" : "$total product" . ($total === 1 ? '' : 's') }}</span>
-                <select name="free_from[]" multiple aria-label="Free from allergens" title="Free from allergens" style="max-width:150px;">
-                    <option value="">Free from…</option>
-                    @foreach ($allergens as $al)
-                        <option value="{{ $al->slug }}" @selected(in_array($al->slug, $freeFrom))>No {{ $al->name }}</option>
-                    @endforeach
-                </select>
                 <select class="sort-select" name="sort" aria-label="Sort" data-shop-sort>
                     <option value="featured" @selected($sort === 'featured')>Featured</option>
                     <option value="price_asc" @selected($sort === 'price_asc')>Price: low to high</option>

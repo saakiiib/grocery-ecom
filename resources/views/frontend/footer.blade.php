@@ -119,8 +119,8 @@
         </div>
         <div class="footer-bottom">
             <span>© {{ date('Y') }} {{ $brand }}. All rights reserved.</span>
-            <span><x-icon name="shield-check" /> 100% Halal promise · Prices in GBP · Free delivery over £50</span>
             <span class="footer-credit">Design &amp; Developed by <a href="https://mentosoftware.co.uk/" target="_blank" rel="noopener">MentoSoftware</a></span>
+            <span class="footer-halal"><x-icon name="shield-check" /> 100% Halal promise · Prices in GBP · Free delivery over £{{ number_format(\App\Models\Setting::money('delivery_free_over', 50.00), 2) }}</span>
         </div>
     </div>
 </footer>

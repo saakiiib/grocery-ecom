@@ -102,20 +102,27 @@ class CheckoutController extends Controller
      *
      * @return array{ok: bool, message?: string, lines?: array, subtotal?: float, fee?: float, total?: float, slot?: DeliverySlot}
      */
-    public static function priceBag(int $slotId, ?float $subtotalOverride = null, bool $pickup = false): array
+    public static function priceBag(int $slotId, bool $pickup = false): array
     {
         $bag = BagController::detailed();
 
-        if ($bag['count'] === 0) {
-            return ['ok' => false, 'message' => 'Your bag is empty.'];
+        $unavailable = collect($bag['lines'])->where('available', false)->pluck('name')->all();
+        if ($unavailable !== []) {
+            $availableIds = collect($bag['lines'])->where('available', true)->mapWithKeys(fn ($l) => [(int) $l['variant_id'] => (int) $l['qty']])->all();
+            session()->put(BagController::SESSION_KEY, $availableIds);
         }
 
-        $unavailable = collect($bag['lines'])->where('available', false)->pluck('name')->all();
+        if ($bag['count'] === 0) {
+            return ['ok' => false, 'message' => $unavailable !== []
+                ? 'Sorry — '.implode(', ', $unavailable).' is no longer available. Your bag was updated, please review it.'
+                : 'Your bag is empty.'];
+        }
+
         if ($unavailable !== []) {
             return ['ok' => false, 'message' => 'Sorry — '.implode(', ', $unavailable).' is no longer available. Your bag was updated, please review it.'];
         }
 
-        $subtotal = $subtotalOverride ?? $bag['subtotal'];
+        $subtotal = $bag['subtotal'];
         $min = Setting::money('delivery_min_order', 15.00);
         if (! $pickup && $subtotal < $min) {
             return ['ok' => false, 'message' => 'The minimum order for delivery is £'.number_format($min, 2).'.'];
@@ -152,14 +159,14 @@ class CheckoutController extends Controller
         ]);
         $data = $request->validate([
             'name' => 'required|string|max:100',
-            'phone' => ['required', 'string', 'max:30', 'regex:/^(?:\+44|0)(?:7\d{9}|[12]\d{9})$/'],
+            'phone' => ['required', 'string', 'max:30', 'regex:/^(?:\+44|0)(?:7\d{9}|[1235789]\d{9})$/'],
             // Guests must leave an email — otherwise no receipt can reach them.
             'email' => [auth()->check() ? 'nullable' : 'required', 'email:rfc', 'max:255'],
             'address' => [$deliveryAddressRule, 'string', 'max:500'],
             'city' => [$deliveryAddressRule, 'string', 'max:100'],
             'postcode' => [$deliveryAddressRule, 'string', 'max:20'],
             'billing_name' => [$billingRule, 'string', 'max:100'],
-            'billing_phone' => [$billingRule, 'string', 'max:30', 'regex:/^(?:\+44|0)(?:7\d{9}|[12]\d{9})$/'],
+            'billing_phone' => [$billingRule, 'string', 'max:30', 'regex:/^(?:\+44|0)(?:7\d{9}|[1235789]\d{9})$/'],
             'billing_address' => [$billingRule, 'string', 'max:500'],
             'billing_city' => [$billingRule, 'string', 'max:100'],
             'billing_postcode' => [$billingRule, 'string', 'max:20'],
@@ -200,7 +207,7 @@ class CheckoutController extends Controller
             return response()->json(['message' => 'PayPal is not available right now — please choose another method.'], 422);
         }
 
-        $priced = static::priceBag($data['delivery_slot_id'], null, $pickup);
+        $priced = static::priceBag($data['delivery_slot_id'], $pickup);
         if (! $priced['ok']) {
             return response()->json(['message' => $priced['message']], 422);
         }
@@ -253,6 +260,17 @@ class CheckoutController extends Controller
                     $check = $coupon->checkFor(auth()->id(), $priced['subtotal']);
                     if (! $check['ok']) {
                         throw new CouponRejected($check['message']);
+                    }
+                    // Close the race: the coupon row is locked, but usesCount reads
+                    // committed orders — recount under lock so concurrent checkouts
+                    // serialize on the orders index instead of both passing max_uses.
+                    $lockedUses = $coupon->orders()->where('status_slug', '!=', 'cancelled')->lockForUpdate()->count();
+                    if ($coupon->max_uses !== null && $lockedUses >= $coupon->max_uses) {
+                        throw new CouponRejected('That coupon has all been used up.');
+                    }
+                    $lockedMine = $coupon->orders()->where('user_id', auth()->id())->where('status_slug', '!=', 'cancelled')->lockForUpdate()->count();
+                    if ($lockedMine >= $coupon->max_per_user) {
+                        throw new CouponRejected('You have already used that coupon.');
                     }
                     $couponDiscount = $check['discount'];
                 }
@@ -384,11 +402,17 @@ class CheckoutController extends Controller
         session(['last_order_id' => $order->id]);
 
         if ($data['payment_method'] === 'cod') {
-            $order->changeStatus(
-                'confirmed',
-                auth()->id(),
-                $pickup ? 'Cash on collection — pay in store.' : 'Cash on delivery — pay the driver.'
-            );
+            try {
+                $order->changeStatus(
+                    'confirmed',
+                    auth()->id(),
+                    $pickup ? 'Cash on collection — pay in store.' : 'Cash on delivery — pay the driver.'
+                );
+            } catch (\Throwable $e) {
+                report($e);
+
+                return response()->json(['message' => 'We could not confirm your order — please try again or contact us.'], 500);
+            }
             Order::sendMail($order->receiptEmail(), new OrderPlaced($order));
             BagController::clear();
 
@@ -409,7 +433,6 @@ class CheckoutController extends Controller
             }
             $order->payment_reference = $intent['id'];
             $order->save();
-            BagController::clear();
 
             return response()->json([
                 'ok' => true,
@@ -430,7 +453,6 @@ class CheckoutController extends Controller
         }
         $order->payment_reference = $ppOrderId;
         $order->save();
-        BagController::clear();
 
         return response()->json([
             'ok' => true,
@@ -476,7 +498,7 @@ class CheckoutController extends Controller
         $data = $request->validate(['postcode' => 'required|string|max:20']);
 
         $zone = DeliveryZone::matching($data['postcode']);
-        if ($zone === null && DeliveryZone::active()->exists()) {
+        if ($zone === null && DeliveryZone::exists()) {
             return response()->json(['ok' => false, 'message' => 'Sorry — we don\'t deliver to '.$data['postcode'].' yet.'], 422);
         }
 
@@ -503,6 +525,9 @@ class CheckoutController extends Controller
         if (! $this->maySee($order)) {
             return response()->json(['message' => 'Order not found.'], 404);
         }
+        if (in_array($order->status_slug, ['cancelled', 'delivered', 'refunded'], true)) {
+            return response()->json(['message' => 'That order is no longer payable — please place a fresh order or contact us.'], 422);
+        }
         if ($order->isPaid()) {
             return response()->json(['ok' => true, 'redirect' => route('order.success', $order->number)]);
         }
@@ -524,11 +549,31 @@ class CheckoutController extends Controller
             return response()->json(['message' => 'Your payment has not completed yet — please try again.'], 422);
         }
 
-        $order->payment_status = 'paid';
-        $order->amount_paid = $order->total;
-        $order->save();
-        $order->changeStatus('confirmed', $order->user_id, 'Paid online ('.$order->paymentLabel().').');
-        Order::sendMail($order->receiptEmail(), new OrderPlaced($order));
+        // Row-locked: a webhook racing this confirm resolves to one mail.
+        $confirmed = DB::transaction(function () use ($order) {
+            $fresh = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
+            if ($fresh->isPaid()) {
+                return false;
+            }
+            if (in_array($fresh->status_slug, ['cancelled', 'delivered', 'refunded'], true)) {
+                return false;
+            }
+            $fresh->payment_status = 'paid';
+            $fresh->amount_paid = $fresh->total;
+            $fresh->save();
+            $changed = $fresh->status_slug === 'new'
+                ? $fresh->changeStatus('confirmed', $fresh->user_id, 'Paid online ('.$fresh->paymentLabel().').')
+                : null;
+            if ($changed) {
+                Order::sendMail($fresh->receiptEmail(), new OrderPlaced($fresh));
+            }
+
+            return true;
+        });
+        if (! $confirmed) {
+            return response()->json(['ok' => true, 'redirect' => route('order.success', $order->number)]);
+        }
+        BagController::clear();
         session(['last_order_id' => $order->id]);
 
         return response()->json(['ok' => true, 'redirect' => route('order.success', $order->number)]);
@@ -656,7 +701,9 @@ class CheckoutController extends Controller
         $intentId = $intent['id'] ?? null;
         $referenceMatches = is_string($intentId)
             && str_starts_with($intentId, 'pi_')
-            && (! $order->payment_reference || hash_equals((string) $order->payment_reference, $intentId));
+            && is_string($order->payment_reference)
+            && $order->payment_reference !== ''
+            && hash_equals($order->payment_reference, $intentId);
 
         return $referenceMatches
             && ($intent['metadata']['order_number'] ?? null) === $order->number

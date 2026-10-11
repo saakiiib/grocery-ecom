@@ -78,6 +78,7 @@ class AddressController extends Controller
      */
     private function validated(Request $request): array
     {
+        $request->merge(['phone' => self::normalizePhone($request->input('phone'))]);
         $validator = Validator::make($request->all(), [
             'label' => 'required|string|max:50',
             'name' => 'required|string|max:100',
@@ -108,5 +109,15 @@ class AddressController extends Controller
             $user->addresses()->where('id', '!=', $address->id)->update(['is_default_billing' => false]);
         }
         $address->update(['is_default_delivery' => $delivery, 'is_default_billing' => $billing]);
+    }
+
+    private static function normalizePhone(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+        $clean = (string) preg_replace('/[\s\-().]/', '', $value);
+
+        return $clean === '' ? null : $clean;
     }
 }

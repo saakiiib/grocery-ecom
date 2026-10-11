@@ -17,7 +17,7 @@ class ContactController extends Controller
             return DataTables::of($contacts)
                 ->addIndexColumn()
                 ->addColumn('message', function ($row) {
-                    return strlen($row->message) > 60 ? substr($row->message, 0, 60).'...' : $row->message;
+                    return mb_strlen($row->message) > 60 ? mb_substr($row->message, 0, 60).'...' : $row->message;
                 })
                 ->addColumn('date', function ($row) {
                     return $row->created_at->format('d M Y, h:i A');

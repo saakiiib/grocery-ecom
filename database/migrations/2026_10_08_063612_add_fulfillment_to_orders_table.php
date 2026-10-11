@@ -11,6 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasColumn('orders', 'fulfillment')) {
+            return;
+        }
         Schema::table('orders', function (Blueprint $table) {
             $table->string('fulfillment', 20)->default('delivery')->after('payment_status');
         });

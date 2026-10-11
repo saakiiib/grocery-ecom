@@ -26,7 +26,7 @@ class ReviewController extends Controller
                 ->addColumn('review', function ($row) {
                     $text = $row->title ? $row->title.' — '.$row->body : $row->body;
 
-                    return strlen($text) > 80 ? substr($text, 0, 80).'...' : $text;
+                    return mb_strlen($text) > 80 ? mb_substr($text, 0, 80).'...' : $text;
                 })
                 ->addColumn('status', function ($row) {
                     $checked = $row->status ? 'checked' : '';

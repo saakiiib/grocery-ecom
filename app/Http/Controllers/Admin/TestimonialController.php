@@ -23,7 +23,7 @@ class TestimonialController extends Controller
                     return '<img src="'.$src.'" class="img-thumbnail" style="width:50px;height:50px;object-fit:cover;border-radius:50%;">';
                 })
                 ->addColumn('review', function ($row) {
-                    return strlen($row->review) > 60 ? substr($row->review, 0, 60).'...' : $row->review;
+                    return mb_strlen($row->review) > 60 ? mb_substr($row->review, 0, 60).'...' : $row->review;
                 })
                 ->addColumn('status', function ($row) {
                     $checked = $row->is_active ? 'checked' : '';

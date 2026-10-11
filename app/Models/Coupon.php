@@ -63,7 +63,7 @@ class Coupon extends Model
 
         $discount = $this->type === 'fixed'
             ? min((float) $this->value, $subtotal)
-            : round($subtotal * (float) $this->value / 100, 2);
+            : round($subtotal * min((float) $this->value, 100.0) / 100, 2);
 
         return ['ok' => true, 'discount' => max(0.0, $discount)];
     }

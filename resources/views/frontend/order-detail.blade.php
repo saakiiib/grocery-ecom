@@ -34,10 +34,13 @@
             @php $st = $order->status; @endphp
             <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.75rem;margin-bottom:1rem;">
                 <span class="status-pill" @if ($st) style="background:{{ $st->color }}22;color:{{ $st->color }};border:1px solid {{ $st->color }}55;" @endif>{{ $st?->name ?? ucfirst($order->status_slug) }}</span>
-                <form method="POST" action="{{ route('account.reorder', $order->number) }}">
-                    @csrf
-                    <button type="submit" class="btn btn-dark btn-sm">Buy everything again</button>
-                </form>
+                <span style="display:flex;gap:.5rem;flex-wrap:wrap;">
+                    <a href="{{ route('order.invoice', $order->number) }}" class="btn btn-ghost btn-sm">Download invoice</a>
+                    <form method="POST" action="{{ route('account.reorder', $order->number) }}">
+                        @csrf
+                        <button type="submit" class="btn btn-dark btn-sm">Buy everything again</button>
+                    </form>
+                </span>
             </div>
             @foreach ($order->items as $item)
                 <div class="summary-row" style="align-items:start;">
@@ -162,7 +165,8 @@
                     });
                 },
                 onCancel: function () {
-                    post('{{ route('checkout.cancel') }}', { order_number: '{{ $order->number }}' }).catch(function () {});
+                    // Popup closed: leave the order alone (the sweeper cancels
+                    // truly abandoned orders later) so pay can simply retry.
                     showError('PayPal was closed — no money moved. You can try again any time.');
                 },
                 onError: function () { showError('PayPal ran into a problem — please try again.'); }

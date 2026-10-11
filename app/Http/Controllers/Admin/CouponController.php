@@ -81,6 +81,7 @@ class CouponController extends Controller
 
     private function validated(Request $request, ?int $ignoreId = null): array
     {
+        $request->merge(['code' => strtoupper(trim((string) $request->input('code', '')))]);
         $data = $request->validate([
             'code' => 'required|string|max:50|unique:coupons,code,'.$ignoreId,
             'type' => 'required|in:percent,fixed',
@@ -94,7 +95,10 @@ class CouponController extends Controller
         if ($data['type'] === 'percent' && $data['value'] > 100) {
             throw ValidationException::withMessages(['value' => 'Percent coupons cannot exceed 100.']);
         }
+        $status = $request->has('status')
+            ? $request->boolean('status')
+            : ($ignoreId ? (bool) Coupon::find($ignoreId)?->status : true);
 
-        return $data + ['status' => $request->boolean('status', true)];
+        return $data + ['status' => $status];
     }
 }

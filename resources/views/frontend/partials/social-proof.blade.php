@@ -2,7 +2,7 @@
 @if ($proof)
     <div class="proof-toast" data-proof hidden>
         <script type="application/json" data-proof-data>@json($proof)</script>
-        <a @spa href="#" class="proof-card" data-proof-link>
+        <a href="{{ $proof[0]['url'] ?? '#' }}" class="proof-card" data-proof-link>
             <span class="proof-avatar"><x-icon name="user" /></span>
             <span class="proof-text" data-proof-text></span>
         </a>

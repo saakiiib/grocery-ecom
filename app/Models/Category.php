@@ -21,6 +21,7 @@ class Category extends Model
 
     protected $casts = [
         'sort_order' => 'integer',
+        'status' => 'boolean',
     ];
 
     // Parent category
