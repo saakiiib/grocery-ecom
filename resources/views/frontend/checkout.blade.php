@@ -242,6 +242,16 @@
                             </div>
                         @endif
                     @endauth
+                    @if ($stripeOn)
+                    <div id="co-express" style="margin-bottom:0.9rem;">
+                        <p class="text-muted" style="font-size:13px;margin:0 0 0.5rem;">Express checkout</p>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;">
+                            <button type="button" id="co-express-gpay" class="btn btn-dark">G&nbsp;Pay</button>
+                            <button type="button" id="co-express-apay" class="btn btn-dark">Apple&nbsp;Pay</button>
+                        </div>
+                        <div id="co-express-element" style="display:none;margin-top:0.6rem;"></div>
+                    </div>
+                    @endif
                     <div class="pay-tiles" id="co-methods">
                         <label class="pay-tile">
                             <input type="radio" name="payment_method" value="cod" checked>
@@ -268,13 +278,28 @@
                             <span class="text-muted">{{ $paypalOn ? 'Protected' : 'Soon' }}</span>
                             <span class="pay-tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
                         </label>
+                        <label class="pay-tile @if (! $stripeOn) pay-tile-off @endif">
+                            <input type="radio" name="payment_method" value="google_pay" @disabled(! $stripeOn)>
+                            <span class="pay-tile-icon"><strong>G</strong></span>
+                            <strong>Google Pay</strong>
+                            <span class="text-muted">{{ $stripeOn ? 'One tap' : 'Soon' }}</span>
+                            <span class="pay-tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+                        </label>
+                        <label class="pay-tile @if (! $stripeOn) pay-tile-off @endif">
+                            <input type="radio" name="payment_method" value="apple_pay" @disabled(! $stripeOn)>
+                            <span class="pay-tile-icon"><strong>A</strong></span>
+                            <strong>Apple Pay</strong>
+                            <span class="text-muted">{{ $stripeOn ? 'One tap' : 'Soon' }}</span>
+                            <span class="pay-tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+                        </label>
                     </div>
                     @if (! $stripeOn || ! $paypalOn)
                         <p class="text-muted" style="font-size:13px;margin:0.5rem 0 1rem;">Online payments go live as soon as the shop connects its card and PayPal accounts — cash on delivery works today.</p>
                     @endif
                     <div class="form-group" id="co-card-wrap" style="display:none;">
-                        <label>Card details</label>
+                        <label>Payment details</label>
                         <div id="co-card-element" style="border:1px solid var(--border,#e5e2da);border-radius:10px;padding:0.8rem;"></div>
+                        <p class="text-muted" id="co-stripe-note" style="font-size:13px;margin-top:0.5rem;">Same page, no redirect — your order is already placed, just complete payment below.</p>
                     </div>
                     <div id="co-paypal-buttons" style="display:none;margin-bottom:1rem;"></div>
 
@@ -322,7 +347,33 @@
         var couponMsg = document.getElementById('co-coupon-msg');
         var couponDiscount = 0;
         var stripe = null;
-        var card = null;
+        var stripeElements = null;
+        var payElement = null;
+        var expressElement = null;
+        /* Phase 2 of a Stripe-family payment: the order is placed (server-side
+        amount locked) and the shopper completes payment in-page. */
+        var stripePhase = null;
+
+        function isStripeFamily(m) { return m === 'stripe' || m === 'google_pay' || m === 'apple_pay'; }
+        function grandTotal() {
+            var fee = (fulfillment() === 'pickup' || subtotal >= freeOver) ? 0 : speedFee();
+            return Math.max(0, subtotal + fee - pointsDiscount() - couponDiscount);
+        }
+        /* Totals changed after the order was placed — drop back to phase 1 so
+        the next submit re-prices (the locked intent amount must match). */
+        function resetStripePhase() {
+            if (!stripePhase) return;
+            stripePhase = null;
+            if (payElement) { try { payElement.unmount(); } catch (e) {} payElement = null; }
+            if (expressElement) { try { expressElement.unmount(); } catch (e) {} expressElement = null; }
+            stripeElements = null;
+            var wrap = document.getElementById('co-card-wrap');
+            if (wrap) wrap.style.display = 'none';
+            var ex = document.getElementById('co-express-element');
+            if (ex) { ex.style.display = 'none'; ex.innerHTML = ''; }
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.style.display = method() === 'paypal' ? 'none' : ''; submitBtn.innerHTML = 'Place order · <span data-co-total>' + money(grandTotal()) + '</span>'; submitBtn._orig = submitBtn.innerHTML; }
+            paintTotals();
+        }
 
         /* Address book: picking an entry fills the inputs; billing defaults to delivery. */
         var bookEl = document.getElementById('co-address-book');
@@ -543,6 +594,7 @@
             if (text) toast(text);
         }
         function clearCoupon() {
+            resetStripePhase();
             couponDiscount = 0;
             if (couponHidden) couponHidden.value = '';
             if (couponInput) couponInput.value = '';
@@ -557,6 +609,7 @@
                 applyBtn.disabled = true;
                 post('{{ route('checkout.coupon') }}', { code: code }).then(function (json) {
                     applyBtn.disabled = false;
+                    resetStripePhase();
                     couponDiscount = parseFloat(json.discount) || 0;
                     if (couponHidden) couponHidden.value = json.code || code.toUpperCase();
                     couponMessage(json.message || 'Coupon applied.', true);
@@ -570,11 +623,12 @@
         var removeBtn = document.querySelector('[data-co-coupon-remove]');
         if (removeBtn) removeBtn.addEventListener('click', clearCoupon);
         form.querySelectorAll('input[name="delivery_speed"]').forEach(function (radio) {
-            radio.addEventListener('change', paintTotals);
+            radio.addEventListener('change', function () { resetStripePhase(); paintTotals(); });
         });
-        if (pointsInput) pointsInput.addEventListener('input', paintTotals);
+        if (pointsInput) pointsInput.addEventListener('input', function () { resetStripePhase(); paintTotals(); });
         form.querySelectorAll('input[name="fulfillment"]').forEach(function (radio) {
             radio.addEventListener('change', function () {
+                resetStripePhase();
                 syncFulfillmentUI();
                 paintTotals();
             });
@@ -587,7 +641,7 @@
             return checked ? checked.value : 'cod';
         }
         form.querySelectorAll('input[name="payment_method"]').forEach(function (radio) {
-            radio.addEventListener('change', syncMethod);
+            radio.addEventListener('change', function () { resetStripePhase(); syncMethod(); });
         });
         function syncMethod() {
             if (form.dataset.hasUnavailable === '1') {
@@ -597,16 +651,91 @@
                 return;
             }
             var m = method();
-            document.getElementById('co-card-wrap').style.display = m === 'stripe' ? '' : 'none';
-            document.getElementById('co-paypal-buttons').style.display = m === 'paypal' ? '' : 'none';
-            submitBtn.style.display = m === 'paypal' ? 'none' : '';
-            if (m === 'stripe' && window.Stripe && !stripe) {
-                stripe = window.Stripe('{{ \App\Http\Controllers\CheckoutController::stripePublishable() }}');
-                var elements = stripe.elements();
-                card = elements.create('card');
-                card.mount('#co-card-element');
+            /* Phase-2 panels are driven by startStripePhase, not the tiles. */
+            if (!stripePhase) {
+                document.getElementById('co-card-wrap').style.display = 'none';
+                document.getElementById('co-paypal-buttons').style.display = m === 'paypal' ? '' : 'none';
+                submitBtn.style.display = m === 'paypal' ? 'none' : '';
             }
             if (m === 'paypal') renderPaypalButtons();
+        }
+        /* Top Express row: pick the wallet and run the normal submit (phase 1
+        places the order, phase 2 completes the wallet sheet in-page). */
+        function expressSubmit(m) {
+            var radio = form.querySelector('input[name="payment_method"][value="' + m + '"]');
+            if (!radio || radio.disabled) { showError('That wallet is not available right now — please choose another method.'); return; }
+            radio.checked = true;
+            resetStripePhase();
+            syncMethod();
+            if (form.requestSubmit) form.requestSubmit(); else form.submit();
+        }
+        var gBtn = document.getElementById('co-express-gpay');
+        if (gBtn) gBtn.addEventListener('click', function () { expressSubmit('google_pay'); });
+        var aBtn = document.getElementById('co-express-apay');
+        if (aBtn) aBtn.addEventListener('click', function () { expressSubmit('apple_pay'); });
+        /* Phase 2: mount Stripe's tabbed Payment Element (Card, Revolut Pay…)
+        and, for wallets, the one-tap wallet buttons — all on this page. */
+        function startStripePhase(json) {
+            if (!window.Stripe) { showError('Payment form could not load — please reload and try again.'); unlockSubmit(); return; }
+            var m = json.payment_method || method();
+            stripe = window.Stripe(json.publishable || '');
+            if (!json.publishable) { showError('Card payments are not set up yet — please choose cash.'); unlockSubmit(); return; }
+            stripeElements = stripe.elements({ clientSecret: json.client_secret });
+            stripePhase = { orderNumber: json.order_number, method: m, amount: grandTotal() };
+            payElement = stripeElements.create('payment', {
+                layout: 'tabs',
+                wallets: { applePay: 'auto', googlePay: 'auto' }
+            });
+            payElement.mount('#co-card-element');
+            document.getElementById('co-card-wrap').style.display = '';
+            if (m === 'google_pay' || m === 'apple_pay') {
+                try {
+                    expressElement = stripeElements.create('expressCheckout');
+                    expressElement.mount('#co-express-element');
+                    document.getElementById('co-express-element').style.display = '';
+                    expressElement.on('confirm', function () {
+                        lockSubmit();
+                        var phase = stripePhase;
+                        stripe.confirmPayment({ elements: stripeElements, redirect: 'if_required' }).then(function (result) {
+                            if (result.error) {
+                                showError(result.error.message || 'Wallet payment failed — please try again.');
+                                unlockSubmit();
+                                return;
+                            }
+                            confirmAndGo(phase.orderNumber, phase.method).catch(function (err) {
+                                showError((err && err.message) || 'Payment confirmation failed.');
+                                unlockSubmit();
+                            });
+                        });
+                    });
+                    expressElement.on('cancel', function () {
+                        submitBtn.disabled = false;
+                        showError('Wallet was closed — no money moved. Tap it again or pay by card below.');
+                    });
+                } catch (e) { expressElement = null; }
+            }
+            submitBtn.disabled = false;
+            submitBtn.style.display = '';
+            submitBtn.innerHTML = 'Pay ' + money(stripePhase.amount) + ' securely';
+            submitBtn._orig = submitBtn.innerHTML;
+            document.getElementById('co-card-wrap').scrollIntoView({ block: 'center', behavior: 'smooth' });
+        }
+        /* Phase-2 submit: confirm the card/wallet details against the placed order. */
+        function confirmStripePhase() {
+            if (!stripe || !stripeElements || !stripePhase) { showError('Payment form is not ready — please try again.'); return; }
+            lockSubmit();
+            var phase = stripePhase;
+            stripe.confirmPayment({ elements: stripeElements, redirect: 'if_required' }).then(function (result) {
+                if (result.error) {
+                    showError(result.error.message || 'Your card was declined.');
+                    unlockSubmit();
+                    return;
+                }
+                confirmAndGo(phase.orderNumber, phase.method).catch(function (err) {
+                    showError((err && err.message) || 'Payment confirmation failed.');
+                    unlockSubmit();
+                });
+            });
         }
 
         function post(url, payload) {
@@ -696,6 +825,8 @@
         form.addEventListener('submit', function (e) {
             e.preventDefault();
             errBox.style.display = 'none';
+            /* Phase 2: the order is placed — confirm the card/wallet in-page. */
+            if (stripePhase) { confirmStripePhase(); return; }
             if (typeof postcodeOk !== 'undefined' && !postcodeOk) {
                 showError(postcodeMsg && postcodeMsg.textContent ? postcodeMsg.textContent : 'Sorry — that postcode is outside our delivery area.');
                 return;
@@ -719,23 +850,17 @@
             }
             lockSubmit();
             var m = method();
+            if (m === 'paypal') {
+                document.getElementById('co-paypal-buttons').style.display = '';
+                document.getElementById('co-card-wrap').style.display = 'none';
+                submitBtn.style.display = 'none';
+                renderPaypalButtons();
+                unlockSubmit();
+                return;
+            }
             post('{{ route('checkout.place') }}', payload()).then(function (json) {
                 if (json.redirect) { window.location.href = json.redirect; return; }
-                if (json.stripe) {
-                    if (!stripe || !card) { showError('Card form is not ready — please try again.'); unlockSubmit(); return; }
-                    stripe.confirmCardPayment(json.client_secret, { payment_method: { card: card } }).then(function (result) {
-                        if (result.error) {
-                            showError(result.error.message || 'Your card was declined.');
-                            unlockSubmit();
-                            return;
-                        }
-                        confirmAndGo(json.order_number, 'stripe').catch(function (err) {
-                            showError((err && err.message) || 'Payment confirmation failed.');
-                            unlockSubmit();
-                        });
-                    });
-                    return;
-                }
+                if (json.stripe) { startStripePhase(json); return; }
                 showError('Unexpected response — please try again.');
                 unlockSubmit();
             }).catch(function (err) {

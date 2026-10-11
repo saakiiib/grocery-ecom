@@ -8,6 +8,7 @@ use App\Models\CompanyDetails;
 use App\Models\FlashSale;
 use App\Models\Order;
 use App\Models\OrderStatus;
+use App\Models\Payment;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Setting;
@@ -80,7 +81,7 @@ class OrderController extends Controller
 
     public function show(int $id)
     {
-        $order = Order::with(['items', 'histories.changer', 'status', 'user'])->findOrFail($id);
+        $order = Order::with(['items', 'histories.changer', 'status', 'user', 'payments'])->findOrFail($id);
         $statuses = OrderStatus::ordered();
         $products = Product::where('status', true)->orderBy('name')->get(['id', 'name']);
 
@@ -272,12 +273,13 @@ class OrderController extends Controller
                 if ((float) $data['amount'] > $locked->refundableAmount()) {
                     throw new \RuntimeException('Only £'.number_format($locked->refundableAmount(), 2).' is left to refund on this order.');
                 }
-                $gatewayId = $locked->payment_method === 'stripe'
+                $gatewayId = CheckoutController::isStripeMethod($locked->payment_method)
                     ? CheckoutController::stripeRefund($locked, (float) $data['amount'])
                     : CheckoutController::paypalRefund($locked, (float) $data['amount']);
 
                 $refunded = round((float) $locked->refunded_amount + (float) $data['amount'], 2);
                 $locked->refunded_amount = $refunded;
+                Payment::recordRefund($locked, (float) $data['amount']);
                 $locked->payment_status = round($refunded - (float) $locked->total, 2) >= 0 ? 'refunded' : 'partially_refunded';
                 $locked->refreshVat();
 
@@ -334,11 +336,12 @@ class OrderController extends Controller
                 $amount = min($lineTotal, $locked->refundableAmount());
                 $gatewayId = null;
                 if ($amount > 0) {
-                    $gatewayId = $locked->payment_method === 'stripe'
+                    $gatewayId = CheckoutController::isStripeMethod($locked->payment_method)
                         ? CheckoutController::stripeRefund($locked, $amount)
                         : CheckoutController::paypalRefund($locked, $amount);
                     $refunded = round((float) $locked->refunded_amount + $amount, 2);
                     $locked->refunded_amount = $refunded;
+                    Payment::recordRefund($locked, $amount);
                     $locked->payment_status = round($refunded - (float) $locked->total, 2) >= 0 ? 'refunded' : 'partially_refunded';
                 }
 

@@ -6,6 +6,7 @@ use App\Models\BogoOffer;
 use App\Models\BundleOffer;
 use App\Models\FlashSale;
 use App\Models\Order;
+use App\Models\Payment;
 use App\Models\ProductVariant;
 use App\Models\RepeatSchedule;
 use App\Models\ShoppingList;
@@ -195,7 +196,11 @@ class AccountController extends Controller
     /** Start (or retry) online payment for an unpaid order. Returns SDK credentials. */
     public function pay(string $number): JsonResponse
     {
-        $order = $this->ownOrder($number);
+        try {
+            $order = $this->ownOrder($number);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json(['message' => 'That order does not exist.'], 404);
+        }
 
         if ($order->isPaid() || ! in_array($order->status_slug, ['new', 'confirmed'], true)) {
             return response()->json(['message' => 'That order does not need payment.'], 422);
@@ -208,7 +213,7 @@ class AccountController extends Controller
         }
 
         try {
-            if ($order->payment_method === 'stripe') {
+            if (CheckoutController::isStripeMethod($order->payment_method)) {
                 if (! CheckoutController::stripeConfigured()) {
                     return response()->json(['message' => 'Card payment is not available right now.'], 422);
                 }
@@ -223,6 +228,10 @@ class AccountController extends Controller
                 $intent = CheckoutController::stripeIntent($order);
                 $order->payment_reference = $intent['id'];
                 $order->save();
+                // The retired intent's row stays as history; only the fresh attempt is payable.
+                Payment::where('order_id', $order->id)->where('status', Payment::PENDING)
+                    ->where('reference', '!=', $intent['id'])->update(['status' => Payment::CANCELLED]);
+                Payment::attempt($order, $intent['id']);
 
                 return response()->json([
                     'ok' => true,
@@ -230,6 +239,7 @@ class AccountController extends Controller
                     'publishable' => CheckoutController::stripePublishable(),
                     'client_secret' => $intent['client_secret'],
                     'order_number' => $order->number,
+                    'payment_method' => $order->payment_method,
                 ]);
             }
 
@@ -239,6 +249,9 @@ class AccountController extends Controller
             $ppOrderId = CheckoutController::paypalCreateOrder($order);
             $order->payment_reference = $ppOrderId;
             $order->save();
+            Payment::where('order_id', $order->id)->where('status', Payment::PENDING)
+                ->where('reference', '!=', $ppOrderId)->update(['status' => Payment::CANCELLED]);
+            Payment::attempt($order, $ppOrderId);
 
             return response()->json([
                 'ok' => true,

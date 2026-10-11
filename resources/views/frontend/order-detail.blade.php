@@ -19,7 +19,7 @@
                 <h2 style="font-size:1.25rem;margin-bottom:0.5rem;">Payment still pending</h2>
                 <p class="text-muted" style="margin-bottom:1rem;">Your {{ $order->paymentLabel() }} payment did not finish — complete it below and we will start packing.</p>
                 <div id="od-error" style="display:none;color:#B91C1C;font-size:14px;margin-bottom:1rem;"></div>
-                @if ($order->payment_method === 'stripe' && $payPublishable)
+                @if (in_array($order->payment_method, ['stripe', 'google_pay', 'apple_pay'], true) && $payPublishable)
                     <div id="od-card-element" style="border:1px solid var(--border,#e5e2da);border-radius:10px;padding:0.8rem;margin-bottom:1rem;"></div>
                     <button type="button" id="od-pay-btn" class="btn btn-dark btn-block">Pay £{{ number_format($order->total, 2) }} now</button>
                 @elseif ($order->payment_method === 'paypal' && $payPaypalClient)
@@ -80,7 +80,7 @@
 @endsection
 
 @section('script')
-@if (! $order->isPaid() && $order->payment_method === 'stripe' && $payPublishable)
+@if (! $order->isPaid() && in_array($order->payment_method, ['stripe', 'google_pay', 'apple_pay'], true) && $payPublishable)
 <script src="https://js.stripe.com/v3/"></script>
 @endif
 @if (! $order->isPaid() && $order->payment_method === 'paypal' && $payPaypalClient)

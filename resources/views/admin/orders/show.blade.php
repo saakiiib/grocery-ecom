@@ -251,7 +251,15 @@
                             <div class="col-md-4">
                                 <h6>Payment</h6>
                                 <p class="mb-1">{{ $order->paymentLabel() }} · <span class="badge {{ $order->isPaid() ? 'bg-success' : 'bg-warning text-dark' }}">{{ $order->paymentStatusLabel() }}</span></p>
-                                @if ($order->payment_reference)<p class="mb-0 text-muted"><small>Ref: {{ $order->payment_reference }}</small></p>@endif
+                                @if ($order->payment_reference)<p class="mb-1 text-muted"><small>Ref: {{ $order->payment_reference }}</small></p>@endif
+                                @if ($order->payments->isNotEmpty())
+                                    <div class="mt-2">
+                                        <small class="text-muted">Attempts (newest first)</small>
+                                        @foreach ($order->payments as $pay)
+                                            <p class="mb-1"><small>{{ $pay->label() }} · £{{ number_format($pay->amount, 2) }} · <span class="badge {{ $pay->status === 'succeeded' ? 'bg-success' : ($pay->status === 'pending' ? 'bg-warning text-dark' : 'bg-secondary') }}">{{ $pay->statusLabel() }}</span>@if ($pay->refunded_amount > 0) · refunded £{{ number_format($pay->refunded_amount, 2) }}@endif<br><span class="text-muted">{{ $pay->reference ?? 'no reference' }} · {{ $pay->created_at->format('d M Y, h:i A') }}</span></small></p>
+                                        @endforeach
+                                    </div>
+                                @endif
                             </div>
                         </div>
                     </div>

@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Mail\OrderPlaced;
 use App\Models\Order;
+use App\Models\Payment;
+use App\Models\WebhookEvent;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -33,6 +35,10 @@ class WebhookController extends Controller
         }
 
         $event = json_decode($payload, true) ?? [];
+        $eventId = $event['id'] ?? null;
+        if ($eventId && WebhookEvent::where('provider', 'stripe')->where('event_id', $eventId)->exists()) {
+            return response()->json(['ok' => true]);
+        }
         $type = $event['type'] ?? '';
         $object = $event['data']['object'] ?? [];
 
@@ -43,7 +49,13 @@ class WebhookController extends Controller
                     $order->payment_reference = $object['id'];
                     $order->save();
                 }
-                $this->confirmPaid($order, 'stripe', 'Paid online (Card (Stripe), webhook).');
+                $this->confirmPaid($order, $order->payment_method, 'Paid online ('.$order->paymentLabel().', webhook).');
+                WebhookEvent::create(['provider' => 'stripe', 'event_id' => $eventId ?? 'unknown-'.now()->timestamp, 'type' => $type, 'order_id' => $order->id]);
+
+                return response()->json(['ok' => true]);
+            }
+            if ($eventId) {
+                WebhookEvent::create(['provider' => 'stripe', 'event_id' => $eventId, 'type' => $type, 'order_id' => $order?->id, 'status' => 'ignored']);
             }
 
             return response()->json(['ok' => true]);
@@ -55,10 +67,18 @@ class WebhookController extends Controller
             if ($order && ! $order->isPaid() && $order->status_slug === 'new'
                 && is_string($intentId) && is_string($order->payment_reference)
                 && $order->payment_reference !== '' && hash_equals($order->payment_reference, $intentId)) {
+                Payment::settle($order, $intentId, Payment::FAILED);
                 $order->changeStatus('cancelled', null, 'Card payment failed (webhook).');
+            }
+            if ($eventId) {
+                WebhookEvent::create(['provider' => 'stripe', 'event_id' => $eventId, 'type' => $type, 'order_id' => $order?->id]);
             }
 
             return response()->json(['ok' => true]);
+        }
+
+        if ($eventId) {
+            WebhookEvent::create(['provider' => 'stripe', 'event_id' => $eventId, 'type' => $type ?: 'unknown', 'status' => 'ignored']);
         }
 
         return response()->json(['ok' => true]);
@@ -68,14 +88,14 @@ class WebhookController extends Controller
     {
         $intentId = $object['id'] ?? null;
         if ($intentId) {
-            $order = Order::where('payment_method', 'stripe')->where('payment_reference', $intentId)->first();
+            $order = Order::whereIn('payment_method', CheckoutController::STRIPE_METHODS)->where('payment_reference', $intentId)->first();
             if ($order) {
                 return $order;
             }
         }
         $number = $object['metadata']['order_number'] ?? null;
         if ($number) {
-            return Order::where('payment_method', 'stripe')->where('number', $number)->first();
+            return Order::whereIn('payment_method', CheckoutController::STRIPE_METHODS)->where('number', $number)->first();
         }
 
         return null;
@@ -121,6 +141,11 @@ class WebhookController extends Controller
             return response()->json(['message' => 'Unverified transmission.'], 400);
         }
 
+        $eventId = $event['id'] ?? null;
+        if ($eventId && WebhookEvent::where('provider', 'paypal')->where('event_id', $eventId)->exists()) {
+            return response()->json(['ok' => true]);
+        }
+
         $type = $event['event_type'] ?? '';
         $resource = $event['resource'] ?? [];
 
@@ -139,6 +164,14 @@ class WebhookController extends Controller
                     $order->save();
                 }
                 $this->confirmPaid($order, 'paypal', 'Paid online (PayPal, webhook).');
+                if ($eventId) {
+                    WebhookEvent::create(['provider' => 'paypal', 'event_id' => $eventId, 'type' => $type, 'order_id' => $order->id]);
+                }
+
+                return response()->json(['ok' => true]);
+            }
+            if ($eventId) {
+                WebhookEvent::create(['provider' => 'paypal', 'event_id' => $eventId, 'type' => $type, 'order_id' => $order?->id, 'status' => 'ignored']);
             }
 
             return response()->json(['ok' => true]);
@@ -152,10 +185,18 @@ class WebhookController extends Controller
                 $order = Order::where('payment_method', 'paypal')->where('payment_reference', $paypalOrderId)->first();
             }
             if ($order && ! $order->isPaid() && $order->status_slug === 'new') {
+                Payment::settle($order, $order->payment_reference, Payment::FAILED);
                 $order->changeStatus('cancelled', null, 'PayPal payment denied (webhook).');
+            }
+            if ($eventId) {
+                WebhookEvent::create(['provider' => 'paypal', 'event_id' => $eventId, 'type' => $type, 'order_id' => $order?->id]);
             }
 
             return response()->json(['ok' => true]);
+        }
+
+        if ($eventId) {
+            WebhookEvent::create(['provider' => 'paypal', 'event_id' => $eventId, 'type' => $type ?: 'unknown', 'status' => 'ignored']);
         }
 
         return response()->json(['ok' => true]);
@@ -224,6 +265,7 @@ class WebhookController extends Controller
             $fresh->payment_status = 'paid';
             $fresh->amount_paid = $fresh->total;
             $fresh->save();
+            Payment::settle($fresh, $fresh->payment_reference, Payment::SUCCEEDED);
             $changed = null;
             if ($fresh->status_slug === 'new') {
                 $changed = $fresh->changeStatus('confirmed', null, $note);

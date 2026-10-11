@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Http\Controllers\CheckoutController;
 use App\Models\Order;
+use App\Models\Payment;
 use Illuminate\Console\Command;
 
 class PruneUnpaidOrders extends Command
@@ -19,14 +20,14 @@ class PruneUnpaidOrders extends Command
 
         $orders = Order::where('status_slug', 'new')
             ->where('payment_status', 'unpaid')
-            ->whereIn('payment_method', ['stripe', 'paypal'])
+            ->whereIn('payment_method', ['stripe', 'paypal', 'google_pay', 'apple_pay'])
             ->where('created_at', '<', $cutoff)
             ->get();
 
         $cancelled = 0;
         foreach ($orders as $order) {
             try {
-                if ($order->payment_method === 'stripe' && $order->payment_reference && str_starts_with($order->payment_reference, 'pi_')) {
+                if (CheckoutController::isStripeMethod($order->payment_method) && $order->payment_reference && str_starts_with($order->payment_reference, 'pi_')) {
                     try {
                         CheckoutController::stripeCancelIntent($order->payment_reference);
                     } catch (\Throwable $e) {
@@ -34,6 +35,7 @@ class PruneUnpaidOrders extends Command
                     }
                 }
                 $order->changeStatus('cancelled', null, 'Payment abandoned — auto-cancelled after '.$minutes.' minutes.');
+                Payment::cancelPending($order);
                 $cancelled++;
             } catch (\Throwable $e) {
                 report($e);

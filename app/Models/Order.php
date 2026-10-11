@@ -56,6 +56,12 @@ class Order extends Model
         return $this->hasMany(OrderStatusHistory::class)->orderBy('created_at');
     }
 
+    /** Online payment attempts, newest first — the audit trail behind payment_status. */
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class)->orderByDesc('id');
+    }
+
     public function slot(): BelongsTo
     {
         return $this->belongsTo(DeliverySlot::class, 'delivery_slot_id');
@@ -80,6 +86,8 @@ class Order extends Model
     {
         return match ($this->payment_method) {
             'stripe' => 'Card (Stripe)',
+            'google_pay' => 'Google Pay',
+            'apple_pay' => 'Apple Pay',
             'paypal' => 'PayPal',
             default => $this->fulfillment === 'pickup' ? 'Cash on Collection' : 'Cash on Delivery',
         };
@@ -128,7 +136,7 @@ class Order extends Model
         if (! in_array($this->payment_status, ['paid', 'partially_refunded'], true)) {
             return 0.0;
         }
-        if (! in_array($this->payment_method, ['stripe', 'paypal'], true)) {
+        if (! in_array($this->payment_method, ['stripe', 'paypal', 'google_pay', 'apple_pay'], true)) {
             return 0.0;
         }
 

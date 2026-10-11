@@ -10,6 +10,7 @@ use App\Models\Coupon;
 use App\Models\DeliverySlot;
 use App\Models\Order;
 use App\Models\OrderStatus;
+use App\Models\Payment;
 use App\Models\ProductVariant;
 use App\Models\Setting;
 use App\Models\UserPoint;
@@ -23,7 +24,15 @@ use Illuminate\Support\Facades\Http;
 
 class CheckoutController extends Controller
 {
-    public const METHODS = ['cod', 'stripe', 'paypal'];
+    /** All online wallets ride the same Stripe pipe — one account, one webhook. */
+    public const STRIPE_METHODS = ['stripe', 'google_pay', 'apple_pay'];
+
+    public const METHODS = ['cod', 'stripe', 'paypal', 'google_pay', 'apple_pay'];
+
+    public static function isStripeMethod(?string $method): bool
+    {
+        return in_array($method, static::STRIPE_METHODS, true);
+    }
 
     public static function stripeConfigured(): bool
     {
@@ -204,7 +213,7 @@ class CheckoutController extends Controller
             'delivery_date' => 'nullable|date_format:Y-m-d',
             'delivery_slot_id' => 'nullable|integer',
             'fulfillment' => 'nullable|in:delivery,pickup',
-            'payment_method' => 'required|in:cod,stripe,paypal',
+            'payment_method' => 'required|in:cod,stripe,paypal,google_pay,apple_pay',
             'points_redeem' => 'nullable|integer|min:0|max:1000000',
             'coupon_code' => 'nullable|string|max:50',
             'privacy' => 'accepted',
@@ -252,7 +261,7 @@ class CheckoutController extends Controller
             }
         }
 
-        if ($data['payment_method'] === 'stripe' && ! static::stripeConfigured()) {
+        if (static::isStripeMethod($data['payment_method'] ?? null) && ! static::stripeConfigured()) {
             return response()->json(['message' => 'Card payment is not available right now — please choose another method.'], 422);
         }
         if ($data['payment_method'] === 'paypal' && ! static::paypalConfigured()) {
@@ -474,7 +483,7 @@ class CheckoutController extends Controller
             ]);
         }
 
-        if ($data['payment_method'] === 'stripe') {
+        if (static::isStripeMethod($data['payment_method'] ?? null)) {
             try {
                 $intent = static::stripeIntent($order);
             } catch (\Throwable $e) {
@@ -485,6 +494,7 @@ class CheckoutController extends Controller
             }
             $order->payment_reference = $intent['id'];
             $order->save();
+            Payment::attempt($order, $intent['id']);
 
             return response()->json([
                 'ok' => true,
@@ -492,6 +502,7 @@ class CheckoutController extends Controller
                 'publishable' => static::stripePublishable(),
                 'client_secret' => $intent['client_secret'],
                 'order_number' => $order->number,
+                'payment_method' => $order->payment_method,
             ]);
         }
 
@@ -505,6 +516,7 @@ class CheckoutController extends Controller
         }
         $order->payment_reference = $ppOrderId;
         $order->save();
+        Payment::attempt($order, $ppOrderId);
 
         return response()->json([
             'ok' => true,
@@ -569,7 +581,7 @@ class CheckoutController extends Controller
     {
         $data = $request->validate([
             'order_number' => 'required|string|exists:orders,number',
-            'payment_method' => 'required|in:stripe,paypal',
+            'payment_method' => 'required|in:stripe,paypal,google_pay,apple_pay',
         ]);
 
         $order = Order::where('number', $data['order_number'])->firstOrFail();
@@ -588,9 +600,9 @@ class CheckoutController extends Controller
         }
 
         try {
-            $paid = $data['payment_method'] === 'stripe'
-                ? $this->stripeVerify($order)
-                : $this->paypalCapture($order);
+            $paid = $data['payment_method'] === 'paypal'
+                ? $this->paypalCapture($order)
+                : $this->stripeVerify($order);
         } catch (\Throwable $e) {
             report($e);
 
@@ -625,6 +637,7 @@ class CheckoutController extends Controller
         if (! $confirmed) {
             return response()->json(['ok' => true, 'redirect' => route('order.success', $order->number)]);
         }
+        Payment::settle($order->refresh(), $order->payment_reference, Payment::SUCCEEDED);
         BagController::clear();
         session(['last_order_id' => $order->id]);
 
@@ -660,6 +673,7 @@ class CheckoutController extends Controller
         }
 
         $order->changeStatus('cancelled', $order->user_id, 'Payment abandoned at checkout.');
+        Payment::cancelPending($order);
 
         return response()->json(['ok' => true]);
     }
@@ -725,6 +739,7 @@ class CheckoutController extends Controller
                 'currency' => 'gbp',
                 'automatic_payment_methods[enabled]' => 'true',
                 'metadata[order_number]' => $order->number,
+                'metadata[wallet]' => $order->payment_method,
                 'description' => 'Alam Mini Market order '.$order->number,
             ]);
 
