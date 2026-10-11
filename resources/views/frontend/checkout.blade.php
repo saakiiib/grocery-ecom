@@ -47,6 +47,29 @@
                 </div>
             @endauth
 
+            @if ($stripeOn)
+            <div class="auth-card" id="co-express" style="margin:0 0 1.5rem;">
+                <h2 style="font-size:1.25rem;margin-bottom:0.25rem;">Express checkout</h2>
+                <p class="text-muted" style="font-size:13px;margin:0 0 0.9rem;">Faster — pay with your wallet. Details still come from the form below.</p>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;">
+                    <button type="button" id="co-express-gpay" class="btn btn-dark" style="display:flex;align-items:center;justify-content:center;gap:0.5rem;min-height:48px;font-size:16px;" aria-label="Express checkout with Google Pay">
+                        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path fill="#4285F4" d="M23.5 12.3c0-.9-.1-1.5-.3-2.2H12v4.3h6.5c-.1 1.1-.8 2.7-2.4 3.8l3.6 2.8c2.2-2 3.8-5 3.8-8.7z"/><path fill="#34A853" d="M12 24c3.2 0 5.9-1.1 7.9-2.9l-3.8-2.9c-1 .7-2.4 1.2-4.1 1.2-3.1 0-5.8-2.1-6.8-5l-3.8 2.9C3.5 21.3 7.4 24 12 24z"/><path fill="#FBBC05" d="M5.2 14.4c-.2-.7-.4-1.5-.4-2.4s.1-1.7.4-2.4L1.4 6.7C.5 8.7 0 10.3 0 12s.5 3.3 1.4 4.7l3.8-2.3z"/><path fill="#EA4335" d="M12 4.7c1.8 0 3 .8 3.7 1.4l3.3-3.2C17.9 1.1 15.2 0 12 0 7.4 0 3.5 2.7 1.4 6.7l3.8 2.9c1-2.9 3.7-4.9 6.8-4.9z"/></svg>
+                        <span><strong>G</strong> Pay</span>
+                    </button>
+                    <button type="button" id="co-express-apay" class="btn btn-dark" style="display:flex;align-items:center;justify-content:center;gap:0.5rem;min-height:48px;font-size:16px;" aria-label="Express checkout with Apple Pay">
+                        <x-icon name="apple" />
+                        <span>Pay</span>
+                    </button>
+                </div>
+                <div id="co-express-element" style="display:none;margin-top:0.6rem;"></div>
+                <div style="display:flex;align-items:center;gap:0.75rem;margin-top:1rem;" aria-hidden="true">
+                    <span style="flex:1;height:1px;background:var(--border,#e5e2da);"></span>
+                    <span class="text-muted" style="font-size:12px;letter-spacing:0.08em;">OR CONTINUE BELOW</span>
+                    <span style="flex:1;height:1px;background:var(--border,#e5e2da);"></span>
+                </div>
+            </div>
+            @endif
+
             <form id="egf-checkout-form" class="cart-layout" data-has-unavailable="{{ $hasUnavailable ? '1' : '0' }}" style="margin:0;align-items:start;">
                 @csrf
                 <div style="min-width:0;">
@@ -242,16 +265,6 @@
                             </div>
                         @endif
                     @endauth
-                    @if ($stripeOn)
-                    <div id="co-express" style="margin-bottom:0.9rem;">
-                        <p class="text-muted" style="font-size:13px;margin:0 0 0.5rem;">Express checkout</p>
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;">
-                            <button type="button" id="co-express-gpay" class="btn btn-dark">G&nbsp;Pay</button>
-                            <button type="button" id="co-express-apay" class="btn btn-dark">Apple&nbsp;Pay</button>
-                        </div>
-                        <div id="co-express-element" style="display:none;margin-top:0.6rem;"></div>
-                    </div>
-                    @endif
                     <div class="pay-tiles" id="co-methods">
                         <label class="pay-tile">
                             <input type="radio" name="payment_method" value="cod" checked>
@@ -626,6 +639,12 @@
             radio.addEventListener('change', function () { resetStripePhase(); paintTotals(); });
         });
         if (pointsInput) pointsInput.addEventListener('input', function () { resetStripePhase(); paintTotals(); });
+        /* Contact/address changed after the order was placed — drop back to
+        phase 1 so the next submit re-places with fresh details. */
+        ['co-name', 'co-phone', 'co-email', 'co-address', 'co-city', 'co-postcode', 'co-notes', 'co-bill-name', 'co-bill-phone', 'co-bill-address', 'co-bill-city', 'co-bill-postcode'].forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) el.addEventListener('input', resetStripePhase);
+        });
         form.querySelectorAll('input[name="fulfillment"]').forEach(function (radio) {
             radio.addEventListener('change', function () {
                 resetStripePhase();

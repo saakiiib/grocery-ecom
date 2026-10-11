@@ -238,9 +238,9 @@
                                 <input id="ad-postcode" type="text" name="postcode" required maxlength="20" value="{{ old('postcode') }}" data-address-field="postcode">
                             </div>
                         </div>
-                        <div class="form-group" style="display:flex;gap:1rem;flex-wrap:wrap;">
-                            <label style="font-weight:400;"><input type="checkbox" name="is_default_delivery" value="1" @checked(old('is_default_delivery', $addresses->isEmpty())) data-address-field="is_default_delivery"> Default delivery</label>
-                            <label style="font-weight:400;"><input type="checkbox" name="is_default_billing" value="1" @checked(old('is_default_billing', $addresses->isEmpty())) data-address-field="is_default_billing"> Default billing</label>
+                        <div class="form-group" style="display:flex;gap:0.6rem;flex-wrap:wrap;">
+                            <label class="pick-row is-inline"><input type="checkbox" name="is_default_delivery" value="1" @checked(old('is_default_delivery', $addresses->isEmpty())) data-address-field="is_default_delivery"> <span class="pick-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> <span>Default delivery</span></label>
+                            <label class="pick-row is-inline"><input type="checkbox" name="is_default_billing" value="1" @checked(old('is_default_billing', $addresses->isEmpty())) data-address-field="is_default_billing"> <span class="pick-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> <span>Default billing</span></label>
                         </div>
                         @if ($errors->has('label'))
                             <p style="color:#B91C1C;font-size:13px;">Please check the highlighted address fields.</p>

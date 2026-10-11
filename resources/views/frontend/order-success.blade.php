@@ -56,3 +56,33 @@
     </div>
 </main>
 @endsection
+
+@section('script')
+<script>
+    /* Success page owns the bag badge: server cleared the session, sync the persistent header. */
+    function egfSuccessInit() {
+        var badges = document.querySelectorAll('[data-bag-count]');
+        var i;
+        for (i = 0; i < badges.length; i++) { badges[i].textContent = '0'; }
+        var totals = document.querySelectorAll('[data-bag-total]');
+        for (i = 0; i < totals.length; i++) { totals[i].textContent = '£0.00'; }
+        var floats = document.querySelectorAll('.float-bag');
+        for (i = 0; i < floats.length; i++) { floats[i].style.display = 'none'; }
+        try {
+            fetch('{{ route('bag.data') }}', { headers: { 'Accept': 'application/json' } }).then(function (res) {
+                return res.json();
+            }).then(function (data) {
+                var count = (data && data.count) || 0;
+                var sub = (data && data.subtotal) || 0;
+                var j;
+                var b2 = document.querySelectorAll('[data-bag-count]');
+                for (j = 0; j < b2.length; j++) { b2[j].textContent = count; }
+                var t2 = document.querySelectorAll('[data-bag-total]');
+                for (j = 0; j < t2.length; j++) { t2[j].textContent = '£' + Number(sub).toFixed(2); }
+            }).catch(function () {});
+        } catch (e) {}
+    }
+    document.addEventListener('spa:loaded', egfSuccessInit);
+    egfSuccessInit();
+</script>
+@endsection

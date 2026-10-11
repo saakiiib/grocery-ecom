@@ -459,7 +459,16 @@ class CatalogApiController extends FrontendController
     private function company(): array
     {
         $c = CompanyDetails::cached();
+        if (! $c) {
+            return [];
+        }
 
-        return $c ? $c->only(['name', 'email', 'phone', 'address', 'vat_percent']) : [];
+        $logo = fn (?string $file) => $file ? asset('uploads/company/'.$file) : null;
+
+        return array_merge($c->only(['name', 'email', 'phone', 'address', 'vat_percent']), [
+            'logo_url' => $logo($c->company_logo),
+            'footer_logo_url' => $logo($c->footer_logo),
+            'icon_url' => $logo($c->fav_icon),
+        ]);
     }
 }

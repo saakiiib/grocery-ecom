@@ -652,6 +652,13 @@ class CheckoutController extends Controller
             abort(404);
         }
 
+        // Safety net: webhook-paid orders never touch the session bag
+        // (no session in a webhook), so clear it here when this visit
+        // follows the order it just placed. Idempotent.
+        if (session('last_order_id') === $order->id) {
+            BagController::clear();
+        }
+
         return spa('frontend.order-success', compact('order'));
     }
 

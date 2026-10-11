@@ -26,7 +26,7 @@
                 <a @spa href="{{ $promo['button_url'] ?: route('shop.offers') }}" class="btn btn-primary">{{ $promo['button_text'] ?: 'Shop today\'s deals' }}</a>
                 <button type="button" class="btn btn-ghost" data-promo-close>Continue shopping</button>
             </div>
-            <label class="promo-quiet"><input type="checkbox" data-promo-quiet> Don't show again</label>
+            <label class="pick-row is-inline promo-quiet" style="margin-top:0.9rem;font-size:0.8rem;"><input type="checkbox" data-promo-quiet> <span class="pick-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> <span>Don't show again</span></label>
         </div>
     </div>
 @endif
