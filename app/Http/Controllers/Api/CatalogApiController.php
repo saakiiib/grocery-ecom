@@ -456,6 +456,20 @@ class CatalogApiController extends FrontendController
         ]);
     }
 
+    /** About + legal copy (HTML, same source the Blade pages render) for the app. */
+    public function content(): JsonResponse
+    {
+        $c = CompanyDetails::cached();
+
+        return response()->json([
+            'about_us' => $c?->about_us,
+            'privacy_policy' => $c?->privacy_policy,
+            'terms_and_conditions' => $c?->terms_and_conditions,
+            'refund_policy' => $c?->refund_policy,
+            'company' => $this->company(),
+        ]);
+    }
+
     private function company(): array
     {
         $c = CompanyDetails::cached();
@@ -469,6 +483,11 @@ class CatalogApiController extends FrontendController
             'logo_url' => $logo($c->company_logo),
             'footer_logo_url' => $logo($c->footer_logo),
             'icon_url' => $logo($c->fav_icon),
+            'store_address' => trim(implode(', ', array_filter([$c->address1, $c->address2, $c->address3]))),
+            'store_phone' => $c->phone1,
+            'opening_time' => $c->opening_time,
+            'whatsapp' => preg_replace('/\D/', '', (string) ($c->whatsapp ?? '')),
+            'store_email' => $c->email1,
         ]);
     }
 }
