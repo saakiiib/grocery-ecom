@@ -33,17 +33,29 @@ test('guests are sent to login when submitting a review', function () {
         ->assertUnauthorized();
 });
 
-test('a signed-in shopper can review and it shows on the product page', function () {
-    ['product' => $product, 'shopper' => $shopper] = reviewFixtures();
+test('a signed-in shopper can review but it waits for admin approval', function () {
+    ['product' => $product, 'shopper' => $shopper, 'admin' => $admin] = reviewFixtures();
 
     $this->actingAs($shopper)
         ->postJson(route('reviews.store'), reviewPayload($product->id))
         ->assertOk()
         ->assertJsonPath('ok', true)
-        ->assertJsonPath('avg', 5)
-        ->assertJsonPath('count', 1);
+        ->assertJsonPath('avg', null)
+        ->assertJsonPath('count', 0);
 
-    expect(ProductReview::count())->toBe(1);
+    expect(ProductReview::count())->toBe(1)
+        ->and(ProductReview::first()->status)->toBeFalse();
+
+    // Still invisible until approved — not in the list, stats, or the form.
+    $this->get(route('product.show', $product->slug))
+        ->assertOk()
+        ->assertDontSee('Great quality')
+        ->assertDontSee('Really fresh and tasty.')
+        ->assertSee('awaiting approval', false);
+
+    // Admin approval publishes it.
+    $this->actingAs($admin)->postJson(route('reviews.toggleStatus'), ['id' => ProductReview::first()->id])
+        ->assertOk()->assertJsonPath('success', true);
 
     $this->get(route('product.show', $product->slug))
         ->assertOk()
@@ -71,23 +83,27 @@ test('review input is validated', function () {
 });
 
 test('one review per shopper per product — resubmitting updates it', function () {
-    ['product' => $product, 'shopper' => $shopper] = reviewFixtures();
+    ['product' => $product, 'shopper' => $shopper, 'admin' => $admin] = reviewFixtures();
 
     $this->actingAs($shopper)->postJson(route('reviews.store'), reviewPayload($product->id))->assertOk();
     $this->actingAs($shopper)->postJson(route('reviews.store'), [
         'product_id' => $product->id, 'rating' => 3, 'title' => 'Changed my mind', 'body' => 'It was just okay.',
-    ])->assertOk()->assertJsonPath('avg', 3)->assertJsonPath('count', 1);
+    ])->assertOk()->assertJsonPath('avg', null)->assertJsonPath('count', 0);
 
     expect(ProductReview::count())->toBe(1)
         ->and(ProductReview::first()->rating)->toBe(3);
+
+    $this->actingAs($admin)->postJson(route('reviews.toggleStatus'), ['id' => ProductReview::first()->id])->assertOk();
+    $this->get(route('product.show', $product->slug))->assertOk()->assertSee('3.0 out of 5');
 });
 
 test('hidden reviews stay out of the average and the page', function () {
-    ['product' => $product, 'shopper' => $shopper] = reviewFixtures();
+    ['product' => $product, 'shopper' => $shopper, 'admin' => $admin] = reviewFixtures();
     $other = User::create(['name' => 'Other', 'email' => 'review-other@example.com', 'password' => bcrypt('password'), 'user_type' => 0]);
 
     $this->actingAs($shopper)->postJson(route('reviews.store'), reviewPayload($product->id))->assertOk();
     ProductReview::create(['product_id' => $product->id, 'user_id' => $other->id, 'rating' => 1, 'body' => 'Hidden one.', 'status' => false]);
+    $this->actingAs($admin)->postJson(route('reviews.toggleStatus'), ['id' => ProductReview::where('user_id', $shopper->id)->first()->id])->assertOk();
 
     $this->get(route('product.show', $product->slug))
         ->assertOk()

@@ -290,6 +290,9 @@
                 @endforelse
             </div>
             @auth
+                @if ($myReview && ! $myReview->status)
+                    <p class="review-notice">Thanks — your review is awaiting approval and will appear here once published.</p>
+                @else
                 <form class="review-form" data-review-form data-product-id="{{ $product->id }}">
                     <strong>{{ $myReview ? 'Update your review' : 'Write a review' }}</strong>
                     <div class="review-stars-input" data-stars-input>
@@ -307,6 +310,7 @@
                         <span class="text-muted review-notice" data-review-msg style="margin-left:.5rem;"></span>
                     </div>
                 </form>
+                @endif
             @else
                 <p class="review-notice"><a href="{{ route('login') }}">Sign in</a> to write a review.</p>
             @endauth

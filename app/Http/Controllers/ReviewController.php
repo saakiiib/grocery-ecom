@@ -29,21 +29,26 @@ class ReviewController extends Controller
 
         $product = Product::where('status', true)->findOrFail($data['product_id']);
 
-        $review = ProductReview::updateOrCreate(
-            ['product_id' => $product->id, 'user_id' => auth()->id()],
-            [
-                'rating' => $data['rating'],
-                'title' => $data['title'] ?? null,
-                'body' => $data['body'],
-                'status' => true,
-            ]
-        );
+        // New reviews wait for admin approval; edits keep their current status.
+        $review = ProductReview::firstOrNew([
+            'product_id' => $product->id, 'user_id' => auth()->id(),
+        ]);
+        $isNew = ! $review->exists;
+        $review->fill([
+            'rating' => $data['rating'],
+            'title' => $data['title'] ?? null,
+            'body' => $data['body'],
+        ]);
+        if ($isNew) {
+            $review->status = false;
+        }
+        $review->save();
 
         $summary = $this->summary($product->id);
 
         return response()->json([
             'ok' => true,
-            'message' => 'Thanks — your review is live.',
+            'message' => $review->status ? 'Thanks — your review is live.' : 'Thanks — your review will appear once approved.',
             'review' => [
                 'id' => $review->id,
                 'rating' => $review->rating,
