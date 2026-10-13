@@ -230,15 +230,19 @@
                     <h3 style="margin-top:1.5rem;"><span class="co-step">4</span>Payment</h3>
                     @auth
                         @if ($pointsBalance >= $pointsMin)
-                            <div class="pay-card" style="margin-bottom:0.7rem;cursor:default;" id="co-points-card">
+                            <div class="pay-card" style="margin-bottom:0.7rem;cursor:default;flex-wrap:wrap;" id="co-points-card">
                                 <span class="pay-card-icon">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.5 13 17 22l-5-3-5 3 1.5-9"/></svg>
                                 </span>
-                                <span class="pay-card-text">
+                                <span class="pay-card-text" style="flex:1 1 auto;min-width:0;">
                                     <strong>Use loyalty points <span class="text-muted">({{ $pointsBalance }} available)</span></strong>
                                     <span class="text-muted">100 points = £{{ number_format(100 * $pointsValue, 2) }} off</span>
                                 </span>
-                                <input type="number" id="co-points" min="0" max="{{ $pointsBalance }}" step="{{ $pointsMin }}" value="0" style="width:120px;border:1.5px solid var(--primary);border-radius:8px;padding:0.55rem 0.6rem;font-weight:600;color:var(--primary);background:#fff;" aria-label="Points to spend">
+                                <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.35rem;flex:1 1 100%;">
+                                    <label for="co-points" style="font-size:0.85rem;font-weight:600;color:var(--primary);">Points to use:</label>
+                                    <input type="number" id="co-points" min="0" max="{{ $pointsBalance }}" step="{{ $pointsMin }}" value="0" style="width:100px;border:2px solid var(--primary);border-radius:8px;padding:0.4rem 0.5rem;font-weight:700;font-size:1rem;color:#000;background:#fff;" aria-label="Points to spend">
+                                    <span style="font-size:0.8rem;color:#6B6558;">max {{ $pointsBalance }}</span>
+                                </div>
                             </div>
                         @endif
                     @endauth
