@@ -431,7 +431,8 @@ test('online methods are refused without keys, then work with faked gateways', f
     Setting::put('paypal_client_id', 'pp-id');
     Setting::put('paypal_secret', 'pp-secret');
 
-    Http::fake(function ($request) {
+    $pp = 0;
+    Http::fake(function ($request) use (&$pp) {
         $url = (string) $request->url();
         if (str_contains($url, 'api.stripe.com')) {
             if ($request->method() === 'POST') {
@@ -689,7 +690,7 @@ test('abandoned paypal orders cancel cleanly, paid ones never do', function () {
     Setting::put('paypal_client_id', 'pp-id');
     Setting::put('paypal_secret', 'pp-secret');
 
-    Http::fake(function ($request) {
+    Http::fake(function ($request) use (&$pp) {
         $url = (string) $request->url();
         if (str_contains($url, '/v1/oauth2/token')) {
             return Http::response(['access_token' => 'tok'], 200);
@@ -710,7 +711,11 @@ test('abandoned paypal orders cancel cleanly, paid ones never do', function () {
             ], 200);
         }
 
-        return Http::response(['id' => 'PP-ABANDON'], 200);
+        // Each PayPal order id is unique in production — the fake must be too,
+        // or two orders share one payments.reference and trip the UNIQUE guard.
+        $pp++;
+
+        return Http::response(['id' => 'PP-'.$pp], 200);
     });
 
     $this->postJson(route('bag.add'), ['variant_id' => $f['b']->id])->assertOk();
@@ -736,15 +741,25 @@ test('shoppers can pay again for unpaid orders and cancel untouched ones', funct
     Setting::put('stripe_publishable', 'pk_test_x');
     Setting::put('stripe_secret', 'sk_test_x');
 
-    Http::fake(function ($request) {
-        if ($request->method() === 'POST' && str_contains((string) $request->url(), 'payment_intents')) {
-            return Http::response(['id' => 'pi_retry', 'client_secret' => 'cs_retry'], 200);
+    $pi = 0;
+    Http::fake(function ($request) use (&$pi) {
+        $url = (string) $request->url();
+        // Stripe mints a fresh intent per attempt in production — the fake
+        // must too, or retry trips the payments.reference UNIQUE guard.
+        if ($request->method() === 'POST' && str_ends_with($url, '/payment_intents')) {
+            $pi++;
+
+            return Http::response(['id' => 'pi_retry_'.$pi, 'client_secret' => 'cs_retry_'.$pi], 200);
+        }
+        if (str_contains($url, '/cancel')) {
+            return Http::response(['id' => 'cancelled', 'status' => 'canceled'], 200);
         }
 
-        $order = Order::where('payment_reference', 'pi_retry')->first() ?? Order::orderByDesc('id')->first();
+        preg_match('#payment_intents/(pi_[^/]+)#', $url, $m);
+        $order = Order::where('payment_reference', $m[1] ?? '')->first() ?? Order::orderByDesc('id')->first();
         $cents = $order ? (int) round((float) $order->total * 100) : 0;
 
-        return Http::response(['id' => 'pi_retry', 'status' => 'succeeded', 'currency' => 'gbp', 'amount_received' => $cents, 'metadata' => ['order_number' => $order?->number]], 200);
+        return Http::response(['id' => $m[1] ?? 'pi_retry_2', 'status' => 'succeeded', 'currency' => 'gbp', 'amount_received' => $cents, 'metadata' => ['order_number' => $order?->number]], 200);
     });
 
     // Unpaid stripe order (payment abandoned at checkout).
@@ -753,7 +768,7 @@ test('shoppers can pay again for unpaid orders and cancel untouched ones', funct
 
     // Pay-now from the account returns fresh credentials and completes.
     $pay = $this->actingAs($user)->postJson(route('account.pay', $number))->assertOk();
-    expect($pay->json('client_secret'))->toBe('cs_retry');
+    expect($pay->json('client_secret'))->toBe('cs_retry_2');
     $this->actingAs($user)->postJson(route('checkout.payment-confirm'), ['order_number' => $number, 'payment_method' => 'stripe'])->assertOk();
     expect(Order::where('number', $number)->first()->payment_status)->toBe('paid');
 

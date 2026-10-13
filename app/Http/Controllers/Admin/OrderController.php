@@ -213,9 +213,15 @@ class OrderController extends Controller
             if (! $date && ! empty($data['delivery_speed'])) {
                 $date = Delivery::dateFor($data['delivery_speed']);
             }
+            $currentSpeed = (($order->delivery_date?->format('Y-m-d') ?? '') === Delivery::todayDate()) ? Delivery::SPEED_TODAY : Delivery::SPEED_STANDARD;
+            // An explicit speed wins over the date derivation. A legacy slot
+            // fee can equal either speed's price by coincidence, so any
+            // explicit speed normalises the fee (recalculate is idempotent
+            // when the money already matches).
+            $speed = $data['delivery_speed'] ?? (($date && $date === Delivery::todayDate()) ? Delivery::SPEED_TODAY : Delivery::SPEED_STANDARD);
             $slotChanged = ($date ?? '') !== (string) ($order->delivery_date?->format('Y-m-d') ?? '')
-                || $data['fulfillment'] !== ($order->fulfillment ?? 'delivery');
-            $speed = $date && $date === Delivery::todayDate() ? Delivery::SPEED_TODAY : Delivery::SPEED_STANDARD;
+                || $data['fulfillment'] !== ($order->fulfillment ?? 'delivery')
+                || ! empty($data['delivery_speed']);
             $order->fill([
                 'name' => $data['name'],
                 'phone' => $data['phone'],

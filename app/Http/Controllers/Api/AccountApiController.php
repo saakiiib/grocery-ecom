@@ -6,7 +6,9 @@ use App\Http\Controllers\AccountController;
 use App\Http\Controllers\BagController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\FavouriteController;
 use App\Http\Controllers\FrontendController;
+use App\Http\Controllers\ReviewController;
 use App\Models\Address;
 use App\Models\BogoOffer;
 use App\Models\BundleOffer;
@@ -92,6 +94,23 @@ class AccountApiController extends Controller
     public function pay(string $number): JsonResponse
     {
         return app(AccountController::class)->pay($number);
+    }
+
+    /** App heart: same toggle without the web session-auth constructor. */
+    public function favouriteToggle(Request $request): JsonResponse
+    {
+        return app(FavouriteController::class)->toggle($request);
+    }
+
+    /** App reviews: same store/destroy without the web session-auth constructor. */
+    public function reviewStore(Request $request): JsonResponse
+    {
+        return app(ReviewController::class)->store($request);
+    }
+
+    public function reviewDestroy(int $id): JsonResponse
+    {
+        return app(ReviewController::class)->destroy($id);
     }
 
     public function cancel(string $number): JsonResponse

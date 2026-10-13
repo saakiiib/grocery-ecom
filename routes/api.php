@@ -5,9 +5,7 @@ use App\Http\Controllers\Api\AuthApiController;
 use App\Http\Controllers\Api\CatalogApiController;
 use App\Http\Controllers\BagController;
 use App\Http\Controllers\CheckoutController;
-use App\Http\Controllers\FavouriteController;
 use App\Http\Controllers\FrontendController;
-use App\Http\Controllers\ReviewController;
 use Illuminate\Support\Facades\Route;
 
 // Mobile app API — plain /api (no version prefix). Token auth replaces the web session;
@@ -73,7 +71,7 @@ Route::middleware(['api_session', 'api_auth:optional'])->group(function () {
         Route::delete('/addresses/{id}', [AccountApiController::class, 'addressDestroy']);
 
         Route::get('/favourites', [AccountApiController::class, 'favourites']);
-        Route::post('/favourites/toggle', [FavouriteController::class, 'toggle']);
+        Route::post('/favourites/toggle', [AccountApiController::class, 'favouriteToggle']);
         Route::post('/favourites/move-all', [AccountApiController::class, 'favouritesMoveAll']);
 
         Route::get('/buy-again', [AccountApiController::class, 'buyAgain']);
@@ -89,7 +87,7 @@ Route::middleware(['api_session', 'api_auth:optional'])->group(function () {
         Route::post('/orders/{number}/repeat-weekly', [AccountApiController::class, 'repeatStore']);
         Route::post('/repeats/{id}/cancel', [AccountApiController::class, 'repeatCancel']);
 
-        Route::post('/reviews', [ReviewController::class, 'store'])->middleware('throttle:20,1');
-        Route::delete('/reviews/{id}', [ReviewController::class, 'destroy']);
+        Route::post('/reviews', [AccountApiController::class, 'reviewStore'])->middleware('throttle:20,1');
+        Route::delete('/reviews/{id}', [AccountApiController::class, 'reviewDestroy']);
     });
 });
