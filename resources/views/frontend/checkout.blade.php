@@ -47,7 +47,7 @@
                 </div>
             @endauth
 
-            <form id="egf-checkout-form" class="cart-layout" data-has-unavailable="{{ $hasUnavailable ? '1' : '0' }}" style="margin:0;align-items:start;">
+            <form id="egf-checkout-form" class="cart-layout" data-has-unavailable="{{ $hasUnavailable ? '1' : '0' }}" data-min-order="{{ $minOrder }}" style="margin:0;align-items:start;">
                 @csrf
                 <div style="min-width:0;">
                 <div class="auth-card" style="margin:0 0 1.5rem;">
@@ -768,14 +768,25 @@
 
         var paypalRendered = false;
         var lastPaypalOrder = null;
+        /* createOrder already shows the server's message — onError must not
+        overwrite it with the generic one. */
+        var paypalOwnError = false;
         function renderPaypalButtons() {
             if (!window.paypal || paypalRendered) return;
             paypalRendered = true;
             window.paypal.Buttons({
                 createOrder: function () {
+                    paypalOwnError = false;
                     if (!privacyOk()) {
                         showError('Please agree to the privacy policy and terms first.');
                         return Promise.reject(new Error('privacy'));
+                    }
+                    /* Instant pre-flight: same minimum the server enforces. */
+                    var minOrder = parseFloat(form.dataset.minOrder || '0') || 0;
+                    if (fulfillment() !== 'pickup' && subtotal < minOrder) {
+                        paypalOwnError = true;
+                        showError('The minimum order for delivery is ' + money(minOrder) + '.');
+                        return Promise.reject(new Error('min-order'));
                     }
                     lockSubmit();
                     return post('{{ route('checkout.place') }}', payload()).then(function (json) {
@@ -783,6 +794,7 @@
                         return json.paypal_order_id;
                     }).catch(function (err) {
                         unlockSubmit();
+                        paypalOwnError = true;
                         showError((err && err.message) || 'PayPal could not be started.');
                         throw err;
                     });
@@ -801,7 +813,7 @@
                 },
                 onError: function () {
                     unlockSubmit();
-                    showError('PayPal ran into a problem — please try again.');
+                    if (!paypalOwnError) showError('PayPal ran into a problem — please try again.');
                 }
             }).render('#co-paypal-buttons');
         }
