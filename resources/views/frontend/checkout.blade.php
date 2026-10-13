@@ -230,16 +230,17 @@
                     <h3 style="margin-top:1.5rem;"><span class="co-step">4</span>Payment</h3>
                     @auth
                         @if ($pointsBalance >= $pointsMin)
+                            @php($pointsMax = $pointsValue > 0 ? min($pointsBalance, (int) floor($bag['subtotal'] / $pointsValue)) : 0)
                             <div class="pay-card" style="margin-bottom:0.7rem;cursor:default;flex-wrap:wrap;padding:12px;" id="co-points-card">
                                 <label for="use-points-check" style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:700;color:#2C2A24;font-size:1.05rem;">
-                                    <input type="checkbox" id="use-points-check" style="width:22px;height:22px;accent-color:#E01E26;border:2px solid #E01E26;border-radius:4px;flex-shrink:0;">
+                                    <input type="checkbox" id="use-points-check" style="position:static;opacity:1;pointer-events:auto;width:22px;height:22px;accent-color:#E01E26;border:2px solid #E01E26;border-radius:4px;flex-shrink:0;">
                                     <span>Use loyalty points <span class="text-muted">({{ $pointsBalance }} available)</span></span>
                                 </label>
                                 <div id="points-row" style="display:none;margin-top:0.6rem;padding-top:0.4rem;border-top:1.5px dashed #E5E1D6;">
                                     <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
                                         <label for="co-points" style="font-size:0.9rem;font-weight:700;color:#2C2A24;">Points to use</label>
-                                        <input type="number" id="co-points" min="0" max="{{ $pointsBalance }}" step="{{ $pointsMin }}" value="0" inputmode="numeric" aria-describedby="co-points-help" disabled style="width:90px;border:2px solid #E01E26;border-radius:8px;padding:0.35rem 0.4rem;font-weight:700;font-size:1rem;color:#000;background:#fff;text-align:center;" oninput="if(this.value>{{ $pointsBalance }})this.value={{ $pointsBalance }};if(this.value<0)this.value=0;">
-                                        <span id="co-points-help" style="font-size:0.85rem;color:#6B6558;">{{ $pointsMin }}+ points · {{ $pointsMin }} pts = £{{ number_format($pointsMin * $pointsValue, 2) }} off · max {{ $pointsBalance }}</span>
+                                        <input type="number" id="co-points" min="0" max="{{ $pointsMax }}" step="{{ $pointsMin }}" value="0" inputmode="numeric" aria-describedby="co-points-help" disabled style="position:static;opacity:1;pointer-events:auto;width:90px;border:2px solid #E01E26;border-radius:8px;padding:0.35rem 0.4rem;font-weight:700;font-size:1rem;color:#000;background:#fff;text-align:center;">
+                                        <span id="co-points-help" style="font-size:0.85rem;color:#6B6558;">{{ $pointsMin }}+ points · {{ $pointsMin }} pts = £{{ number_format($pointsMin * $pointsValue, 2) }} off · max {{ $pointsMax }}</span>
                                     </div>
                                 </div>
                             </div>
@@ -318,6 +319,7 @@
         var freeOver = parseFloat('{{ $freeOver }}') || 0;
         var pointsValue = parseFloat('{{ $pointsValue }}') || 0;
         var pointsBalance = parseInt('{{ $pointsBalance }}', 10) || 0;
+        var maxRedeemPoints = pointsValue > 0 ? Math.min(pointsBalance, Math.floor(subtotal / pointsValue)) : 0;
         var cutoffMsg = document.getElementById('co-cutoff-msg');
         var cutoffBase = cutoffMsg ? cutoffMsg.textContent : '';
         var pointsToggle = document.getElementById('use-points-check');
@@ -613,13 +615,20 @@
             if (pointsRow) pointsRow.style.display = usePoints ? '' : 'none';
             if (pointsInput) {
                 pointsInput.disabled = !usePoints;
+                pointsInput.max = maxRedeemPoints;
                 if (!usePoints) pointsInput.value = 0;
+                if (usePoints && (parseInt(pointsInput.value, 10) || 0) > maxRedeemPoints) pointsInput.value = maxRedeemPoints;
             }
             resetStripePhase();
             paintTotals();
         }
         if (pointsToggle) pointsToggle.addEventListener('change', syncPointsToggle);
-        if (pointsInput) pointsInput.addEventListener('input', function () { resetStripePhase(); paintTotals(); });
+        if (pointsInput) pointsInput.addEventListener('input', function () {
+            var entered = parseInt(pointsInput.value, 10) || 0;
+            pointsInput.value = Math.max(0, Math.min(entered, maxRedeemPoints));
+            resetStripePhase();
+            paintTotals();
+        });
         syncPointsToggle();
         /* Contact/address changed after the order was placed — drop back to
         phase 1 so the next submit re-places with fresh details. */
