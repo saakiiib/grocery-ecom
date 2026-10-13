@@ -76,7 +76,7 @@
                     @if ($hasUnavailable)
                         <button type="button" class="btn btn-dark btn-block" style="margin-top:1.25rem;" onclick="egfRemoveUnavailable(this)" data-unavailable="{{ implode(',', $unavailableIds) }}">Remove unavailable items to continue</button>
                     @else
-                        <a @spa href="{{ route('checkout') }}" class="btn btn-dark btn-block" style="margin-top:1.25rem;">Proceed to checkout</a>
+                        <a href="{{ route('checkout') }}" class="btn btn-dark btn-block" style="margin-top:1.25rem;">Proceed to checkout</a>
                     @endif
                 </div>
                 <a @spa href="{{ route('shop') }}" class="btn btn-ghost btn-block" style="margin-top:0.5rem;">Continue shopping</a>

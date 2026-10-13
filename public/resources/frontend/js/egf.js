@@ -367,7 +367,7 @@
       var deadIds = (data.lines || []).filter(function (item) { return !item.available; }).map(function (item) { return item.variant_id; }).join(',');
       checkoutAction.innerHTML = unavailable
         ? '<button type="button" class="btn btn-dark btn-block" style="margin-top:1.25rem;" onclick="egfRemoveUnavailable(this)" data-unavailable="' + deadIds + '">Remove unavailable items to continue</button>'
-        : '<a data-spa href="' + r.checkout + '" class="btn btn-dark btn-block" style="margin-top:1.25rem;">Proceed to checkout</a>';
+        : '<a href="' + r.checkout + '" class="btn btn-dark btn-block" style="margin-top:1.25rem;">Proceed to checkout</a>';
     }
     if (!data.lines || data.lines.length === 0) {
       container.innerHTML =
@@ -1378,7 +1378,38 @@
   }
 
   /* ---------------- Boot (runs on first load + every SPA nav) ---------------- */
+  /* Thin top progress bar so SPA page switches are perceptible. The engine
+  itself is untouched — this only observes clicks + spa:loaded. */
+  function initSpaBar() {
+    var bar = document.getElementById('spa-bar');
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.id = 'spa-bar';
+      document.body.appendChild(bar);
+    }
+    if (window.spaNavigate && !window._egfSpaBarWrapped) {
+      window._egfSpaBarWrapped = true;
+      var orig = window.spaNavigate;
+      window.spaNavigate = function (url, opts) {
+        bar.classList.add('on');
+        return orig(url, opts);
+      };
+    }
+    if (!window._egfSpaBarClicked) {
+      window._egfSpaBarClicked = true;
+      document.addEventListener('click', function (e) {
+        var a = e.target.closest ? e.target.closest('a[data-spa][href]') : null;
+        if (a) {
+          bar.classList.add('on');
+          setTimeout(function () { bar.classList.remove('on'); }, 5000);
+        }
+      });
+      document.addEventListener('spa:loaded', function () { bar.classList.remove('on'); });
+    }
+  }
+
   function boot() {
+    initSpaBar();
     if (searchEl && document.body.contains(searchEl)) searchEl.remove();
     searchEl = null;
     loadBag();    initMobileNav();

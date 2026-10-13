@@ -2544,3 +2544,7 @@ label.pick-row.promo-quiet:has(input:checked) { background: none; box-shadow: no
 
 /* Trending searches */
 .trend-row { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; font-size: 0.85rem; }
+
+/* SPA page-switch cue: thin top progress bar, driven by egf.js (initSpaBar). */
+#spa-bar { position: fixed; top: 0; left: 0; height: 3px; width: 0; background: #b3261e; z-index: 9999; pointer-events: none; transition: width 0.35s ease; }
+#spa-bar.on { width: 100%; }
