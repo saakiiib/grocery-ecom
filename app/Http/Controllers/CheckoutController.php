@@ -21,6 +21,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class CheckoutController extends Controller
 {
@@ -880,6 +881,8 @@ class CheckoutController extends Controller
     private function paypalCapture(Order $order): bool
     {
         if (! $order->payment_reference) {
+            Log::warning('PayPal capture skipped: empty payment_reference.', ['order' => $order->number]);
+
             return false;
         }
 
@@ -887,11 +890,20 @@ class CheckoutController extends Controller
             ->post(static::paypalBaseUrl().'/v2/checkout/orders/'.$order->payment_reference.'/capture', []);
 
         if ($res->failed()) {
+            Log::warning('PayPal capture refused.', [
+                'order' => $order->number,
+                'reference' => $order->payment_reference,
+                'http' => $res->status(),
+                'paypal' => static::paypalErrorSummary($res->json()),
+            ]);
+
             return false;
         }
 
         $unit = $res->json('purchase_units.0', []);
         if (! is_array($unit)) {
+            Log::warning('PayPal capture has no purchase unit.', ['order' => $order->number, 'reference' => $order->payment_reference]);
+
             return false;
         }
         $capture = collect($unit['payments']['captures'] ?? [])->first(fn ($c) => ($c['status'] ?? null) === 'COMPLETED'
@@ -904,11 +916,32 @@ class CheckoutController extends Controller
         if (($unit['reference_id'] ?? null) === $order->number && $capture) {
             $order->payment_reference = $capture['id'];
             $order->save();
+            Log::info('PayPal capture ok.', ['order' => $order->number, 'capture' => $capture['id']]);
 
             return true;
         }
 
+        Log::warning('PayPal capture not completed.', [
+            'order' => $order->number,
+            'reference' => $order->payment_reference,
+            'reference_id' => $unit['reference_id'] ?? null,
+            'statuses' => collect($unit['payments']['captures'] ?? [])->pluck('status')->all(),
+        ]);
+
         return false;
+    }
+
+    /**
+     * One-line PayPal error: name + first issue (e.g. ORDER_NOT_APPROVED).
+     */
+    private static function paypalErrorSummary(mixed $body): string
+    {
+        if (! is_array($body)) {
+            return substr((string) $body, 0, 200);
+        }
+        $issue = $body['details'][0]['issue'] ?? $body['details'][0]['description'] ?? null;
+
+        return trim(($body['name'] ?? 'ERROR').($issue ? ': '.$issue : '').(isset($body['message']) && ! $issue ? ' '.$body['message'] : ''));
     }
 
     /**
