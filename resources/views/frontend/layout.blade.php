@@ -43,7 +43,9 @@
 
 @include('frontend.partials.floating-contact')
 
-@include('frontend.partials.floating-bag')
+@if (! request()->routeIs('checkout'))
+    @include('frontend.partials.floating-bag')
+@endif
 
 @include('frontend.partials.cookie-banner')
 

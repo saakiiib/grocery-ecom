@@ -279,6 +279,7 @@
                     </div>
                     <div id="co-express-element" style="display:none;margin-top:0.6rem;"></div>
                     <div id="co-paypal-buttons" style="display:none;margin-bottom:1rem;"></div>
+                    <p class="text-muted" id="co-paypal-privacy-hint" style="display:none;font-size:13px;margin-bottom:1rem;">Please agree to the privacy policy and terms first — then the PayPal buttons will appear here.</p>
 
                     <div id="co-error" style="display:none;color:#B91C1C;font-size:14px;margin-bottom:1rem;"></div>
                     <label class="privacy-check pick-row" style="margin-bottom:1.25rem;">
@@ -626,21 +627,31 @@
         form.querySelectorAll('input[name="payment_method"]').forEach(function (radio) {
             radio.addEventListener('change', function () { resetStripePhase(); syncMethod(); });
         });
+        var privacyBox = document.getElementById('co-privacy');
+        if (privacyBox) privacyBox.addEventListener('change', function () { errBox.style.display = 'none'; syncMethod(); });
+        function privacyOk() {
+            var privacy = document.getElementById('co-privacy');
+            return !privacy || privacy.checked;
+        }
         function syncMethod() {
             if (form.dataset.hasUnavailable === '1') {
                 submitBtn.disabled = true;
                 submitBtn.style.display = 'none';
                 document.getElementById('co-paypal-buttons').style.display = 'none';
+                document.getElementById('co-paypal-privacy-hint').style.display = 'none';
                 return;
             }
             var m = method();
             /* Phase-2 panels are driven by startStripePhase, not the tiles. */
             if (!stripePhase) {
                 document.getElementById('co-card-wrap').style.display = 'none';
-                document.getElementById('co-paypal-buttons').style.display = m === 'paypal' ? '' : 'none';
+                /* PayPal buttons stay locked until privacy is agreed. */
+                var allowPaypal = m === 'paypal' && privacyOk();
+                document.getElementById('co-paypal-buttons').style.display = allowPaypal ? '' : 'none';
+                document.getElementById('co-paypal-privacy-hint').style.display = (m === 'paypal' && !privacyOk()) ? '' : 'none';
                 submitBtn.style.display = m === 'paypal' ? 'none' : '';
             }
-            if (m === 'paypal') renderPaypalButtons();
+            if (m === 'paypal' && privacyOk()) renderPaypalButtons();
         }
         /* Phase 2: mount Stripe's tabbed Payment Element (Card, Revolut Pay…)
         and, for resumed wallet orders, the one-tap wallet buttons — all on this page. */
@@ -762,6 +773,10 @@
             paypalRendered = true;
             window.paypal.Buttons({
                 createOrder: function () {
+                    if (!privacyOk()) {
+                        showError('Please agree to the privacy policy and terms first.');
+                        return Promise.reject(new Error('privacy'));
+                    }
                     lockSubmit();
                     return post('{{ route('checkout.place') }}', payload()).then(function (json) {
                         lastPaypalOrder = json.order_number;
