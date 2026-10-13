@@ -886,9 +886,11 @@ class CheckoutController extends Controller
             return false;
         }
 
-        // Body-less POST: PayPal rejects a literal `[]` JSON body with
-        // MALFORMED_REQUEST_JSON, which Laravel sends for `post($url, [])`.
+        // Empty JSON object with a JSON content type: PayPal rejects both a
+        // literal `[]` body (MALFORMED_REQUEST_JSON) and a body-less request
+        // (415 UNSUPPORTED_MEDIA_TYPE) on the capture endpoint.
         $res = Http::withToken(static::paypalToken())
+            ->withBody('{}')
             ->send('POST', static::paypalBaseUrl().'/v2/checkout/orders/'.$order->payment_reference.'/capture');
 
         if ($res->failed()) {
