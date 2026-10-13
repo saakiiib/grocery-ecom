@@ -488,6 +488,7 @@ class CatalogApiController extends FrontendController
             'opening_time' => $c->opening_time,
             'whatsapp' => preg_replace('/\D/', '', (string) ($c->whatsapp ?? '')),
             'store_email' => $c->email1,
+            'map_embed' => $c->google_map,
         ]);
     }
 }

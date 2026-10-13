@@ -93,7 +93,7 @@ test('wallet orders confirm, stay refundable, and webhooks confirm them', functi
         ->assertStatus(422);
 });
 
-test('checkout renders the express row and all five payment tiles', function () {
+test('checkout hides the express row and wallet tiles', function () {
     $f = shopFixtures();
     shopSetup();
     Setting::put('stripe_publishable', 'pk_test_wallet');
@@ -103,12 +103,11 @@ test('checkout renders the express row and all five payment tiles', function () 
     $this->postJson(route('bag.add'), ['variant_id' => $f['b']->id])->assertOk();
 
     $this->get(route('checkout'))->assertOk()
-        ->assertSee('Express checkout', false)
-        ->assertSee('co-express-gpay', false)
-        ->assertSee('co-express-apay', false)
-        ->assertSee('value="google_pay"', false)
-        ->assertSee('value="apple_pay"', false)
-        ->assertSee('co-express-element', false);
+        ->assertDontSee('Express checkout', false)
+        ->assertDontSee('co-express-gpay', false)
+        ->assertDontSee('co-express-apay', false)
+        ->assertDontSee('value="google_pay"', false)
+        ->assertDontSee('value="apple_pay"', false);
 });
 
 test('wallet methods need stripe keys like cards do', function () {

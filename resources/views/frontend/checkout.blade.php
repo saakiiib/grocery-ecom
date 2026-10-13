@@ -47,29 +47,6 @@
                 </div>
             @endauth
 
-            @if ($stripeOn)
-            <div class="auth-card" id="co-express" style="margin:0 0 1.5rem;">
-                <h2 style="font-size:1.25rem;margin-bottom:0.25rem;">Express checkout</h2>
-                <p class="text-muted" style="font-size:13px;margin:0 0 0.9rem;">Faster — pay with your wallet. Details still come from the form below.</p>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;">
-                    <button type="button" id="co-express-gpay" class="btn btn-dark" style="display:flex;align-items:center;justify-content:center;gap:0.5rem;min-height:48px;font-size:16px;" aria-label="Express checkout with Google Pay">
-                        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path fill="#4285F4" d="M23.5 12.3c0-.9-.1-1.5-.3-2.2H12v4.3h6.5c-.1 1.1-.8 2.7-2.4 3.8l3.6 2.8c2.2-2 3.8-5 3.8-8.7z"/><path fill="#34A853" d="M12 24c3.2 0 5.9-1.1 7.9-2.9l-3.8-2.9c-1 .7-2.4 1.2-4.1 1.2-3.1 0-5.8-2.1-6.8-5l-3.8 2.9C3.5 21.3 7.4 24 12 24z"/><path fill="#FBBC05" d="M5.2 14.4c-.2-.7-.4-1.5-.4-2.4s.1-1.7.4-2.4L1.4 6.7C.5 8.7 0 10.3 0 12s.5 3.3 1.4 4.7l3.8-2.3z"/><path fill="#EA4335" d="M12 4.7c1.8 0 3 .8 3.7 1.4l3.3-3.2C17.9 1.1 15.2 0 12 0 7.4 0 3.5 2.7 1.4 6.7l3.8 2.9c1-2.9 3.7-4.9 6.8-4.9z"/></svg>
-                        <span><strong>G</strong> Pay</span>
-                    </button>
-                    <button type="button" id="co-express-apay" class="btn btn-dark" style="display:flex;align-items:center;justify-content:center;gap:0.5rem;min-height:48px;font-size:16px;" aria-label="Express checkout with Apple Pay">
-                        <x-icon name="apple" />
-                        <span>Pay</span>
-                    </button>
-                </div>
-                <div id="co-express-element" style="display:none;margin-top:0.6rem;"></div>
-                <div style="display:flex;align-items:center;gap:0.75rem;margin-top:1rem;" aria-hidden="true">
-                    <span style="flex:1;height:1px;background:var(--border,#e5e2da);"></span>
-                    <span class="text-muted" style="font-size:12px;letter-spacing:0.08em;">OR CONTINUE BELOW</span>
-                    <span style="flex:1;height:1px;background:var(--border,#e5e2da);"></span>
-                </div>
-            </div>
-            @endif
-
             <form id="egf-checkout-form" class="cart-layout" data-has-unavailable="{{ $hasUnavailable ? '1' : '0' }}" style="margin:0;align-items:start;">
                 @csrf
                 <div style="min-width:0;">
@@ -291,20 +268,6 @@
                             <span class="text-muted">{{ $paypalOn ? 'Protected' : 'Soon' }}</span>
                             <span class="pay-tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
                         </label>
-                        <label class="pay-tile @if (! $stripeOn) pay-tile-off @endif">
-                            <input type="radio" name="payment_method" value="google_pay" @disabled(! $stripeOn)>
-                            <span class="pay-tile-icon"><strong>G</strong></span>
-                            <strong>Google Pay</strong>
-                            <span class="text-muted">{{ $stripeOn ? 'One tap' : 'Soon' }}</span>
-                            <span class="pay-tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
-                        </label>
-                        <label class="pay-tile @if (! $stripeOn) pay-tile-off @endif">
-                            <input type="radio" name="payment_method" value="apple_pay" @disabled(! $stripeOn)>
-                            <span class="pay-tile-icon"><strong>A</strong></span>
-                            <strong>Apple Pay</strong>
-                            <span class="text-muted">{{ $stripeOn ? 'One tap' : 'Soon' }}</span>
-                            <span class="pay-tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
-                        </label>
                     </div>
                     @if (! $stripeOn || ! $paypalOn)
                         <p class="text-muted" style="font-size:13px;margin:0.5rem 0 1rem;">Online payments go live as soon as the shop connects its card and PayPal accounts — cash on delivery works today.</p>
@@ -314,6 +277,7 @@
                         <div id="co-card-element" style="border:1px solid var(--border,#e5e2da);border-radius:10px;padding:0.8rem;"></div>
                         <p class="text-muted" id="co-stripe-note" style="font-size:13px;margin-top:0.5rem;">Same page, no redirect — your order is already placed, just complete payment below.</p>
                     </div>
+                    <div id="co-express-element" style="display:none;margin-top:0.6rem;"></div>
                     <div id="co-paypal-buttons" style="display:none;margin-bottom:1rem;"></div>
 
                     <div id="co-error" style="display:none;color:#B91C1C;font-size:14px;margin-bottom:1rem;"></div>
@@ -678,22 +642,8 @@
             }
             if (m === 'paypal') renderPaypalButtons();
         }
-        /* Top Express row: pick the wallet and run the normal submit (phase 1
-        places the order, phase 2 completes the wallet sheet in-page). */
-        function expressSubmit(m) {
-            var radio = form.querySelector('input[name="payment_method"][value="' + m + '"]');
-            if (!radio || radio.disabled) { showError('That wallet is not available right now — please choose another method.'); return; }
-            radio.checked = true;
-            resetStripePhase();
-            syncMethod();
-            if (form.requestSubmit) form.requestSubmit(); else form.submit();
-        }
-        var gBtn = document.getElementById('co-express-gpay');
-        if (gBtn) gBtn.addEventListener('click', function () { expressSubmit('google_pay'); });
-        var aBtn = document.getElementById('co-express-apay');
-        if (aBtn) aBtn.addEventListener('click', function () { expressSubmit('apple_pay'); });
         /* Phase 2: mount Stripe's tabbed Payment Element (Card, Revolut Pay…)
-        and, for wallets, the one-tap wallet buttons — all on this page. */
+        and, for resumed wallet orders, the one-tap wallet buttons — all on this page. */
         function startStripePhase(json) {
             if (!window.Stripe) { showError('Payment form could not load — please reload and try again.'); unlockSubmit(); return; }
             var m = json.payment_method || method();
