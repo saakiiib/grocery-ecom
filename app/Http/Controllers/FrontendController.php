@@ -636,8 +636,17 @@ class FrontendController extends Controller
         if ($shopper) {
             $shopper->ensureAddressBook();
             $addresses = $shopper->addresses()->get();
-            $defaultDelivery = $shopper->defaultDeliveryAddress();
-            $defaultBilling = $shopper->defaultBillingAddress();
+            // Blank address fields fall back to the profile so checkout prefills
+            // (an empty string must not win over a filled profile value).
+            foreach ($addresses as $a) {
+                foreach (['name', 'phone', 'address', 'city', 'postcode'] as $f) {
+                    if (trim((string) $a->$f) === '') {
+                        $a->$f = $shopper->$f ?? '';
+                    }
+                }
+            }
+            $defaultDelivery = $addresses->firstWhere('is_default_delivery', true) ?? $addresses->first();
+            $defaultBilling = $addresses->firstWhere('is_default_billing', true) ?? $defaultDelivery;
         }
         $coAddressBook = $addresses->mapWithKeys(fn ($a) => [
             $a->id => $a->only(['name', 'phone', 'address', 'city', 'postcode']),

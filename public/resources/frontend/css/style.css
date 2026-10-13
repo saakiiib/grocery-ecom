@@ -1829,9 +1829,9 @@ h1, h2, h3, .display {
 }
 .co-line { gap: 0.75rem; align-items: center; }
 .co-line > span { line-height: 1.45; }
-.arriving-line { font-size: 15px; background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; border-radius: 10px; padding: 0.6rem 0.9rem; margin: 0 0 0.6rem; }
+.arriving-line { font-size: 15px; background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; border-radius: 10px; padding: 0.6rem 0.9rem; margin: 0.6rem 0; }
 /* Payment tiles */
-.pay-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.6rem; }
+.pay-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.6rem; margin: 0 0 1rem; }
 .pay-tile {
   position: relative;
   display: flex;

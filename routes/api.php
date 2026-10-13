@@ -12,8 +12,8 @@ use Illuminate\Support\Facades\Route;
 // the bag/checkout session is keyed by the X-Session-Id header (see ApiSession).
 Route::middleware(['api_session', 'api_auth:optional'])->group(function () {
     // Auth
-    Route::post('/auth/register', [AuthApiController::class, 'register'])->middleware('throttle:5,1');
-    Route::post('/auth/login', [AuthApiController::class, 'login'])->middleware('throttle:5,1');
+    Route::post('/auth/register', [AuthApiController::class, 'register'])->middleware('throttle:10,1');
+    Route::post('/auth/login', [AuthApiController::class, 'login'])->middleware('throttle:10,1');
 
     // Catalogue
     Route::get('/home', [CatalogApiController::class, 'home']);
