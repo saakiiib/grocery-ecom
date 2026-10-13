@@ -257,6 +257,7 @@ class AccountController extends Controller
                 'ok' => true,
                 'paypal' => true,
                 'paypal_order_id' => $ppOrderId,
+                'approve_url' => CheckoutController::paypalCheckoutUrl($ppOrderId),
                 'order_number' => $order->number,
             ]);
         } catch (\Throwable $e) {

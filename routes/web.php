@@ -61,6 +61,8 @@ Route::post('/checkout/postcode', [CheckoutController::class, 'postcode'])->midd
 Route::post('/checkout/payment-confirm', [CheckoutController::class, 'paymentConfirm'])->middleware('throttle:30,1')->name('checkout.payment-confirm');
 Route::post('/webhooks/stripe', [WebhookController::class, 'stripe'])->name('webhooks.stripe');
 Route::post('/webhooks/paypal', [WebhookController::class, 'paypal'])->name('webhooks.paypal');
+Route::get('/checkout/paypal-return', [CheckoutController::class, 'paypalReturn'])->name('checkout.paypal-return');
+Route::get('/checkout/paypal-cancel', [CheckoutController::class, 'paypalCancel'])->name('checkout.paypal-cancel');
 Route::post('/checkout/cancel', [CheckoutController::class, 'cancel'])->middleware('throttle:20,1')->name('checkout.cancel');
 Route::get('/order/success/{number}', [CheckoutController::class, 'success'])->name('order.success');
 Route::get('/order/invoice/{number}', [CheckoutController::class, 'invoicePdf'])->name('order.invoice');

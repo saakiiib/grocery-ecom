@@ -523,6 +523,7 @@ class CheckoutController extends Controller
             'ok' => true,
             'paypal' => true,
             'paypal_order_id' => $ppOrderId,
+            'approve_url' => static::paypalCheckoutUrl($ppOrderId),
             'order_number' => $order->number,
         ]);
     }
@@ -856,6 +857,13 @@ class CheckoutController extends Controller
         return $res->json('access_token');
     }
 
+    public static function paypalCheckoutUrl(string $orderId): string
+    {
+        $host = static::paypalMode() === 'live' ? 'www.paypal.com' : 'www.sandbox.paypal.com';
+
+        return "https://{$host}/checkoutnow?token={$orderId}";
+    }
+
     public static function paypalCreateOrder(Order $order): string
     {
         $res = Http::withToken(static::paypalToken())
@@ -869,6 +877,14 @@ class CheckoutController extends Controller
                         'value' => number_format($order->total, 2, '.', ''),
                     ],
                 ]],
+                'application_context' => [
+                    'brand_name' => 'Alam Mini Market',
+                    'locale' => 'en-GB',
+                    'landing_page' => 'LOGIN',
+                    'user_action' => 'PAY_NOW',
+                    'return_url' => url('/checkout/paypal-return'),
+                    'cancel_url' => url('/checkout/paypal-cancel'),
+                ],
             ]);
 
         if ($res->failed() || ! $res->json('id')) {
@@ -876,6 +892,16 @@ class CheckoutController extends Controller
         }
 
         return $res->json('id');
+    }
+
+    public function paypalReturn(Request $request)
+    {
+        return response('<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><title>Payment Approved</title><style>body{font-family:system-ui,-apple-system,sans-serif;text-align:center;padding:48px 20px;background:#FAF7EF;color:#1A2E22;}h2{color:#1B4332;margin-bottom:8px;}p{color:#555;font-size:15px;}</style></head><body><h2>Payment approved!</h2><p>Please wait, returning you to your order...</p></body></html>', 200, ['Content-Type' => 'text/html']);
+    }
+
+    public function paypalCancel(Request $request)
+    {
+        return response('<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><title>Payment Cancelled</title><style>body{font-family:system-ui,-apple-system,sans-serif;text-align:center;padding:48px 20px;background:#FAF7EF;color:#1A2E22;}h2{color:#B91C1C;margin-bottom:8px;}p{color:#555;font-size:15px;}</style></head><body><h2>Payment cancelled</h2><p>Returning to checkout...</p></body></html>', 200, ['Content-Type' => 'text/html']);
     }
 
     private function paypalCapture(Order $order): bool
