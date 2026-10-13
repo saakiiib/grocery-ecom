@@ -886,8 +886,10 @@ class CheckoutController extends Controller
             return false;
         }
 
+        // Body-less POST: PayPal rejects a literal `[]` JSON body with
+        // MALFORMED_REQUEST_JSON, which Laravel sends for `post($url, [])`.
         $res = Http::withToken(static::paypalToken())
-            ->post(static::paypalBaseUrl().'/v2/checkout/orders/'.$order->payment_reference.'/capture', []);
+            ->send('POST', static::paypalBaseUrl().'/v2/checkout/orders/'.$order->payment_reference.'/capture');
 
         if ($res->failed()) {
             Log::warning('PayPal capture refused.', [
