@@ -8,6 +8,7 @@ use App\Mail\OrderPlaced;
 use App\Models\CompanyDetails;
 use App\Models\Coupon;
 use App\Models\DeliverySlot;
+use App\Models\DraftOrder;
 use App\Models\Order;
 use App\Models\OrderStatus;
 use App\Models\Payment;
@@ -349,112 +350,26 @@ class CheckoutController extends Controller
                 $total = max(0, round($priced['subtotal'] + $priced['fee'] - $pointsDiscount - $couponDiscount, 2));
                 $vatPercent = (float) (CompanyDetails::cached()->vat_percent ?? 0);
                 $vatAmount = $vatPercent > 0 ? round($total * $vatPercent / (100 + $vatPercent), 2) : 0.0;
-                $order = Order::create([
-                    'number' => 'PENDING',
+                $draft = DraftOrder::create([
+                    'draft_number' => 'DRAFT-' . uniqid(),
                     'user_id' => auth()->id(),
-                    'name' => $data['name'],
-                    'phone' => $data['phone'],
-                    'email' => $data['email'] ?? null,
-                    // Pickup orders don't collect or persist a delivery address.
-                    'address' => $pickup ? 'Click & Collect' : $data['address'],
-                    'city' => $pickup ? '' : $data['city'],
-                    'postcode' => $pickup ? '' : $data['postcode'],
-                    'billing_name' => $pickup ? null : $data['billing_name'],
-                    'billing_phone' => $pickup ? null : $data['billing_phone'],
-                    'billing_address' => $pickup ? null : $data['billing_address'],
-                    'billing_city' => $pickup ? null : $data['billing_city'],
-                    'billing_postcode' => $pickup ? null : $data['billing_postcode'],
-                    'notes' => $data['notes'] ?? null,
-                    'substitution_preference' => $data['substitution'],
-                    'delivery_date' => $deliveryDate,
-                    'delivery_slot_id' => $priced['slot']?->id,
-                    'delivery_slot_label' => $deliveryLabel ?? $priced['label'] ?? $priced['slot']?->label(),
-                    'subtotal' => $priced['subtotal'],
-                    'delivery_fee' => $priced['fee'],
-                    'total' => $total,
-                    'vat_percent' => $vatPercent,
-                    'vat_amount' => $vatAmount,
-                    'points_redeemed' => $pointsRedeem,
-                    'points_discount' => $pointsDiscount,
-                    'coupon_id' => $coupon?->id,
-                    'coupon_code' => $coupon?->code,
-                    'coupon_discount' => $couponDiscount,
+                    'payload' => [
+                        'data' => $data,
+                        'priced' => $priced,
+                        'points_redeem' => $pointsRedeem,
+                        'points_discount' => $pointsDiscount,
+                        'pickup' => $pickup,
+                        'delivery_date' => $deliveryDate,
+                        'delivery_label' => $deliveryLabel,
+                        'total' => $total,
+                        'vat_percent' => $vatPercent,
+                        'vat_amount' => $vatAmount,
+                    ],
                     'payment_method' => $data['payment_method'],
-                    'payment_status' => 'unpaid',
-                    'fulfillment' => $pickup ? 'pickup' : 'delivery',
-                    'status_id' => $status->id,
-                    'status_slug' => $status->slug,
-                ]);
-                $order->number = 'AMM-'.(10000 + $order->id);
-                $order->save();
-
-                if ($pointsRedeem > 0) {
-                    $order->points()->create([
-                        'user_id' => $order->user_id,
-                        'order_id' => $order->id,
-                        'points' => -$pointsRedeem,
-                        'type' => UserPoint::REDEEM,
-                        'description' => 'Spent on '.$order->number,
-                    ]);
-                }
-
-                foreach ($priced['lines'] as $line) {
-                    $order->items()->create([
-                        'product_variant_id' => $line['variant_id'],
-                        'product_id' => ProductVariant::find($line['variant_id'])?->product_id,
-                        'product_name' => $line['name'],
-                        'variant_sku' => $line['sku'],
-                        'pack_label' => $line['pack'],
-                        'unit_price' => $line['price'],
-                        'qty' => $line['qty'],
-                        'line_total' => $line['line_total'],
-                        'promo_label' => $line['promo_label'] ?? null,
-                        'free_qty' => $line['free_qty'] ?? 0,
-                    ]);
-                }
-
-                $order->histories()->create([
-                    'from_slug' => null,
-                    'to_slug' => $status->slug,
-                    'changed_by' => auth()->id(),
-                    'note' => 'Order placed ('.$order->paymentLabel().').',
+                    'status' => 'pending',
                 ]);
 
-                // Remember the shopper's details for next time (never overwrite,
-                // and never steal a phone number that belongs to another account).
-                if ($order->user_id) {
-                    if (! $pickup) {
-                        $profile = ['address' => $order->address, 'city' => $order->city, 'postcode' => $order->postcode];
-                        foreach (['address', 'city', 'postcode'] as $field) {
-                            if ($order->user->$field) {
-                                unset($profile[$field]);
-                            }
-                        }
-                        if ($profile !== []) {
-                            $order->user->update($profile);
-                        }
-                    }
-                    if (! $pickup && ! empty($data['save_address'])) {
-                        $exists = $order->user->addresses()
-                            ->where('address', $order->address)
-                            ->where('postcode', $order->postcode)
-                            ->exists();
-                        if (! $exists) {
-                            $order->user->addresses()->create([
-                                'label' => $data['save_label'] ?: 'Home',
-                                'name' => $order->name,
-                                'phone' => $order->phone,
-                                'address' => $order->address,
-                                'city' => $order->city,
-                                'postcode' => $order->postcode,
-                                'is_default_delivery' => false,
-                                'is_default_billing' => false,
-                            ]);
-                        }
-                    }
-                }
-
-                return $order;
+                return $draft;
             });
         } catch (CouponRejected $e) {
             return response()->json(['message' => $e->getMessage()], 422);
@@ -466,27 +381,17 @@ class CheckoutController extends Controller
             return response()->json(['message' => 'We could not place your order — please try again.'], 500);
         }
 
-        session(['last_order_id' => $order->id]);
+        session(['last_draft_id' => $draft->id]);
 
         if ($data['payment_method'] === 'cod') {
+            $order = $this->promoteDraftToOrder($draft);
             try {
-                $order->changeStatus(
-                    'confirmed',
-                    auth()->id(),
-                    $pickup ? 'Cash on collection — pay in store.' : 'Cash on delivery — pay the driver.'
-                );
-            } catch (\Throwable $e) {
-                report($e);
-
-                return response()->json(['message' => 'We could not confirm your order — please try again or contact us.'], 500);
-            }
+                $order->changeStatus('confirmed', auth()->id(), $pickup ? 'Cash on collection — pay in store.' : 'Cash on delivery — pay the driver.');
+            } catch (\Throwable $e) { report($e); return response()->json(['message' => 'We could not confirm your order.'], 500); }
             Order::sendMail($order->receiptEmail(), new OrderPlaced($order));
             BagController::clear();
-
-            return response()->json([
-                'ok' => true,
-                'redirect' => route('order.success', $order->number),
-            ]);
+            session(['last_order_id' => $order->id]);
+            return response()->json(['ok' => true, 'redirect' => route('order.success', $order->number)]);
         }
 
         if (static::isStripeMethod($data['payment_method'] ?? null)) {
@@ -587,32 +492,31 @@ class CheckoutController extends Controller
     public function paymentConfirm(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'order_number' => 'required|string|exists:orders,number',
+            'draft_number' => 'required|string',
             'payment_method' => 'required|in:stripe,paypal,google_pay,apple_pay',
         ]);
 
-        $order = Order::where('number', $data['order_number'])->firstOrFail();
-
-        if (! $this->maySee($order)) {
-            return response()->json(['message' => 'Order not found.'], 404);
+        $draft = DraftOrder::where('draft_number', $data['draft_number'])->first();
+        if (! $draft) {
+            $order = Order::where('number', $data['draft_number'])->firstOrFail();
+            if (! $this->maySee($order)) return response()->json(['message' => 'Order not found.'], 404);
+            if ($order->isPaid()) return response()->json(['ok' => true, 'redirect' => route('order.success', $order->number)]);
+            return response()->json(['message' => 'Not yet paid — please try again.'], 422);
         }
-        if (in_array($order->status_slug, ['cancelled', 'delivered', 'refunded'], true)) {
-            return response()->json(['message' => 'That order is no longer payable — please place a fresh order or contact us.'], 422);
-        }
-        if ($order->isPaid()) {
-            return response()->json(['ok' => true, 'redirect' => route('order.success', $order->number)]);
-        }
-        if ($order->payment_method !== $data['payment_method']) {
+        if ($draft->payment_method !== $data['payment_method']) {
             return response()->json(['message' => 'Payment method mismatch.'], 422);
         }
 
         try {
+            $tmp = new \stdClass();
+            $tmp->total = $draft->payload['total'] ?? 0;
+            $tmp->number = $draft->draft_number;
+            $tmp->payment_method = $draft->payment_method;
             $paid = $data['payment_method'] === 'paypal'
-                ? $this->paypalCapture($order)
-                : $this->stripeVerify($order);
+                ? $this->paypalCapture($tmp)
+                : $this->stripeVerify($tmp);
         } catch (\Throwable $e) {
             report($e);
-
             return response()->json(['message' => 'We could not confirm your payment — please try again.'], 422);
         }
 
@@ -620,31 +524,15 @@ class CheckoutController extends Controller
             return response()->json(['message' => 'Your payment has not completed yet — please try again.'], 422);
         }
 
-        // Row-locked: a webhook racing this confirm resolves to one mail.
-        $confirmed = DB::transaction(function () use ($order) {
-            $fresh = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
-            if ($fresh->isPaid()) {
-                return false;
-            }
-            if (in_array($fresh->status_slug, ['cancelled', 'delivered', 'refunded'], true)) {
-                return false;
-            }
-            $fresh->payment_status = 'paid';
-            $fresh->amount_paid = $fresh->total;
-            $fresh->save();
-            $changed = $fresh->status_slug === 'new'
-                ? $fresh->changeStatus('confirmed', $fresh->user_id, 'Paid online ('.$fresh->paymentLabel().').')
-                : null;
-            if ($changed) {
-                Order::sendMail($fresh->receiptEmail(), new OrderPlaced($fresh));
-            }
-
-            return true;
-        });
-        if (! $confirmed) {
-            return response()->json(['ok' => true, 'redirect' => route('order.success', $order->number)]);
-        }
-        Payment::settle($order->refresh(), $order->payment_reference, Payment::SUCCEEDED);
+        $order = $this->promoteDraftToOrder($draft);
+        $order->payment_reference = $draft->payment_reference;
+        $order->save();
+        $order->payment_status = 'paid';
+        $order->amount_paid = $order->total;
+        $order->save();
+        $changed = $order->status_slug === 'new' ? $order->changeStatus('confirmed', $order->user_id, 'Paid online ('.$order->paymentLabel().').') : null;
+        if ($changed) Order::sendMail($order->receiptEmail(), new OrderPlaced($order));
+        Payment::settle($order, $draft->payment_reference, Payment::SUCCEEDED);
         BagController::clear();
         session(['last_order_id' => $order->id]);
 
@@ -1006,5 +894,89 @@ class CheckoutController extends Controller
         }
 
         return $res->json('id');
+    }
+
+    private function promoteDraftToOrder(DraftOrder $draft): Order
+    {
+        $p = $draft->payload ?? [];
+        $data = $p['data'] ?? [];
+        $priced = $p['priced'] ?? [];
+        $pickup = $p['pickup'] ?? false;
+        $deliveryDate = $p['delivery_date'] ?? null;
+        $deliveryLabel = $p['delivery_label'] ?? null;
+        $pointsRedeem = $p['points_redeem'] ?? 0;
+        $total = $p['total'] ?? 0;
+        $vatPercent = $p['vat_percent'] ?? 0;
+        $vatAmount = $p['vat_amount'] ?? 0;
+
+        $status = OrderStatus::where('slug', 'new')->where('is_active', true)->firstOrFail();
+        $order = Order::create([
+            'number' => 'PENDING',
+            'user_id' => $draft->user_id,
+            'name' => $data['name'] ?? '',
+            'phone' => $data['phone'] ?? '',
+            'email' => $data['email'] ?? null,
+            'address' => $pickup ? 'Click & Collect' : ($data['address'] ?? ''),
+            'city' => $pickup ? '' : ($data['city'] ?? ''),
+            'postcode' => $pickup ? '' : ($data['postcode'] ?? ''),
+            'billing_name' => $pickup ? null : ($data['billing_name'] ?? null),
+            'billing_phone' => $pickup ? null : ($data['billing_phone'] ?? null),
+            'billing_address' => $pickup ? null : ($data['billing_address'] ?? null),
+            'billing_city' => $pickup ? null : ($data['billing_city'] ?? null),
+            'billing_postcode' => $pickup ? null : ($data['billing_postcode'] ?? null),
+            'notes' => $data['notes'] ?? null,
+            'substitution_preference' => $data['substitution'] ?? 'substitute',
+            'delivery_date' => $deliveryDate,
+            'delivery_slot_id' => $priced['slot']['id'] ?? null,
+            'delivery_slot_label' => $deliveryLabel ?? $priced['label'] ?? null,
+            'subtotal' => $priced['subtotal'] ?? 0,
+            'delivery_fee' => $priced['fee'] ?? 0,
+            'total' => $total,
+            'vat_percent' => $vatPercent,
+            'vat_amount' => $vatAmount,
+            'points_redeem' => $pointsRedeem,
+            'points_discount' => $p['points_discount'] ?? 0,
+            'coupon_id' => $data['coupon_id'] ?? null,
+            'coupon_code' => $data['coupon_code'] ?? null,
+            'coupon_discount' => $p['coupon_discount'] ?? 0,
+            'payment_method' => $draft->payment_method,
+            'payment_status' => 'unpaid',
+            'fulfillment' => $pickup ? 'pickup' : 'delivery',
+            'status_id' => $status->id,
+            'status_slug' => $status->slug,
+        ]);
+        $order->number = 'AMM-'.(10000 + $order->id);
+        $order->save();
+        $draft->delete();
+        if ($pointsRedeem > 0) {
+            $order->points()->create([
+                'user_id' => $order->user_id,
+                'order_id' => $order->id,
+                'points' => -$pointsRedeem,
+                'type' => UserPoint::REDEEM,
+                'description' => 'Spent on '.$order->number,
+            ]);
+        }
+        foreach ($priced['lines'] ?? [] as $line) {
+            $order->items()->create([
+                'product_variant_id' => $line['variant_id'],
+                'product_id' => ProductVariant::find($line['variant_id'])?->product_id,
+                'product_name' => $line['name'],
+                'variant_sku' => $line['sku'],
+                'pack_label' => $line['pack'],
+                'unit_price' => $line['price'],
+                'qty' => $line['qty'],
+                'line_total' => $line['line_total'],
+                'promo_label' => $line['promo_label'] ?? null,
+                'free_qty' => $line['free_qty'] ?? 0,
+            ]);
+        }
+        $order->histories()->create([
+            'from_slug' => null,
+            'to_slug' => $status->slug,
+            'changed_by' => $draft->user_id,
+            'note' => 'Order placed ('.$order->paymentLabel().').',
+        ]);
+        return $order;
     }
 }
