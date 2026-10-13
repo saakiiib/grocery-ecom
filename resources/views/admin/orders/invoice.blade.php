@@ -171,10 +171,10 @@
 
             <table style="margin-top:12px;">
                 <tr>
-                    <td style="vertical-align:top;">
-                        <div class="payline"><strong>Payment:</strong> {{ $order->paymentLabel() }} · {{ $order->paymentStatusLabel() }}</div>
+                    <td style="vertical-align:bottom;">
                         @if (! $order->isPaid())<div class="due">Amount due: £{{ number_format($order->total, 2) }} — please pay {{ strtolower($order->paymentLabel()) === 'cash' ? 'on delivery' : 'to complete this order' }}.</div>@endif
                         @if ($order->notes)<div class="payline" style="border-left-color:#6b7280;"><strong>Delivery notes:</strong> {{ $order->notes }}</div>@endif
+                        <div class="payline"><strong>Payment:</strong> {{ $order->paymentLabel() }} · {{ $order->paymentStatusLabel() }}</div>
                     </td>
                     <td style="width:44%;vertical-align:top;">
                         <table class="totals">
