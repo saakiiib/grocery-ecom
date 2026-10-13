@@ -230,14 +230,17 @@
                     <h3 style="margin-top:1.5rem;"><span class="co-step">4</span>Payment</h3>
                     @auth
                         @if ($pointsBalance >= $pointsMin)
-                            <div class="pay-card" style="margin-bottom:0.7rem;cursor:default;flex-wrap:wrap;" id="co-points-card">
-                                <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;flex:1 1 100%;font-weight:600;color:#2C2A24;">
-                                    <input type="checkbox" id="use-points-check" style="width:20px;height:20px;accent-color:var(--primary);cursor:pointer;" onclick="document.getElementById('points-row').style.display = this.checked ? 'flex' : 'none'; document.getElementById('co-points').value = this.checked ? '0' : '0';">
+                            <div class="pay-card" style="margin-bottom:0.7rem;cursor:default;flex-wrap:wrap;padding:12px;" id="co-points-card">
+                                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:700;color:#2C2A24;font-size:1.05rem;">
+                                    <input type="checkbox" id="use-points-check" onclick="document.getElementById('points-row').style.display=this.checked?'block':'none';" style="width:22px;height:22px;accent-color:#E01E26;border:2px solid #E01E26;border-radius:4px;flex-shrink:0;">
                                     <span>Use loyalty points <span class="text-muted">({{ $pointsBalance }} available)</span></span>
                                 </label>
-                                <div id="points-row" style="display:none;align-items:center;gap:0.5rem;margin-top:0.35rem;flex:1 1 100%;">
-                                    <span class="text-muted" style="font-size:0.85rem;">Spend up to <strong>{{ $pointsBalance }}</strong> points <span style="color:#D4A84B;">· 100 pts = £{{ number_format(100 * $pointsValue, 2) }} off</span></span>
-                                    <input type="number" id="co-points" min="0" max="{{ $pointsBalance }}" step="{{ $pointsMin }}" value="0" style="width:100px;border:2px solid var(--primary);border-radius:8px;padding:0.4rem 0.5rem;font-weight:700;font-size:1rem;color:#000;background:#fff;" aria-label="Points to spend" oninput="if(this.value > {{ $pointsBalance }}) this.value={{ $pointsBalance }};">
+                                <div id="points-row" style="display:none;margin-top:0.6rem;padding-top:0.4rem;border-top:1.5px dashed #E5E1D6;">
+                                    <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+                                        <strong style="font-size:0.9rem;color:#2C2A24;">Spend</strong>
+                                        <input type="number" id="co-points" min="0" max="{{ $pointsBalance }}" step="{{ $pointsMin }}" value="0" style="width:90px;border:2px solid #E01E26;border-radius:8px;padding:0.35rem 0.4rem;font-weight:700;font-size:1rem;color:#000;background:#fff;text-align:center;" oninput="if(this.value>{{ $pointsBalance }})this.value={{ $pointsBalance }};if(this.value<0)this.value=0;">
+                                        <span style="font-size:0.85rem;color:#6B6558;">points · 100 pts = £1 off · max {{ $pointsBalance }}</span>
+                                    </div>
                                 </div>
                             </div>
                         @endif

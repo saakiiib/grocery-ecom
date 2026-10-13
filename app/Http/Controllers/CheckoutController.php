@@ -301,7 +301,7 @@ class CheckoutController extends Controller
         }
 
         try {
-            $order = DB::transaction(function () use ($data, $priced, $pointsRedeem, $pointsDiscount, $pickup, $deliveryDate, $deliveryLabel) {
+            $draft = DB::transaction(function () use ($data, $priced, $pointsRedeem, $pointsDiscount, $pickup, $deliveryDate, $deliveryLabel) {
                 // Lock existing ledger rows and recheck the balance inside the
                 // transaction so two simultaneous checkouts cannot spend the
                 // same points twice.
@@ -343,21 +343,20 @@ class CheckoutController extends Controller
                     $couponDiscount = $check['discount'];
                 }
 
-                $status = OrderStatus::where('slug', 'new')->where('is_active', true)->firstOrFail();
-
-                /** @var Order $order */
                 // VAT is included in shelf prices: snapshot the VAT portion of the total.
                 $total = max(0, round($priced['subtotal'] + $priced['fee'] - $pointsDiscount - $couponDiscount, 2));
                 $vatPercent = (float) (CompanyDetails::cached()->vat_percent ?? 0);
                 $vatAmount = $vatPercent > 0 ? round($total * $vatPercent / (100 + $vatPercent), 2) : 0.0;
                 $draft = DraftOrder::create([
-                    'draft_number' => 'DRAFT-' . uniqid(),
+                    'draft_number' => 'DRAFT-'.uniqid(),
                     'user_id' => auth()->id(),
                     'payload' => [
                         'data' => $data,
+                        'coupon_id' => $coupon?->id,
                         'priced' => $priced,
                         'points_redeem' => $pointsRedeem,
                         'points_discount' => $pointsDiscount,
+                        'coupon_discount' => $couponDiscount,
                         'pickup' => $pickup,
                         'delivery_date' => $deliveryDate,
                         'delivery_label' => $deliveryLabel,
@@ -387,54 +386,64 @@ class CheckoutController extends Controller
             $order = $this->promoteDraftToOrder($draft);
             try {
                 $order->changeStatus('confirmed', auth()->id(), $pickup ? 'Cash on collection — pay in store.' : 'Cash on delivery — pay the driver.');
-            } catch (\Throwable $e) { report($e); return response()->json(['message' => 'We could not confirm your order.'], 500); }
+            } catch (\Throwable $e) {
+                report($e);
+
+                return response()->json(['message' => 'We could not confirm your order.'], 500);
+            }
             Order::sendMail($order->receiptEmail(), new OrderPlaced($order));
             BagController::clear();
             session(['last_order_id' => $order->id]);
+
             return response()->json(['ok' => true, 'redirect' => route('order.success', $order->number)]);
         }
 
+        // Build a lightweight value object so gateway helpers (stripeIntent /
+        // paypalCreateOrder) get the fields they need without a real Order row.
+        $gw = new \stdClass;
+        $gw->total = $draft->payload['total'] ?? 0;
+        $gw->number = $draft->draft_number;
+        $gw->payment_method = $draft->payment_method;
+
         if (static::isStripeMethod($data['payment_method'] ?? null)) {
             try {
-                $intent = static::stripeIntent($order);
+                $intent = static::stripeIntent($gw);
             } catch (\Throwable $e) {
                 report($e);
-                $order->changeStatus('cancelled', null, 'Card payment could not be started.');
+                $draft->delete();
 
                 return response()->json(['message' => 'Card payment could not be started — please try again or choose another method.'], 422);
             }
-            $order->payment_reference = $intent['id'];
-            $order->save();
-            Payment::attempt($order, $intent['id']);
+            $draft->payment_reference = $intent['id'];
+            $draft->save();
 
             return response()->json([
                 'ok' => true,
                 'stripe' => true,
                 'publishable' => static::stripePublishable(),
                 'client_secret' => $intent['client_secret'],
-                'order_number' => $order->number,
-                'payment_method' => $order->payment_method,
+                'order_number' => $draft->draft_number,   // app sends this back to paymentConfirm
+                'payment_method' => $draft->payment_method,
             ]);
         }
 
         try {
-            $ppOrderId = static::paypalCreateOrder($order);
+            $ppOrderId = static::paypalCreateOrder($gw);
         } catch (\Throwable $e) {
             report($e);
-            $order->changeStatus('cancelled', null, 'PayPal payment could not be started.');
+            $draft->delete();
 
             return response()->json(['message' => 'PayPal could not be started — please try again or choose another method.'], 422);
         }
-        $order->payment_reference = $ppOrderId;
-        $order->save();
-        Payment::attempt($order, $ppOrderId);
+        $draft->payment_reference = $ppOrderId;
+        $draft->save();
 
         return response()->json([
             'ok' => true,
             'paypal' => true,
             'paypal_order_id' => $ppOrderId,
             'approve_url' => static::paypalCheckoutUrl($ppOrderId),
-            'order_number' => $order->number,
+            'order_number' => $draft->draft_number,   // app sends this back to paymentConfirm
         ]);
     }
 
@@ -492,31 +501,39 @@ class CheckoutController extends Controller
     public function paymentConfirm(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'draft_number' => 'required|string',
+            // The existing browser and mobile clients call this field
+            // order_number. A DRAFT-* value is still the identifier until
+            // the gateway payment succeeds and the real order is created.
+            'order_number' => 'required|string',
             'payment_method' => 'required|in:stripe,paypal,google_pay,apple_pay',
         ]);
 
-        $draft = DraftOrder::where('draft_number', $data['draft_number'])->first();
+        $draft = DraftOrder::where('draft_number', $data['order_number'])->first();
         if (! $draft) {
-            $order = Order::where('number', $data['draft_number'])->firstOrFail();
-            if (! $this->maySee($order)) return response()->json(['message' => 'Order not found.'], 404);
-            if ($order->isPaid()) return response()->json(['ok' => true, 'redirect' => route('order.success', $order->number)]);
+            $order = Order::where('number', $data['order_number'])->firstOrFail();
+            if (! $this->maySee($order)) {
+                return response()->json(['message' => 'Order not found.'], 404);
+            }
+            if ($order->isPaid()) {
+                return response()->json(['ok' => true, 'redirect' => route('order.success', $order->number)]);
+            }
+
             return response()->json(['message' => 'Not yet paid — please try again.'], 422);
+        }
+        if (! $this->maySeeDraft($draft)) {
+            return response()->json(['message' => 'Order not found.'], 404);
         }
         if ($draft->payment_method !== $data['payment_method']) {
             return response()->json(['message' => 'Payment method mismatch.'], 422);
         }
 
         try {
-            $tmp = new \stdClass();
-            $tmp->total = $draft->payload['total'] ?? 0;
-            $tmp->number = $draft->draft_number;
-            $tmp->payment_method = $draft->payment_method;
             $paid = $data['payment_method'] === 'paypal'
-                ? $this->paypalCapture($tmp)
-                : $this->stripeVerify($tmp);
+                ? $this->paypalCapture($draft)
+                : $this->stripeVerify($draft);
         } catch (\Throwable $e) {
             report($e);
+
             return response()->json(['message' => 'We could not confirm your payment — please try again.'], 422);
         }
 
@@ -525,14 +542,15 @@ class CheckoutController extends Controller
         }
 
         $order = $this->promoteDraftToOrder($draft);
-        $order->payment_reference = $draft->payment_reference;
-        $order->save();
         $order->payment_status = 'paid';
         $order->amount_paid = $order->total;
         $order->save();
         $changed = $order->status_slug === 'new' ? $order->changeStatus('confirmed', $order->user_id, 'Paid online ('.$order->paymentLabel().').') : null;
-        if ($changed) Order::sendMail($order->receiptEmail(), new OrderPlaced($order));
-        Payment::settle($order, $draft->payment_reference, Payment::SUCCEEDED);
+        if ($changed) {
+            Order::sendMail($order->receiptEmail(), new OrderPlaced($order));
+        }
+        Payment::attempt($order, $order->payment_reference);
+        Payment::settle($order, $order->payment_reference, Payment::SUCCEEDED);
         BagController::clear();
         session(['last_order_id' => $order->id]);
 
@@ -559,10 +577,25 @@ class CheckoutController extends Controller
 
     /**
      * Abandon an unpaid online order (PayPal cancel button, closed card tab).
-     * Only untouched 'new' orders can vanish this way — nothing paid is touched.
+     * In the draft flow (order_number starts with DRAFT-) we simply delete
+     * the draft row — no real Order exists yet so there is nothing to cancel.
+     * Legacy flow: cancels the real Order as before.
      */
     public function cancel(Request $request): JsonResponse
     {
+        $number = (string) $request->input('order_number', '');
+
+        // Draft flow: just delete the draft and return ok.
+        if (str_starts_with($number, 'DRAFT-')) {
+            $draft = DraftOrder::where('draft_number', $number)->first();
+            if (! $draft || ! $this->maySeeDraft($draft)) {
+                return response()->json(['message' => 'Order not found.'], 404);
+            }
+            $draft->delete();
+
+            return response()->json(['ok' => true]);
+        }
+
         $data = $request->validate(['order_number' => 'required|string|exists:orders,number']);
 
         $order = Order::where('number', $data['order_number'])->firstOrFail();
@@ -615,6 +648,15 @@ class CheckoutController extends Controller
         return session('last_order_id') === $order->id;
     }
 
+    private function maySeeDraft(DraftOrder $draft): bool
+    {
+        if (auth()->check() && (auth()->user()->user_type == 1 || $draft->user_id === auth()->id())) {
+            return true;
+        }
+
+        return session('last_draft_id') === $draft->id;
+    }
+
     /**
      * Strip formatting from a phone number (spaces, dashes, brackets).
      * Empty input becomes null so optional fields skip validation.
@@ -632,7 +674,7 @@ class CheckoutController extends Controller
     /* ---------------- Stripe (raw API — no SDK dependency) ---------------- */
 
     /** @return array{id: string, client_secret: string} */
-    public static function stripeIntent(Order $order): array
+    public static function stripeIntent(object $order): array
     {
         $res = Http::asForm()
             ->withBasicAuth(static::stripeSecret(), '')
@@ -652,7 +694,7 @@ class CheckoutController extends Controller
         return ['id' => $res->json('id'), 'client_secret' => $res->json('client_secret')];
     }
 
-    private function stripeVerify(Order $order): bool
+    private function stripeVerify(object $order): bool
     {
         if (! $order->payment_reference) {
             return false;
@@ -665,7 +707,7 @@ class CheckoutController extends Controller
     }
 
     /** Accept only the exact successful intent created for this order and amount. */
-    public static function stripePaymentMatches(array $intent, Order $order): bool
+    public static function stripePaymentMatches(array $intent, object $order): bool
     {
         $intentId = $intent['id'] ?? null;
         $referenceMatches = is_string($intentId)
@@ -757,7 +799,7 @@ class CheckoutController extends Controller
         return "https://{$host}/checkoutnow?token={$orderId}";
     }
 
-    public static function paypalCreateOrder(Order $order): string
+    public static function paypalCreateOrder(object $order): string
     {
         $res = Http::withToken(static::paypalToken())
             ->post(static::paypalBaseUrl().'/v2/checkout/orders', [
@@ -797,7 +839,7 @@ class CheckoutController extends Controller
         return response('<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><title>Payment Cancelled</title><style>body{font-family:system-ui,-apple-system,sans-serif;text-align:center;padding:48px 20px;background:#FAF7EF;color:#1A2E22;}h2{color:#B91C1C;margin-bottom:8px;}p{color:#555;font-size:15px;}</style></head><body><h2>Payment cancelled</h2><p>Returning to checkout...</p></body></html>', 200, ['Content-Type' => 'text/html']);
     }
 
-    private function paypalCapture(Order $order): bool
+    private function paypalCapture(object $order): bool
     {
         if (! $order->payment_reference) {
             Log::warning('PayPal capture skipped: empty payment_reference.', ['order' => $order->number]);
@@ -934,12 +976,13 @@ class CheckoutController extends Controller
             'total' => $total,
             'vat_percent' => $vatPercent,
             'vat_amount' => $vatAmount,
-            'points_redeem' => $pointsRedeem,
+            'points_redeemed' => $pointsRedeem,
             'points_discount' => $p['points_discount'] ?? 0,
-            'coupon_id' => $data['coupon_id'] ?? null,
-            'coupon_code' => $data['coupon_code'] ?? null,
+            'coupon_id' => $p['coupon_id'] ?? null,
+            'coupon_code' => ! empty($data['coupon_code']) ? strtoupper(trim($data['coupon_code'])) : null,
             'coupon_discount' => $p['coupon_discount'] ?? 0,
             'payment_method' => $draft->payment_method,
+            'payment_reference' => $draft->payment_reference,
             'payment_status' => 'unpaid',
             'fulfillment' => $pickup ? 'pickup' : 'delivery',
             'status_id' => $status->id,
@@ -977,6 +1020,7 @@ class CheckoutController extends Controller
             'changed_by' => $draft->user_id,
             'note' => 'Order placed ('.$order->paymentLabel().').',
         ]);
+
         return $order;
     }
 }
