@@ -226,6 +226,11 @@ class CheckoutController extends Controller
         // New two-speed flow (Today / Next working day). Legacy slot+date
         // payloads from old app clients still take the old branch below.
         $speed = $data['delivery_speed'] ?? null;
+        if ($speed === null && ($data['fulfillment'] ?? null) === 'pickup') {
+            $speed = Delivery::SPEED_STANDARD;
+        } elseif ($speed === null && empty($data['delivery_slot_id'])) {
+            $speed = Delivery::todayAvailable() ? Delivery::SPEED_TODAY : Delivery::SPEED_STANDARD;
+        }
         $deliveryDate = null;
         $deliveryLabel = null;
         $priceKey = null;
