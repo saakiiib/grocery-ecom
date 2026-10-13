@@ -238,7 +238,7 @@
                                     <strong>Use loyalty points <span class="text-muted">({{ $pointsBalance }} available)</span></strong>
                                     <span class="text-muted">100 points = £{{ number_format(100 * $pointsValue, 2) }} off</span>
                                 </span>
-                                <input type="number" id="co-points" min="0" max="{{ $pointsBalance }}" step="{{ $pointsMin }}" value="0" style="width:110px;border:1px solid var(--border);border-radius:8px;padding:0.5rem;" aria-label="Points to spend">
+                                <input type="number" id="co-points" min="0" max="{{ $pointsBalance }}" step="{{ $pointsMin }}" value="0" style="width:120px;border:1.5px solid var(--primary);border-radius:8px;padding:0.55rem 0.6rem;font-weight:600;color:var(--primary);background:#fff;" aria-label="Points to spend">
                             </div>
                         @endif
                     @endauth
