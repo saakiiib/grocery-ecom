@@ -47,8 +47,6 @@
 
 @include('frontend.partials.cookie-banner')
 
-@include('frontend.partials.social-proof')
-
 <script>
     window.EGF_ROUTES = {
         shop: "{{ route('shop') }}",

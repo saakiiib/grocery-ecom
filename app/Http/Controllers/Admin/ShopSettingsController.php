@@ -24,7 +24,6 @@ class ShopSettingsController extends Controller
         'promo_coupon' => 'Welcome promo coupon code',
         'promo_button_text' => 'Welcome promo button text',
         'promo_button_url' => 'Welcome promo button URL',
-        'social_proof_enabled' => 'Recent-sales popup enabled (1/0)',
         'delivery_min_order' => 'Minimum order for delivery (£)',
         'delivery_free_over' => 'Free delivery over (£)',
         'delivery_cutoff_time' => 'Today-delivery cutoff (HH:MM)',
@@ -78,7 +77,6 @@ class ShopSettingsController extends Controller
         $request->merge([
             'announcement_enabled' => $request->input('announcement_enabled', Setting::get('announcement_enabled', '0') ?? '0'),
             'promo_enabled' => $request->input('promo_enabled', Setting::get('promo_enabled', '0') ?? '0'),
-            'social_proof_enabled' => $request->input('social_proof_enabled', Setting::get('social_proof_enabled', '1') ?? '1'),
             'invoice_format' => $request->input('invoice_format', Setting::get('invoice_format', 'a4') ?? 'a4'),
             'delivery_cutoff_time' => $request->input('delivery_cutoff_time', Setting::get('delivery_cutoff_time', '20:00') ?? '20:00'),
             'delivery_today_fee' => $request->input('delivery_today_fee', Setting::get('delivery_today_fee', '2.99') ?? '2.99'),
@@ -97,7 +95,6 @@ class ShopSettingsController extends Controller
             'promo_coupon' => 'nullable|string|max:60',
             'promo_button_text' => 'nullable|string|max:60',
             'promo_button_url' => 'nullable|string|max:255',
-            'social_proof_enabled' => 'required|in:0,1',
             'invoice_format' => 'in:a4,pos',
             'delivery_min_order' => 'required|numeric|min:0|max:9999',
             'delivery_free_over' => 'required|numeric|min:0|max:9999',

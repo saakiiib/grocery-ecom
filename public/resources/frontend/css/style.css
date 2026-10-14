@@ -2520,15 +2520,6 @@ label.pick-row.promo-quiet:has(input:checked) { background: none; box-shadow: no
 .notify-toggle svg { width: 16px; height: 16px; }
 .notify-msg { margin: 0.5rem 0 0 !important; font-size: 0.85rem; }
 
-/* Social proof toast */
-.proof-toast[hidden] { display: none; }
-.proof-toast { position: fixed; left: 1rem; top: 4.5rem; z-index: 80; display: flex; align-items: center; gap: 0.4rem; max-width: 330px; }
-.proof-card { display: flex; align-items: center; gap: 0.65rem; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); padding: 0.65rem 0.85rem; text-decoration: none; color: var(--text); font-size: 0.82rem; }
-.proof-avatar { width: 32px; height: 32px; border-radius: 999px; background: var(--accent); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.proof-avatar svg { width: 16px; height: 16px; }
-.proof-close { background: var(--card); border: 1px solid var(--border); border-radius: 999px; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
-.proof-close svg { width: 12px; height: 12px; }
-
 /* Halal promise */
 .halal-promise { background: var(--muted); }
 .halal-inner { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; }

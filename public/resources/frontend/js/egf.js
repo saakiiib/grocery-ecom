@@ -1344,39 +1344,6 @@
     });
   }
 
-  /* ---------------- Social proof toast (recent orders, max 3 per view) ---------------- */
-  function initSocialProof() {
-    var box = document.querySelector('[data-proof]');
-    if (!box || box._egfBound) return;
-    box._egfBound = true;
-    var dataEl = box.querySelector('[data-proof-data]');
-    var items = [];
-    try { items = JSON.parse(dataEl ? dataEl.textContent : '[]'); } catch (e) { items = []; }
-    if (!items.length) return;
-    var link = box.querySelector('[data-proof-link]');
-    var text = box.querySelector('[data-proof-text]');
-    var idx = 0;
-    var shown = 0;
-    function show() {
-      if (shown >= 3 || idx >= items.length) return;
-      var it = items[idx++];
-      shown++;
-      if (link) link.setAttribute('href', it.url);
-      if (text) text.textContent = it.name + (it.city ? ' from ' + it.city : '') + ' bought ' + it.item + ' · ' + it.ago;
-      box.hidden = false;
-      setTimeout(function () {
-        box.hidden = true;
-        setTimeout(show, 9000);
-      }, 6000);
-    }
-    setTimeout(show, 8000);
-    var close = box.querySelector('[data-proof-close]');
-    if (close) close.addEventListener('click', function () {
-      box.remove();
-      idx = items.length;
-    });
-  }
-
   /* ---------------- Boot (runs on first load + every SPA nav) ---------------- */
   /* Thin top progress bar so SPA page switches are perceptible. The engine
   itself is untouched — this only observes clicks + spa:loaded. */
@@ -1427,7 +1394,6 @@
     initDealCountdown();
     initNewsletter();
     initNotifyMe();
-    initSocialProof();
     initFavToggles();
     renderBagPage();
     initHeroSlider();

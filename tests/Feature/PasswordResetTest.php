@@ -115,7 +115,6 @@ test('shop settings mail fields save', function () {
     $this->actingAs($admin)->post(route('shop-settings.update'), [
         'announcement_enabled' => '0',
         'promo_enabled' => '0',
-        'social_proof_enabled' => '1',
         'invoice_format' => 'a4',
         'delivery_min_order' => '15',
         'delivery_free_over' => '50',
