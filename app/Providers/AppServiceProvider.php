@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\CompanyDetails;
+use App\Support\MailSettings;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -21,6 +22,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        try {
+            MailSettings::apply();
+        } catch (\Throwable $e) {
+            // Settings table may not exist yet (fresh install / migrate).
+        }
         View::composer('*', function ($view) {
             if (! $view->offsetExists('company')) {
                 $view->with('company', CompanyDetails::cached());

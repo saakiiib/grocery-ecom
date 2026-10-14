@@ -202,6 +202,49 @@
                             <p class="text-muted mb-4"><small>Recommended: put <code>PAYPAL_CLIENT_ID</code> / <code>PAYPAL_SECRET</code> / <code>PAYPAL_MODE</code> in <code>.env</code>. These fields are only used when <code>.env</code> is empty.</small></p>
                             <p class="text-muted mb-4"><small>Webhook endpoint: <code>{{ url('/webhooks/paypal') }}</code> — subscribe it to Payment Capture Completed / Denied in the PayPal Developer Dashboard, then copy the webhook ID here.</small></p>
 
+                            <h6 class="mb-3">Email (SMTP)
+                                @if ($sources['mail'])
+                                    <span class="badge bg-success">Live via {{ $sources['mail'] === '.env' ? '.env' : 'shop settings' }}</span>
+                                @else
+                                    <span class="badge bg-danger">Not configured — password resets and order emails only reach the log</span>
+                                @endif
+                            </h6>
+                            <div class="row g-3 mb-2">
+                                <div class="col-md-6">
+                                    <label class="form-label">SMTP host <small class="text-muted">(fallback — MAIL_HOST wins when set)</small></label>
+                                    <input type="text" name="mail_host" class="form-control" maxlength="255" value="{{ old('mail_host', $settings['mail_host']) }}" placeholder="smtp.gmail.com">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Port</label>
+                                    <input type="number" name="mail_port" class="form-control" min="1" max="65535" value="{{ old('mail_port', $settings['mail_port'] ?? '587') }}" placeholder="587">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Encryption</label>
+                                    <select name="mail_encryption" class="form-control">
+                                        <option value="tls" {{ old('mail_encryption', $settings['mail_encryption'] ?? 'tls') === 'tls' ? 'selected' : '' }}>TLS (port 587)</option>
+                                        <option value="ssl" {{ old('mail_encryption', $settings['mail_encryption'] ?? 'tls') === 'ssl' ? 'selected' : '' }}>SSL (port 465)</option>
+                                        <option value="none" {{ old('mail_encryption', $settings['mail_encryption'] ?? 'tls') === 'none' ? 'selected' : '' }}>None (local only)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">SMTP username <small class="text-muted">(fallback — MAIL_USERNAME wins)</small></label>
+                                    <input type="text" name="mail_username" class="form-control" maxlength="255" value="{{ old('mail_username', $settings['mail_username']) }}" placeholder="you@example.com">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">SMTP password <small class="text-muted">(fallback — MAIL_PASSWORD wins)</small></label>
+                                    <input type="password" name="mail_password" class="form-control" maxlength="500" value="{{ old('mail_password', $settings['mail_password']) }}" placeholder="app password" autocomplete="new-password">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">From email address</label>
+                                    <input type="email" name="mail_from_address" class="form-control" maxlength="255" value="{{ old('mail_from_address', $settings['mail_from_address']) }}" placeholder="orders@example.com">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">From name</label>
+                                    <input type="text" name="mail_from_name" class="form-control" maxlength="255" value="{{ old('mail_from_name', $settings['mail_from_name']) }}" placeholder="Alam Mini Market">
+                                </div>
+                            </div>
+                            <p class="text-muted mb-4"><small>Gmail needs an <strong>app password</strong> (Google Account → Security → 2-Step Verification → App passwords), not your login password. Leave everything empty to keep logging mail instead of sending it.</small></p>
+
                             <h6 class="mb-3">Ratings &amp; chat</h6>
                             <div class="row g-3 mb-2">
                                 <div class="col-md-6">
@@ -228,6 +271,19 @@
                             <button type="submit" class="btn btn-primary">Save settings</button>
                             <p class="text-muted mt-2 mb-0"><small>Leave a gateway's keys empty and that button simply never appears at checkout — the shop keeps selling on cash on delivery.</small></p>
                         </form>
+                        <hr class="my-4">
+                        <h6 class="mb-3">Test this email setup</h6>
+                        <form method="POST" action="{{ route('shop-settings.mail-test') }}" class="row g-3 align-items-end">
+                            @csrf
+                            <div class="col-md-8">
+                                <label class="form-label">Send a test email to</label>
+                                <input type="email" name="test_email" class="form-control" maxlength="255" required placeholder="you@example.com" value="{{ old('test_email', auth()->user()->email ?? '') }}">
+                            </div>
+                            <div class="col-md-4">
+                                <button type="submit" class="btn btn-secondary">Send test email</button>
+                            </div>
+                        </form>
+                        <p class="text-muted mt-2 mb-0"><small>Sends with the saved settings above — save first, then test. A success toast means the inbox (or spam) should have it.</small></p>
                     </div>
                 </div>
             </div>

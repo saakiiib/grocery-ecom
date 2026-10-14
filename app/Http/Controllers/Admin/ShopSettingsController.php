@@ -4,9 +4,12 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\Controller;
+use App\Mail\TestMail;
 use App\Models\Setting;
+use App\Support\MailSettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 
 class ShopSettingsController extends Controller
 {
@@ -39,6 +42,13 @@ class ShopSettingsController extends Controller
         'paypal_secret' => 'PayPal secret',
         'paypal_webhook_id' => 'PayPal webhook ID',
         'paypal_mode' => 'PayPal mode (sandbox/live)',
+        'mail_host' => 'SMTP host',
+        'mail_port' => 'SMTP port',
+        'mail_encryption' => 'SMTP encryption (tls/ssl/none)',
+        'mail_username' => 'SMTP username',
+        'mail_password' => 'SMTP password',
+        'mail_from_address' => 'From email address',
+        'mail_from_name' => 'From name',
         'messenger_url' => 'Facebook Messenger chat link',
         'invoice_format' => 'Invoice format (a4/pos)',
         'hygiene_rating' => 'Food hygiene rating (0–5)',
@@ -55,6 +65,7 @@ class ShopSettingsController extends Controller
         $sources = [
             'stripe' => CheckoutController::credentialSource('stripe'),
             'paypal' => CheckoutController::credentialSource('paypal'),
+            'mail' => MailSettings::source(),
         ];
 
         return view('admin.shop-settings.edit', compact('settings', 'sources'));
@@ -105,6 +116,13 @@ class ShopSettingsController extends Controller
             'paypal_secret' => 'nullable|string|max:255',
             'paypal_webhook_id' => 'nullable|string|max:255',
             'paypal_mode' => 'required|in:sandbox,live',
+            'mail_host' => 'nullable|string|max:255',
+            'mail_port' => 'nullable|integer|min:1|max:65535',
+            'mail_encryption' => 'nullable|in:tls,ssl,none',
+            'mail_username' => 'nullable|string|max:255',
+            'mail_password' => 'nullable|string|max:500',
+            'mail_from_address' => 'nullable|email|max:255',
+            'mail_from_name' => 'nullable|string|max:255',
             'messenger_url' => 'nullable|url|max:255',
             'hygiene_rating' => 'nullable|string|max:10',
             'google_rating' => 'nullable|string|max:10',
@@ -116,5 +134,28 @@ class ShopSettingsController extends Controller
         }
 
         return redirect()->route('shop-settings.edit')->with('status', 'Shop settings saved. Empty payment keys hide that method at checkout automatically.');
+    }
+
+    /** Send a probe email with the saved SMTP settings so the admin can verify them. */
+    public function sendTestMail(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'test_email' => 'required|email|max:255',
+        ], [
+            'test_email.required' => 'Enter an email address to send the test to',
+            'test_email.email' => 'Enter a valid email address',
+        ]);
+
+        MailSettings::apply();
+
+        try {
+            Mail::to($data['test_email'])->send(new TestMail);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return redirect()->route('shop-settings.edit')->with('error', 'Test email failed: '.$e->getMessage());
+        }
+
+        return redirect()->route('shop-settings.edit')->with('status', 'Test email sent to '.$data['test_email'].' — check that inbox (and spam folder).');
     }
 }

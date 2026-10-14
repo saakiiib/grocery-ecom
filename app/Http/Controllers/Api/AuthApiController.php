@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
 
 class AuthApiController extends Controller
 {
@@ -78,6 +79,54 @@ class AuthApiController extends Controller
         }
 
         return response()->json(['ok' => true]);
+    }
+
+    /** App forgot-password: always the same message, never reveals whether the address exists. */
+    public function forgotPassword(Request $request): JsonResponse
+    {
+        $request->validate([
+            'email' => 'required|email|max:150',
+        ], [
+            'email.required' => 'Email address is required',
+            'email.email' => 'Enter a valid email address',
+        ]);
+
+        try {
+            Password::sendResetLink($request->only('email'));
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        return response()->json(['message' => 'If an account uses that email address, a reset link is on its way.']);
+    }
+
+    /** App reset-password with the token from the email link. */
+    public function resetPassword(Request $request): JsonResponse
+    {
+        $request->validate([
+            'token' => 'required|string',
+            'email' => 'required|email|max:150',
+            'password' => 'required|string|min:8|max:72|confirmed',
+        ], [
+            'email.required' => 'Email address is required',
+            'password.confirmed' => 'The passwords do not match',
+        ]);
+
+        $status = Password::reset(
+            $request->only('email', 'password', 'password_confirmation', 'token'),
+            function ($user, string $password): void {
+                $user->forceFill(['password' => Hash::make($password)])->save();
+            }
+        );
+
+        if ($status !== Password::PASSWORD_RESET) {
+            return response()->json([
+                'message' => 'This reset link is invalid or has expired — please request a new one.',
+                'errors' => ['email' => ['This reset link is invalid or has expired — please request a new one.']],
+            ], 422);
+        }
+
+        return response()->json(['message' => 'Your password has been reset — please sign in.']);
     }
 
     public function me(): JsonResponse

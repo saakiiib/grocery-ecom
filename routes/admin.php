@@ -215,6 +215,7 @@ Route::group(['prefix' => 'admin/', 'middleware' => ['auth', 'is_admin']], funct
     // Shop settings (delivery rules + Stripe/PayPal keys)
     Route::get('/shop-settings', [ShopSettingsController::class, 'edit'])->name('shop-settings.edit');
     Route::post('/shop-settings', [ShopSettingsController::class, 'update'])->name('shop-settings.update');
+    Route::post('/shop-settings/mail-test', [ShopSettingsController::class, 'sendTestMail'])->name('shop-settings.mail-test');
 
     // Products (core showcase)
     Route::get('/products', [ProductController::class, 'index'])->name('products.index');

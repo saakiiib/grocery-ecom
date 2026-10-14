@@ -14,6 +14,8 @@ Route::middleware(['api_session', 'api_auth:optional'])->group(function () {
     // Auth
     Route::post('/auth/register', [AuthApiController::class, 'register'])->middleware('throttle:10,1');
     Route::post('/auth/login', [AuthApiController::class, 'login'])->middleware('throttle:10,1');
+    Route::post('/auth/forgot-password', [AuthApiController::class, 'forgotPassword'])->middleware('throttle:10,1');
+    Route::post('/auth/reset-password', [AuthApiController::class, 'resetPassword'])->middleware('throttle:10,1');
 
     // Catalogue
     Route::get('/home', [CatalogApiController::class, 'home']);

@@ -9,6 +9,9 @@
             <div class="auth-form">
                 <h1>Welcome back</h1>
                 <p class="text-muted" style="margin-bottom:1.5rem;">Sign in to track orders and check out faster.</p>
+                @if (session('status'))
+                    <p role="status" style="border:1px solid #1A2E22;border-radius:8px;padding:0.75rem 1rem;font-size:14px;margin-bottom:1rem;">{{ session('status') }}</p>
+                @endif
                 <form method="POST" action="{{ route('login') }}">
                     @csrf
                     @if (request()->has('redirect'))
@@ -32,6 +35,9 @@
                     </label>
                     <button type="submit" class="btn btn-dark btn-block">Sign in</button>
                     <p class="text-muted" style="font-size:14px;margin-top:1rem;text-align:center;">
+                        <a href="{{ route('password.request') }}">Forgot your password?</a>
+                    </p>
+                    <p class="text-muted" style="font-size:14px;margin-top:0.5rem;text-align:center;">
                         New here? <a href="{{ route('register', request()->has('redirect') ? ['redirect' => request('redirect')] : []) }}">Create an account</a>
                     </p>
                 </form>

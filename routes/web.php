@@ -26,7 +26,7 @@ Auth::routes([
     'login' => true,
     'logout' => true,
     'register' => false,
-    'reset' => false,
+    'reset' => true,
     'confirm' => false,
     'verify' => false,
 ]);
