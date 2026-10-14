@@ -68,7 +68,7 @@
             <button type="button" class="icon-btn" data-search-open aria-label="Search" title="Search">
                 <x-icon name="search" />
             </button>
-            <a href="{{ route('account') }}" class="icon-btn" aria-label="My account" title="{{ auth()->check() ? auth()->user()->name : 'My account' }}">
+            <a href="{{ auth()->check() && auth()->user()->user_type == 1 ? route('admin.dashboard') : route('account') }}" class="icon-btn" aria-label="My account" title="{{ auth()->check() ? (auth()->user()->user_type == 1 ? 'Admin dashboard' : auth()->user()->name) : 'My account' }}">
                 @auth
                     <span class="avatar-initial">{{ strtoupper(mb_substr(auth()->user()->name, 0, 1)) }}</span>
                 @else

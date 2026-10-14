@@ -391,3 +391,17 @@ test('loyalty and delivery pages show live rates and minimums', function () {
         ->toContain('£15.00')
         ->toContain('£50.00');
 });
+
+test('header account icon goes to the admin portal for admins', function () {
+    $shopper = User::create(['name' => 'Shopper', 'email' => 'shopper@example.com', 'password' => 'password', 'user_type' => 0]);
+    $admin = User::create(['name' => 'Admin', 'email' => 'admin@example.com', 'password' => 'password', 'user_type' => 1]);
+
+    $guest = $this->get('/')->assertOk()->getContent();
+    expect($guest)->toContain(route('account'));
+
+    $shopperHtml = $this->actingAs($shopper)->get('/')->assertOk()->getContent();
+    expect($shopperHtml)->toContain(route('account'));
+
+    $adminHtml = $this->actingAs($admin)->get('/')->assertOk()->getContent();
+    expect($adminHtml)->toContain(route('admin.dashboard'))->toContain('Admin dashboard');
+});
