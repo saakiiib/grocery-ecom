@@ -1,3 +1,16 @@
+@php
+    // Blade @include scopes are isolated — recompute the brand/logo here
+    // instead of relying on variables defined in the header partial.
+    $company = $company ?? \App\Models\CompanyDetails::cached();
+    $brand = trim((string) $company->company_name);
+    if ($siteBrand = trim((string) ($siteBrand ?? ''))) {
+        $brand = $siteBrand;
+    }
+    if ($brand === '' || strcasecmp($brand, 'Evergreen') === 0) {
+        $brand = 'Alam Mini Market';
+    }
+    $logoUrl = $company->company_logo ? asset('uploads/company/'.$company->company_logo) : null;
+@endphp
           </td>
         </tr>
 

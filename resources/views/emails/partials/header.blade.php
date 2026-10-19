@@ -1,6 +1,13 @@
 @php
-    $company = \App\Models\CompanyDetails::cached();
-    $brand = $company->company_name ?: config('app.name', 'Alam Mini Market');
+    // Self-contained so the partial works standalone in any mail view.
+    $company = $company ?? \App\Models\CompanyDetails::cached();
+    $brand = trim((string) $company->company_name);
+    if ($siteBrand = trim((string) ($siteBrand ?? ''))) {
+        $brand = $siteBrand;
+    }
+    if ($brand === '' || strcasecmp($brand, 'Evergreen') === 0) {
+        $brand = 'Alam Mini Market';
+    }
     $logoUrl = $company->company_logo ? asset('uploads/company/'.$company->company_logo) : null;
 @endphp
 
