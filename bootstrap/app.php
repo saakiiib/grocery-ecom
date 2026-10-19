@@ -2,8 +2,10 @@
 
 use App\Http\Middleware\ApiAuth;
 use App\Http\Middleware\ApiSession;
+use App\Http\Middleware\CanonicalHost;
 use App\Http\Middleware\IsAdmin;
 use App\Http\Middleware\IsUser;
+use App\Http\Middleware\SeoRobots;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -18,6 +20,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->use([
 
+        ]);
+        // Canonical host runs first, then per-page robots/canonical defaults.
+        $middleware->web(append: [
+            CanonicalHost::class,
+            SeoRobots::class,
         ]);
         // Gateway webhooks carry their own signatures, not a session cookie.
         $middleware->validateCsrfTokens(except: [

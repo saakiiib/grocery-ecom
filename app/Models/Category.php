@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Seo;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Facades\Cache;
@@ -53,5 +54,18 @@ class Category extends Model
         return $this->belongsToMany(OptionGroup::class, 'category_option_group')
             ->withPivot('sort_order')
             ->orderByPivot('sort_order');
+    }
+
+    /** Frontend SEO array shape for the category page's SEOMeta/OpenGraph. */
+    public function seoArray(): array
+    {
+        $this->loadMissing('parent');
+
+        return [
+            'title' => trim((string) $this->meta_title) !== '' ? $this->meta_title : null,
+            'description' => Seo::categoryDescription($this),
+            'keywords' => $this->meta_keywords,
+            'image' => $this->meta_image ?: $this->image,
+        ];
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Seo;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,6 +17,21 @@ class Product extends Model
     {
         static::saved(fn () => Cache::forget('egf_catalog'));
         static::deleted(fn () => Cache::forget('egf_catalog'));
+
+        // Renaming a product (which regenerates its slug) must not strand the
+        // old URL on a 404 — record it so the storefront can 301 to the new one.
+        static::updated(function (Product $product): void {
+            if (! $product->wasChanged('slug')) {
+                return;
+            }
+            $old = trim((string) $product->getOriginal('slug'));
+            if ($old !== '' && $old !== $product->slug) {
+                ProductRedirect::updateOrCreate(
+                    ['old_slug' => $old],
+                    ['product_id' => $product->id]
+                );
+            }
+        });
     }
 
     protected $fillable = [
@@ -214,11 +230,24 @@ class Product extends Model
     /** Frontend SEO array shape for SEOMeta/OpenGraph. */
     public function seoArray(): array
     {
+        $this->loadMissing('category');
+
+        $description = Seo::firstText([
+            $this->meta_description,
+            $this->tagline,
+            $this->description,
+            $this->category?->meta_description,
+            $this->category?->description,
+        ]);
+
         return [
-            'title' => $this->meta_title ?: $this->name,
-            'description' => $this->meta_description ?: $this->tagline,
+            'title' => trim((string) $this->meta_title) !== '' ? $this->meta_title : null,
+            'description' => $description,
             'keywords' => $this->meta_keywords,
-            'image' => $this->meta_image ?: $this->hero_image,
+            'image' => $this->meta_image
+                ?: $this->hero_image
+                ?: $this->category?->meta_image
+                ?: $this->category?->image,
         ];
     }
 }

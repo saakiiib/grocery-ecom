@@ -100,7 +100,7 @@
                 <div class="cat-grid">
                     @foreach ($categoriesJson as $c)
                         <a @spa href="{{ route('shop.category', ['category' => $c['slug']]) }}" class="cat-card">
-                            <img src="{{ $c['image'] }}" alt="{{ $c['name'] }}" loading="lazy">
+                            <img src="{{ $c['image'] }}" alt="{{ $c['name'] }}" loading="lazy" decoding="async">
                             <div class="cat-card-overlay">
                                 <span class="cat-card-label">{{ $c['count'] }} product{{ $c['count'] === 1 ? '' : 's' }}</span>
                                 <span class="cat-card-title">{{ $c['name'] }}</span>
@@ -251,7 +251,7 @@
                             </div>
                             <blockquote>{{ $t['review'] }}</blockquote>
                             <figcaption>
-                                @if ($t['image'])<img src="{{ $t['image'] }}" alt="{{ $t['name'] }}" loading="lazy">@endif
+                                @if ($t['image'])<img src="{{ $t['image'] }}" alt="{{ $t['name'] }}" loading="lazy" decoding="async">@endif
                                 <div class="tmn-who">
                                     <strong>{{ $t['name'] }}</strong>
                                     @if ($t['designation'])<span>{{ $t['designation'] }}</span>@endif
@@ -284,7 +284,7 @@
                 <div class="cat-grid">
                     @foreach ($galleryJson as $g)
                         <div class="cat-card" data-gallery-item data-full="{{ $g['src'] }}" data-caption="{{ $g['caption'] ?? '' }}" role="button" tabindex="0" aria-label="View larger: {{ $g['caption'] ?? 'Gallery image' }}">
-                            <img src="{{ $g['src'] }}" alt="{{ $g['caption'] ?? 'Gallery image' }}" loading="lazy">
+                            <img src="{{ $g['src'] }}" alt="{{ $g['caption'] ?? 'Gallery image' }}" loading="lazy" decoding="async">
                             @if ($g['caption'])
                                 <div class="cat-card-overlay">
                                     <span class="cat-card-title" style="font-size:1rem;">{{ $g['caption'] }}</span>

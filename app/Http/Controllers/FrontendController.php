@@ -18,6 +18,7 @@ use App\Models\GalleryCategory;
 use App\Models\Order;
 use App\Models\PageSeo;
 use App\Models\Product;
+use App\Models\ProductRedirect;
 use App\Models\ProductReview;
 use App\Models\ProductVariant;
 use App\Models\SearchLog;
@@ -31,9 +32,11 @@ use App\Models\UserPoint;
 use App\Support\Delivery;
 use App\Support\Discovery;
 use App\Support\PairsWell;
+use App\Support\Seo;
 use App\Support\SitePromo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
 use OpenGraph;
 use SEOMeta;
@@ -114,8 +117,6 @@ class FrontendController extends Controller
 
     public function shop(Request $request, ?string $category = null)
     {
-        $this->seo('shop');
-
         $categories = Category::where('status', true)->orderBy('sort_order')->orderBy('id')->get();
         $products = Product::with(['category', 'images', 'variants.values.group', 'allergens'])
             ->withReviewSummary()
@@ -200,6 +201,43 @@ class FrontendController extends Controller
                 return redirect()->route('shop.offers', [], 301);
             }
         }
+
+        // --- SEO: per-category metadata, canonical and breadcrumbs ---------
+        // Category pages use the category's own meta fields; the general Shop
+        // copy is only for the unfiltered /shop listing. A text search is
+        // noindexed so filtered result sets are never indexed as duplicates.
+        $categoryModel = $activeCategorySlug
+            ? $categories->firstWhere('slug', $activeCategorySlug)
+            : null;
+        $isSearch = $search !== '';
+        $robots = $isSearch ? 'noindex, follow' : 'index, follow';
+
+        if ($categoryModel) {
+            $categorySeo = $categoryModel->seoArray();
+            $canonical = route('shop.category', $categoryModel->slug);
+            $this->seo(null, $categorySeo['title'], $categorySeo['description'], $categorySeo['keywords'], $this->imgUrl($categorySeo['image']), $robots, $canonical);
+        } elseif ($onlyOffers) {
+            $this->seo('shop', null, null, null, null, $robots, route('shop.offers'));
+        } else {
+            $this->seo('shop', null, null, null, null, $robots, route('shop'));
+        }
+
+        $crumbs = [['name' => 'Home', 'url' => route('home')]];
+        if ($categoryModel) {
+            $parentModel = $categoryModel->parent_id
+                ? $categories->firstWhere('id', $categoryModel->parent_id)
+                : null;
+            if ($parentModel) {
+                $crumbs[] = ['name' => $parentModel->name, 'url' => route('shop.category', $parentModel->slug)];
+            }
+            $crumbs[] = ['name' => $categoryModel->name, 'url' => route('shop.category', $categoryModel->slug)];
+        } elseif ($onlyOffers) {
+            $crumbs[] = ['name' => 'Offers', 'url' => route('shop.offers')];
+        } else {
+            $crumbs[] = ['name' => 'Shop', 'url' => route('shop')];
+        }
+        $categoryIntro = $categoryModel ? Seo::plain($categoryModel->description, 400) : null;
+        $schema = [Seo::breadcrumbs($crumbs)];
 
         // Cheapest-variant price per product — drives the slider bounds and the filter.
         $flashMap = FlashSale::liveMap();
@@ -303,7 +341,7 @@ class FrontendController extends Controller
         }
         $trendingSearches = SearchLog::trending();
 
-        return spa('frontend.shop', compact('categories', 'parents', 'activeParent', 'productsJson', 'activeCategory', 'activeCategorySlug', 'categoriesJson', 'search', 'sort', 'onlyOffers', 'minPrice', 'maxPrice', 'priceFloor', 'priceCeil', 'page', 'perPage', 'total', 'shown', 'hasMore', 'categoryPath', 'offersPath', 'diets', 'freeFrom', 'allergens', 'hasDietFlags', 'trendingSearches'));
+        return spa('frontend.shop', compact('categories', 'parents', 'activeParent', 'productsJson', 'activeCategory', 'activeCategorySlug', 'categoriesJson', 'search', 'sort', 'onlyOffers', 'minPrice', 'maxPrice', 'priceFloor', 'priceCeil', 'page', 'perPage', 'total', 'shown', 'hasMore', 'categoryPath', 'offersPath', 'diets', 'freeFrom', 'allergens', 'hasDietFlags', 'trendingSearches', 'categoryIntro', 'schema'));
     }
 
     /** Offers landing page — the shop with the offers filter pre-selected. */
@@ -377,16 +415,29 @@ class FrontendController extends Controller
 
     public function productShow($slug)
     {
-        $product = Product::with(['category', 'images', 'extraAttributes', 'variants.values.group', 'optionGroups.values', 'category.optionGroups.values', 'allergens'])
+        $product = Product::with(['category.parent', 'images', 'extraAttributes', 'variants.values.group', 'optionGroups.values', 'category.optionGroups.values', 'allergens'])
             ->where('slug', $slug)
-            ->where('status', true)
-            ->firstOrFail();
+            ->first();
+
+        if (! $product) {
+            // A renamed product's old slug 301s to its current URL.
+            $redirect = ProductRedirect::with('product')->where('old_slug', $slug)->first();
+            if ($redirect && $redirect->product && $redirect->product->status) {
+                return redirect()->route('product.show', $redirect->product->slug, 301);
+            }
+            abort(404);
+        }
+
+        if (! $product->status) {
+            // Withdrawn but real: 410 tells Google to drop it without a soft 404.
+            abort(410);
+        }
 
         $recent = collect(session()->get('recently_viewed', []))->reject(fn ($id) => (int) $id === $product->id);
         session()->put('recently_viewed', $recent->prepend($product->id)->take(8)->values()->all());
 
         $seo = $product->seoArray();
-        $this->seo(null, $seo['title'], $seo['description'], $seo['keywords'], $this->imgUrl($seo['image']));
+        $this->seo(null, $seo['title'], $seo['description'], $seo['keywords'], $this->imgUrl($seo['image']), 'index, follow', route('product.show', $product->slug));
 
         $related = Product::with(['category', 'images', 'variants.values.group'])
             ->withReviewSummary()
@@ -420,6 +471,27 @@ class FrontendController extends Controller
             ->first();
         $productJson['ratingAvg'] = $reviewStats && $reviewStats->count > 0 ? round((float) $reviewStats->avg, 1) : null;
         $productJson['ratingCount'] = (int) ($reviewStats->count ?? 0);
+
+        // --- Structured data: Product + BreadcrumbList ---------------------
+        $productCrumbs = [['name' => 'Home', 'url' => route('home')]];
+        if ($product->category) {
+            if ($product->category->parent_id && $product->category->parent) {
+                $productCrumbs[] = ['name' => $product->category->parent->name, 'url' => route('shop.category', $product->category->parent->slug)];
+            }
+            $productCrumbs[] = ['name' => $product->category->name, 'url' => route('shop.category', $product->category->slug)];
+        }
+        $productCrumbs[] = ['name' => $product->name, 'url' => route('product.show', $product->slug)];
+        $schema = [
+            Seo::product($product, [
+                'priceNum' => $productJson['priceNum'] ?? null,
+                'inStock' => $productJson['inStock'] ?? false,
+                'ratingAvg' => $productJson['ratingAvg'],
+                'ratingCount' => $productJson['ratingCount'],
+                'images' => collect($productJson['gallery'] ?? [])->pluck('full')->filter()->all(),
+            ]),
+            Seo::breadcrumbs($productCrumbs),
+        ];
+
         $reviewsJson = ProductReview::approved()->with('user:id,name')
             ->where('product_id', $product->id)
             ->latest()
@@ -453,7 +525,7 @@ class FrontendController extends Controller
         $videoUrl = null;
         $videoEmbed = null;
 
-        return spa('frontend.details', compact('product', 'productJson', 'optionsJson', 'zonesJson', 'relatedJson', 'pairsJson', 'recentlyViewed', 'myLists', 'faqsJson', 'docsJson', 'videoUrl', 'videoEmbed', 'reviewsJson', 'myReview'));
+        return spa('frontend.details', compact('product', 'productJson', 'optionsJson', 'zonesJson', 'relatedJson', 'pairsJson', 'recentlyViewed', 'myLists', 'faqsJson', 'docsJson', 'videoUrl', 'videoEmbed', 'reviewsJson', 'myReview', 'schema'));
     }
 
     public function about()
@@ -585,7 +657,7 @@ class FrontendController extends Controller
 
     public function bag()
     {
-        $this->seo('cart');
+        $this->seo('cart', null, null, null, null, 'noindex, nofollow');
 
         $bag = BagController::detailed();
         $minOrder = Setting::money('delivery_min_order', 15.00);
@@ -615,7 +687,7 @@ class FrontendController extends Controller
 
     public function checkout()
     {
-        $this->seo('checkout');
+        $this->seo('checkout', null, null, null, null, 'noindex, nofollow');
 
         BagController::reconcile();
         $bag = BagController::detailed();
@@ -667,14 +739,14 @@ class FrontendController extends Controller
     /** Guest order tracking: order number + the phone given at checkout. */
     public function track()
     {
-        $this->seo('track');
+        $this->seo('track', null, null, null, null, 'noindex, nofollow');
 
         return spa('frontend.track', ['order' => null]);
     }
 
     public function trackLookup(Request $request)
     {
-        $this->seo('track');
+        $this->seo('track', null, null, null, null, 'noindex, nofollow');
 
         $data = $request->validate([
             'number' => 'required|string|max:30',
@@ -1141,34 +1213,52 @@ class FrontendController extends Controller
             ->pluck('name', 'slug')->all();
     }
 
-    private function seo($pageKey = null, $title = null, $description = null, $keywords = null, $image = null)
+    /**
+     * Apply page metadata to the SEO facades and share the resolved title with
+     * the layout so exactly one <title> is rendered.
+     *
+     * Explicit $title/$description/$image (product or category) win, then the
+     * page's PageSeo row, then — on the homepage only — the company defaults.
+     * Other pages fall back to their Blade @section('title') instead of
+     * repeating the company title, which would create duplicate titles.
+     */
+    private function seo($pageKey = null, $title = null, $description = null, $keywords = null, $image = null, ?string $robots = null, ?string $canonical = null)
     {
         $company = CompanyDetails::cached();
         $pageSeo = $pageKey ? PageSeo::where('page_key', $pageKey)->first() : null;
+        $home = $pageKey === 'home';
 
-        $title = $title ?: ($pageSeo?->meta_title ?: $company?->meta_title);
-        $description = $description ?: ($pageSeo?->meta_description ?: $company?->meta_description);
-        $keywords = $keywords ?: ($pageSeo?->meta_keywords ?: $company?->meta_keywords);
+        $title = trim((string) ($title ?: ($pageSeo?->meta_title ?: ($home ? $company?->meta_title : null))));
+        $description = trim((string) ($description ?: ($pageSeo?->meta_description ?: ($home ? $company?->meta_description : null))));
+        $keywords = trim((string) ($keywords ?: ($pageSeo?->meta_keywords ?: ($home ? $company?->meta_keywords : null))));
         $image = $image ?: ($pageSeo?->meta_image
             ? $this->imgUrl($pageSeo->meta_image)
-            : ($company?->meta_image ? asset('uploads/company/'.$company->meta_image) : null));
+            : ($home && $company?->meta_image ? asset('uploads/company/'.$company->meta_image) : null));
 
-        if ($title) {
-            SEOMeta::setTitle($title);
+        if ($title !== '') {
+            View::share('seoTitle', $title);
             OpenGraph::setTitle($title);
             Twitter::setTitle($title);
         }
-        if ($description) {
+        if ($description !== '') {
             SEOMeta::setDescription($description);
             OpenGraph::setDescription($description);
             Twitter::setDescription($description);
         }
-        if ($keywords) {
+        if ($keywords !== '') {
             SEOMeta::setKeywords($keywords);
         }
         if ($image) {
             OpenGraph::addImage($image);
             Twitter::setImage($image);
+        }
+        if ($robots !== null) {
+            SEOMeta::setRobots($robots);
+        }
+        if ($canonical !== null) {
+            SEOMeta::setCanonical($canonical);
+            OpenGraph::setUrl($canonical);
+            Twitter::setUrl($canonical);
         }
     }
 }

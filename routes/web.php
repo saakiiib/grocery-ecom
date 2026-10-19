@@ -11,6 +11,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\RecipeController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\ShoppingListController;
+use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\WebhookController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -37,6 +38,10 @@ Route::post('/register', [RegisterController::class, 'register'])->name('registe
 
 // Dashboard (must keep)
 Route::get('/dashboard', [HomeController::class, 'dashboard'])->name('dashboard');
+
+// SEO: dynamic sitemap + robots.txt (public/robots.txt removed so this wins).
+Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
+Route::get('/robots.txt', [SitemapController::class, 'robots'])->name('robots');
 
 // Frontend Routes (Alam Mini Market grocery theme)
 Route::get('/', [FrontendController::class, 'index'])->name('home');

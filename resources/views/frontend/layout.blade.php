@@ -3,6 +3,15 @@
     if ($siteBrand === '' || strcasecmp($siteBrand, 'Evergreen') === 0) {
         $siteBrand = 'Alam Mini Market';
     }
+
+    // Exactly one <title> per page. Controllers that know the page's SEO title
+    // share $seoTitle (including any admin-entered title); otherwise the view's
+    // @section('title') is used and the brand is appended.
+    $sectionTitle = trim((string) \Illuminate\Support\Facades\View::yieldContent('title'));
+    $seoTitle = trim((string) ($seoTitle ?? ''));
+    if ($seoTitle === '') {
+        $seoTitle = $sectionTitle !== '' ? $sectionTitle.' — '.$siteBrand : $siteBrand;
+    }
 @endphp
 <!DOCTYPE html>
 <html lang="en-GB">
@@ -12,16 +21,15 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="author" content="{{ $siteBrand }}">
-    <link rel="canonical" href="{{ url()->current() }}">
     <meta name="theme-color" content="#1A2E22">
     <meta property="og:site_name" content="{{ $siteBrand }}">
     <meta property="og:type" content="website">
-    <meta property="og:url" content="{{ url()->current() }}">
     <meta name="twitter:card" content="summary_large_image">
-    <title>@yield('title', config('app.name')) — {{ $siteBrand }}</title>
+    <title>{{ $seoTitle }}</title>
     {!! SEOMeta::generate() !!}
     {!! OpenGraph::generate() !!}
     {!! Twitter::generate() !!}
+    @include('frontend.partials.structured-data')
     @if ($company->google_analytics_id)
         <script async src="https://www.googletagmanager.com/gtag/js?id={{ $company->google_analytics_id }}"></script>
         <script>window.dataLayer = window.dataLayer || [];function gtag(){dataLayer.push(arguments);}gtag('js', new Date());gtag('config', '{{ $company->google_analytics_id }}');</script>
