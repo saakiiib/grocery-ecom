@@ -1111,6 +1111,9 @@
     function decide(value) {
       try { window.localStorage.setItem('egf-consent', value); } catch (e) {}
       bar.hidden = true;
+      if (value === 'accepted' && typeof window.egfLoadTracking === 'function') {
+        window.egfLoadTracking();
+      }
     }
     var accept = bar.querySelector('[data-cookie-accept]');
     var decline = bar.querySelector('[data-cookie-decline]');

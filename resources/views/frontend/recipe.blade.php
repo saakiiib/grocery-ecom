@@ -12,7 +12,7 @@
     </div>
     <div class="container">
         @if ($recipe->image)
-            <img src="{{ url($recipe->image) }}" alt="{{ $recipe->title }}" loading="lazy" style="width:100%;border-radius:1rem;object-fit:cover;max-height:380px;">
+            <img src="{{ url($recipe->image) }}" alt="{{ $recipe->title }}" width="1200" height="800" loading="lazy" decoding="async" style="width:100%;border-radius:1rem;object-fit:cover;max-height:380px;">
         @endif
         @if ($recipe->body)
             <div style="margin-top:1.5rem;max-width:680px;">{!! $recipe->body !!}</div>

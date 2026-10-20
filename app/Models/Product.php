@@ -15,8 +15,14 @@ class Product extends Model
 {
     protected static function booted(): void
     {
-        static::saved(fn () => Cache::forget('egf_catalog'));
-        static::deleted(fn () => Cache::forget('egf_catalog'));
+        static::saved(function (): void {
+            Cache::forget('egf_catalog');
+            Cache::forget('seo_sitemap_xml');
+        });
+        static::deleted(function (): void {
+            Cache::forget('egf_catalog');
+            Cache::forget('seo_sitemap_xml');
+        });
 
         // Renaming a product (which regenerates its slug) must not strand the
         // old URL on a 404 — record it so the storefront can 301 to the new one.

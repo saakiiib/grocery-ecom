@@ -48,7 +48,7 @@
         <div class="footer-grid">
             <div class="footer-brand">
                 <a @spa href="{{ route('home') }}" class="logo">
-                    @if ($logo)<img class="logo-img" src="{{ $logo }}" alt="{{ $brand }}">@endif
+                    @if ($logo)<img class="logo-img" src="{{ $logo }}" alt="{{ $brand }}" width="2172" height="724" loading="lazy" decoding="async">@endif
                     <span class="logo-text">
                         <strong>{{ $brand }}</strong>
                         <small>Fresh living, every day</small>

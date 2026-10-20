@@ -12,6 +12,15 @@
     if ($seoTitle === '') {
         $seoTitle = $sectionTitle !== '' ? $sectionTitle.' — '.$siteBrand : $siteBrand;
     }
+    OpenGraph::setTitle($seoTitle);
+    Twitter::setTitle($seoTitle);
+
+    // Tracking/verification IDs live in Company Details (admin → Company).
+    $googleSiteVerification = trim((string) ($company->google_site_verification ?? ''));
+    $googleAnalyticsId = trim((string) ($company->google_analytics_id ?? ''));
+    $googleTagManagerId = trim((string) ($company->google_tag_manager_id ?? ''));
+    $facebookPixelId = trim((string) ($company->facebook_pixel_id ?? ''));
+    $hasTracking = $googleAnalyticsId !== '' || $googleTagManagerId !== '' || $facebookPixelId !== '';
 @endphp
 <!DOCTYPE html>
 <html lang="en-GB">
@@ -22,19 +31,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="author" content="{{ $siteBrand }}">
     <meta name="theme-color" content="#1A2E22">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <meta name="geo.placename" content="{{ config('seo.business.locality') }}">
+    @if ($googleSiteVerification !== '')
+        <meta name="google-site-verification" content="{{ $googleSiteVerification }}">
+    @endif
+    @if ($googleTagManagerId !== '' || $googleAnalyticsId !== '')
+        <link rel="preconnect" href="https://www.googletagmanager.com">
+        <link rel="dns-prefetch" href="https://www.google-analytics.com">
+    @endif
+    @if ($facebookPixelId !== '')
+        <link rel="preconnect" href="https://connect.facebook.net">
+    @endif
     <meta property="og:site_name" content="{{ $siteBrand }}">
     <meta property="og:type" content="website">
-    <meta name="twitter:card" content="summary_large_image">
+    <meta property="og:locale" content="en_GB">
     <title>{{ $seoTitle }}</title>
     {!! SEOMeta::generate() !!}
     {!! OpenGraph::generate() !!}
     {!! Twitter::generate() !!}
     @include('frontend.partials.structured-data')
-    @if ($company->google_analytics_id)
-        <script async src="https://www.googletagmanager.com/gtag/js?id={{ $company->google_analytics_id }}"></script>
-        <script>window.dataLayer = window.dataLayer || [];function gtag(){dataLayer.push(arguments);}gtag('js', new Date());gtag('config', '{{ $company->google_analytics_id }}');</script>
-    @endif
+    @include('frontend.partials.tracking')
     <link rel="icon" href="{{ $company->fav_icon ? asset('uploads/company/' . $company->fav_icon) : asset('favicon.ico') }}">
+    @if ($company->fav_icon)
+        <link rel="apple-touch-icon" href="{{ asset('uploads/company/' . $company->fav_icon) }}">
+    @endif
     <link rel="stylesheet" href="{{ asset('resources/frontend/css/style.css') }}?v={{ filemtime(public_path('resources/frontend/css/style.css')) }}">
     @yield('style')
 </head>

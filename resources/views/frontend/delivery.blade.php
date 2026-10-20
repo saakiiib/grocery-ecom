@@ -43,8 +43,9 @@
                 </p>
             @endif
             <p class="text-muted" style="font-size:14px;">
-                Outside the delivery radius? You can still shop and collect from the store — collection is free
-                and does not count towards the delivery minimum.
+                Delivery is local only — we do not currently offer a nationwide courier option. Outside the
+                delivery radius? You can still shop and collect from the store — collection is free and does
+                not count towards the delivery minimum.
             </p>
         </div>
 

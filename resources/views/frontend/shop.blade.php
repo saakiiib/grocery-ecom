@@ -1,5 +1,15 @@
 @extends('frontend.layout')
-@section('title', ($onlyOffers ? 'Offers' . ($activeCategory !== 'All' ? ' | ' . $activeCategory : '') : ($activeCategory !== 'All' ? $activeCategory . ' | ' : '')) . 'Shop all groceries')
+@php
+    $shopTitleParts = [];
+    if ($onlyOffers) {
+        $shopTitleParts[] = 'Offers';
+    }
+    if ($activeCategory !== 'All') {
+        $shopTitleParts[] = $activeCategory;
+    }
+    $shopTitleParts[] = 'Shop all groceries';
+@endphp
+@section('title', implode(' | ', $shopTitleParts))
 
 @php
     // Pretty shop links: category and offers live in the path (/shop/lamb,

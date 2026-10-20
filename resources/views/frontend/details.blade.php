@@ -34,12 +34,12 @@
         <div class="product-detail">
             <div class="product-gallery">
                 <div class="product-main-img">
-                    <img src="{{ \App\Models\Product::thumb($mainImage, 600) }}" data-full="{{ $mainImage }}" alt="{{ $product->name }}" data-main-image onerror="this.onerror=null;this.src=this.dataset.full||'{{ url('placeholder.webp') }}'">
+                    <img src="{{ \App\Models\Product::thumb($mainImage, 600) }}" data-full="{{ $mainImage }}" alt="{{ $product->name }}" width="600" height="600" fetchpriority="high" data-main-image onerror="this.onerror=null;this.src=this.dataset.full||'{{ url('placeholder.webp') }}'">
                 </div>
                 @if (count($gallery) > 1)
                     <div class="product-thumbs" style="display:flex;gap:.5rem;margin-top:.75rem;flex-wrap:wrap;">
                         @foreach ($gallery as $g)
-                            <img src="{{ $g['src'] }}" data-full="{{ $g['full'] ?? $g['src'] }}" alt="{{ $g['caption'] ?? $product->name }}" loading="lazy" decoding="async"
+                            <img src="{{ $g['src'] }}" data-full="{{ $g['full'] ?? $g['src'] }}" alt="{{ $g['caption'] ?? $product->name }}" width="72" height="72" loading="lazy" decoding="async"
                                 style="width:72px;height:72px;object-fit:cover;border-radius:10px;cursor:pointer;"
                                 tabindex="0" role="button" aria-label="View {{ $g['caption'] ?? $product->name }}"
                                 onerror="this.onerror=null;this.src=this.dataset.full"
@@ -151,7 +151,7 @@
                                 <div style="display:flex;gap:.6rem;margin-top:.6rem;flex-wrap:wrap;">
                                     @foreach ($bo['others'] as $other)
                                         <a @spa href="{{ $other['url'] }}" style="display:flex;gap:.5rem;align-items:center;border:1px solid #dbeafe;border-radius:10px;padding:.35rem .6rem .35rem .35rem;background:#fff;text-decoration:none;color:inherit;">
-                                            <img src="{{ \App\Models\Product::thumb($other['image'], 150) }}" data-full="{{ $other['image'] }}" alt="{{ $other['name'] }}" loading="lazy" decoding="async" style="width:40px;height:40px;object-fit:cover;border-radius:8px;" onerror="this.onerror=null;this.src=this.dataset.full">
+                                            <img src="{{ \App\Models\Product::thumb($other['image'], 150) }}" data-full="{{ $other['image'] }}" alt="{{ $other['name'] }}" width="40" height="40" loading="lazy" decoding="async" style="width:40px;height:40px;object-fit:cover;border-radius:8px;" onerror="this.onerror=null;this.src=this.dataset.full">
                                             <span style="font-size:13px;"><strong>{{ $other['name'] }}</strong><br><span class="text-muted">{{ $other['price'] }}</span></span>
                                         </a>
                                     @endforeach

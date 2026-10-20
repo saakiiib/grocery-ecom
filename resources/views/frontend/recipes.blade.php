@@ -20,7 +20,7 @@
             <div class="cat-grid">
                 @foreach ($recipes as $r)
                     <a @spa href="{{ route('recipes.show', $r->slug) }}" class="cat-card">
-                        <img src="{{ $r->image ? url($r->image) : asset('placeholder.webp') }}" alt="{{ $r->title }}" loading="lazy">
+                        <img src="{{ $r->image ? url($r->image) : asset('placeholder.webp') }}" alt="{{ $r->title }}" width="600" height="800" loading="lazy" decoding="async">
                         <div class="cat-card-overlay">
                             @if ($r->servings)<span class="cat-card-label">{{ $r->servings }}</span>@endif
                             <span class="cat-card-title">{{ $r->title }}</span>

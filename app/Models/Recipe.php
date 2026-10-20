@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 class Recipe extends Model
@@ -25,6 +26,8 @@ class Recipe extends Model
                 $recipe->slug = Str::slug($recipe->title);
             }
         });
+        static::saved(fn () => Cache::forget('seo_sitemap_xml'));
+        static::deleted(fn () => Cache::forget('seo_sitemap_xml'));
     }
 
     public function ingredients(): HasMany

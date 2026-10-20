@@ -11,7 +11,6 @@ use Yajra\DataTables\Facades\DataTables;
 class PageSeoController extends Controller
 {
     private array $pages = [
-        'home' => 'Home',
         'about' => 'About Us',
         'shop' => 'Shop',
         'gallery' => 'Gallery',

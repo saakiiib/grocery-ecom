@@ -37,8 +37,7 @@ return [
 
     'twitter' => [
         'defaults' => [
-            'card' => false,
-            'site' => false,
+            'card' => 'summary_large_image',
         ],
     ],
 

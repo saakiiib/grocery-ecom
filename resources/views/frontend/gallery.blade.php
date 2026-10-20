@@ -15,7 +15,7 @@
             <div class="cat-grid">
                 @foreach ($galleryJson as $g)
                     <div class="cat-card" data-gallery-item data-full="{{ $g['src'] }}" data-caption="{{ $g['caption'] ?? '' }}" role="button" tabindex="0" aria-label="View larger: {{ $g['caption'] ?? 'Gallery image' }}">
-                        <img src="{{ $g['src'] }}" alt="{{ $g['caption'] ?? 'Gallery image' }}" loading="lazy">
+                        <img src="{{ $g['src'] }}" alt="{{ $g['caption'] ?? 'Gallery image' }}" width="600" height="800" loading="lazy" decoding="async">
                         @if ($g['caption'])
                             <div class="cat-card-overlay">
                                 <span class="cat-card-title" style="font-size:1rem;">{{ $g['caption'] }}</span>

@@ -49,7 +49,7 @@
 <header class="site-header">
     <div class="container header-inner">
         <a @spa href="{{ route('home') }}" class="logo">
-            @if ($logo)<img class="logo-img" src="{{ $logo }}" alt="{{ $brand }}">@endif
+            @if ($logo)<img class="logo-img" src="{{ $logo }}" alt="{{ $brand }}" width="2172" height="724">@endif
             <span class="logo-text">
                 <strong>{{ $brand }}</strong>
                 <small>Fresh living, every day</small>
@@ -94,7 +94,7 @@
     <div class="mobile-nav-panel">
         <div class="mobile-nav-header">
             <a @spa href="{{ route('home') }}" class="logo">
-                @if ($logo)<img class="logo-img" src="{{ $logo }}" alt="{{ $brand }}">@endif
+                @if ($logo)<img class="logo-img" src="{{ $logo }}" alt="{{ $brand }}" width="2172" height="724">@endif
                 <span class="logo-text"><strong>{{ $brand }}</strong></span>
             </a>
             <button type="button" class="icon-btn" data-close-menu aria-label="Close">

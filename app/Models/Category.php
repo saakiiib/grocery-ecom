@@ -11,8 +11,14 @@ class Category extends Model
 {
     protected static function booted(): void
     {
-        static::saved(fn () => Cache::forget('egf_catalog'));
-        static::deleted(fn () => Cache::forget('egf_catalog'));
+        static::saved(function (): void {
+            Cache::forget('egf_catalog');
+            Cache::forget('seo_sitemap_xml');
+        });
+        static::deleted(function (): void {
+            Cache::forget('egf_catalog');
+            Cache::forget('seo_sitemap_xml');
+        });
     }
 
     protected $fillable = [

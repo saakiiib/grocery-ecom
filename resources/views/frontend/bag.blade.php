@@ -37,7 +37,7 @@
                     @foreach ($bag['lines'] as $item)
                         <div class="cart-item" data-key="{{ $item['variant_id'] }}">
                             <a @spa href="{{ $item['slug'] ? route('product.show', $item['slug']) : route('shop') }}">
-                                <img src="{{ $item['image'] }}" alt="{{ $item['name'] }}" loading="lazy">
+                                <img src="{{ $item['image'] }}" alt="{{ $item['name'] }}" width="140" height="140" loading="lazy" decoding="async">
                             </a>
                             <div>
                                 <div class="cart-item-name">{{ $item['name'] }}</div>

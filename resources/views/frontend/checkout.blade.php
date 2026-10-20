@@ -200,7 +200,7 @@
                     <h3>Your bag ({{ $bag['count'] }})</h3>
                     @foreach ($bag['lines'] as $item)
                         <div class="summary-row co-line" style="align-items:center;">
-                            <img class="co-thumb" src="{{ $item['image'] }}" alt="" loading="lazy" onerror="this.onerror=null;this.src='{{ url('placeholder.webp') }}'">
+                            <img class="co-thumb" src="{{ $item['image'] }}" alt="" width="64" height="64" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='{{ url('placeholder.webp') }}'">
                             <span style="flex:1;min-width:0;">{{ $item['qty'] }} × {{ $item['name'] }}@if ($item['promo_label']) <span class="promo-tag">{{ $item['promo_label'] }}</span>@endif<br><span class="text-muted">{{ $item['pack'] }}</span>@if (! $item['available'])<br><span style="color:#B91C1C">Unavailable</span>@endif</span>
                             <span>@if ($item['available'])£{{ number_format($item['line_total'], 2) }}@else—@endif</span>
                         </div>

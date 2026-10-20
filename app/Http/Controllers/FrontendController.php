@@ -49,7 +49,7 @@ class FrontendController extends Controller
 
     public function index()
     {
-        $this->seo('home');
+        $this->seo();
 
         $products = Product::with(['category', 'images', 'variants.values.group'])
             ->withReviewSummary()
@@ -217,7 +217,11 @@ class FrontendController extends Controller
             $canonical = route('shop.category', $categoryModel->slug);
             $this->seo(null, $categorySeo['title'], $categorySeo['description'], $categorySeo['keywords'], $this->imgUrl($categorySeo['image']), $robots, $canonical);
         } elseif ($onlyOffers) {
-            $this->seo('shop', null, null, null, null, $robots, route('shop.offers'));
+            // Distinct title from /shop so the two indexable URLs never share
+            // one <title>. Description/keywords still come from the Shop row.
+            $shopSeoTitle = trim((string) (PageSeo::where('page_key', 'shop')->value('meta_title') ?? ''));
+            $offersTitle = $shopSeoTitle !== '' ? 'Offers | '.$shopSeoTitle : null;
+            $this->seo('shop', $offersTitle, null, null, null, $robots, route('shop.offers'));
         } else {
             $this->seo('shop', null, null, null, null, $robots, route('shop'));
         }
@@ -429,8 +433,9 @@ class FrontendController extends Controller
         }
 
         if (! $product->status) {
-            // Withdrawn but real: 410 tells Google to drop it without a soft 404.
-            abort(410);
+            // Hidden but real: 404 (not 410) so Google keeps recrawling and
+            // restores the URL automatically if the product is re-enabled.
+            abort(404);
         }
 
         $recent = collect(session()->get('recently_viewed', []))->reject(fn ($id) => (int) $id === $product->id);
@@ -484,6 +489,7 @@ class FrontendController extends Controller
         $schema = [
             Seo::product($product, [
                 'priceNum' => $productJson['priceNum'] ?? null,
+                'priceValidUntil' => $productJson['flashEndsIso'] ?? null,
                 'inStock' => $productJson['inStock'] ?? false,
                 'ratingAvg' => $productJson['ratingAvg'],
                 'ratingCount' => $productJson['ratingCount'],
@@ -972,6 +978,7 @@ class FrontendController extends Controller
             ] : null,
             'diets' => $p->dietBadges(),
             'flashEnds' => $flash ? $flash['ends']->format('D j M, H:i') : null,
+            'flashEndsIso' => $flash ? $flash['ends']->toAtomString() : null,
             'favourited' => Favourite::isFavourited(auth()->id(), $p->id),
             'url' => route('product.show', $p->slug),
             'imgAbs' => $this->imgUrl($this->heroFor($p)),
@@ -1217,23 +1224,31 @@ class FrontendController extends Controller
      * Apply page metadata to the SEO facades and share the resolved title with
      * the layout so exactly one <title> is rendered.
      *
-     * Explicit $title/$description/$image (product or category) win, then the
-     * page's PageSeo row, then — on the homepage only — the company defaults.
-     * Other pages fall back to their Blade @section('title') instead of
-     * repeating the company title, which would create duplicate titles.
+     * A bare seo() call — no page key and no explicit values — is the homepage,
+     * so it takes the Company Details meta as its default. Any other call has
+     * a real PageSeo key (about, delivery, faq…) or explicit product/category
+     * meta, so those never inherit the company title and stay unique.
      */
     private function seo($pageKey = null, $title = null, $description = null, $keywords = null, $image = null, ?string $robots = null, ?string $canonical = null)
     {
         $company = CompanyDetails::cached();
         $pageSeo = $pageKey ? PageSeo::where('page_key', $pageKey)->first() : null;
-        $home = $pageKey === 'home';
 
-        $title = trim((string) ($title ?: ($pageSeo?->meta_title ?: ($home ? $company?->meta_title : null))));
-        $description = trim((string) ($description ?: ($pageSeo?->meta_description ?: ($home ? $company?->meta_description : null))));
-        $keywords = trim((string) ($keywords ?: ($pageSeo?->meta_keywords ?: ($home ? $company?->meta_keywords : null))));
+        $isHome = $pageKey === null
+            && $title === null
+            && $description === null
+            && $keywords === null
+            && $image === null
+            && $robots === null
+            && $canonical === null;
+        $defaults = $isHome ? $company : null;
+
+        $title = trim((string) ($title ?: ($pageSeo?->meta_title ?: $defaults?->meta_title)));
+        $description = trim((string) ($description ?: ($pageSeo?->meta_description ?: $defaults?->meta_description)));
+        $keywords = trim((string) ($keywords ?: ($pageSeo?->meta_keywords ?: $defaults?->meta_keywords)));
         $image = $image ?: ($pageSeo?->meta_image
             ? $this->imgUrl($pageSeo->meta_image)
-            : ($home && $company?->meta_image ? asset('uploads/company/'.$company->meta_image) : null));
+            : ($defaults?->meta_image ? asset('uploads/company/'.$defaults->meta_image) : null));
 
         if ($title !== '') {
             View::share('seoTitle', $title);

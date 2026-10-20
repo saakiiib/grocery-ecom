@@ -22,7 +22,7 @@
                 </div>
             </div>
             <a @spa href="{{ $dealOfDay['card']['url'] }}" class="deal-media" aria-label="{{ $dealOfDay['card']['name'] }}">
-                <img src="{{ $dealOfDay['card']['imgAbs'] }}" alt="{{ $dealOfDay['card']['name'] }}" loading="lazy">
+                <img src="{{ $dealOfDay['card']['imgAbs'] }}" alt="{{ $dealOfDay['card']['name'] }}" width="600" height="600" loading="lazy" decoding="async">
             </a>
         </div>
     </section>

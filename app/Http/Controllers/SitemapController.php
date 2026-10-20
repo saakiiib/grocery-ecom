@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\Recipe;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Dynamic XML sitemap and robots.txt so both always reflect live data and the
@@ -14,6 +15,14 @@ use Illuminate\Http\Response;
 class SitemapController extends Controller
 {
     public function index(): Response
+    {
+        $xml = Cache::remember('seo_sitemap_xml', now()->addHour(), fn (): string => $this->build());
+
+        return response($xml, 200, ['Content-Type' => 'application/xml; charset=UTF-8']);
+    }
+
+    /** Build the full sitemap from live categories, products and pages. */
+    protected function build(): string
     {
         $urls = [];
 
@@ -91,7 +100,7 @@ class SitemapController extends Controller
         }
         $xml .= '</urlset>'."\n";
 
-        return response($xml, 200, ['Content-Type' => 'application/xml; charset=UTF-8']);
+        return $xml;
     }
 
     public function robots(): Response
@@ -100,17 +109,12 @@ class SitemapController extends Controller
             'User-agent: *',
             'Allow: /',
             '',
-            '# Private / transactional pages — never indexed.',
-            'Disallow: /bag',
-            'Disallow: /checkout',
-            'Disallow: /account',
-            'Disallow: /register',
-            'Disallow: /login',
-            'Disallow: /track',
-            'Disallow: /favourites',
-            'Disallow: /order/',
-            'Disallow: /dashboard',
+            '# Only block non-HTML endpoints here. Customer/transactional pages',
+            '# (bag, checkout, account, login, register, track, favourites, order)',
+            '# send "noindex, nofollow" from SeoRobots — blocking them in robots.txt',
+            '# would stop Google from ever reading that directive.',
             'Disallow: /admin',
+            'Disallow: /dashboard',
             'Disallow: /search-catalog',
             'Disallow: /api/',
             'Disallow: /webhooks/',

@@ -6,7 +6,6 @@ use App\Models\Category;
 use App\Models\CompanyDetails;
 use App\Models\Product;
 use App\Models\Setting;
-use Illuminate\Support\Str;
 
 /**
  * Central SEO helpers: meta-text fallbacks and JSON-LD nodes.
@@ -57,7 +56,18 @@ class Seo
         $text = html_entity_decode(strip_tags($text), ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $text = trim((string) preg_replace('/\s+/u', ' ', $text));
 
-        return $limit > 0 ? Str::limit($text, $limit, '') : $text;
+        if ($limit <= 0 || mb_strlen($text) <= $limit) {
+            return $text;
+        }
+
+        // Trim on a word boundary instead of cutting mid-word.
+        $cut = mb_substr($text, 0, $limit);
+        $lastSpace = mb_strrpos($cut, ' ');
+        if ($lastSpace !== false) {
+            $cut = mb_substr($cut, 0, $lastSpace);
+        }
+
+        return rtrim($cut, " \t\n\r\0\x0B.,;:-");
     }
 
     /** First non-empty candidate, cleaned to plain text and trimmed to $limit. */
@@ -74,15 +84,25 @@ class Seo
     }
 
     /**
-     * Meta description for a category: saved description, then category copy.
+     * Meta description for a category: saved meta description, then the
+     * category's own copy, then a unique generated fallback. Parent copy is
+     * deliberately not reused — sibling categories would otherwise share one
+     * near-duplicate description.
      */
     public static function categoryDescription(Category $category): string
     {
-        return self::firstText([
+        $description = self::firstText([
             $category->meta_description,
             $category->description,
-            $category->parent?->description,
         ]);
+
+        if ($description !== '') {
+            return $description;
+        }
+
+        return self::plain(
+            'Shop '.$category->name.' at '.self::brand().' — fresh groceries, everyday essentials, local delivery and free collection.'
+        );
     }
 
     /* ---------------------------------------------------------------------
@@ -170,7 +190,7 @@ class Seo
     /**
      * Product node for the details page.
      *
-     * @param  array{priceNum?: float|int|null, inStock?: bool, ratingAvg?: float|null, ratingCount?: int, images?: array<int, string>}  $detail
+     * @param  array{priceNum?: float|int|null, priceValidUntil?: string|null, inStock?: bool, ratingAvg?: float|null, ratingCount?: int, images?: array<int, string>}  $detail
      */
     public static function product(Product $product, array $detail = []): array
     {
@@ -197,6 +217,10 @@ class Seo
             '@id' => $url.'#product',
             'name' => $product->name,
             'url' => $url,
+            'brand' => [
+                '@type' => 'Brand',
+                'name' => self::brand(),
+            ],
         ];
 
         $description = self::firstText([
@@ -232,6 +256,9 @@ class Seo
                 'itemCondition' => 'https://schema.org/NewCondition',
                 'seller' => ['@id' => self::organizationId()],
             ];
+            if (! empty($detail['priceValidUntil'])) {
+                $node['offers']['priceValidUntil'] = (string) $detail['priceValidUntil'];
+            }
         }
 
         $ratingCount = (int) ($detail['ratingCount'] ?? 0);
