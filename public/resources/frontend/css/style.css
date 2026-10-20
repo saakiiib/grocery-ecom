@@ -2318,10 +2318,11 @@ body.search-open { overflow: hidden; }
 .star-on { color: #d97706; }
 .star-on .lucide-star { fill: currentColor; }
 .star-off { color: #d1d5db; }
-.product-rating { display: inline-flex; align-items: center; gap: .35rem; font-size: 13px; color: var(--muted, #6b7280); }
+.product-rating { display: inline-flex; align-items: center; gap: .35rem; font-size: 13px; color: var(--muted-foreground, #6b7280); }
 .review-list { display: grid; gap: 1rem; margin-top: 1rem; }
 .review-item { border: 1px solid #e9ecef; border-radius: 12px; padding: 1rem 1.1rem; background: #fff; }
-.review-meta { display: flex; align-items: center; gap: .5rem; font-size: 13px; color: var(--muted, #6b7280); flex-wrap: wrap; }
+.review-meta { display: flex; align-items: center; gap: .5rem; font-size: 13px; color: var(--muted-foreground, #6b7280); flex-wrap: wrap; }
+.review-meta strong { color: var(--text); }
 .review-title { font-weight: 600; margin: .35rem 0 .25rem; }
 .review-body { margin: 0; font-size: 14px; }
 .review-form { margin-top: 1.25rem; border: 1px solid #e9ecef; border-radius: 12px; padding: 1rem 1.1rem; background: #fff; display: grid; gap: .7rem; max-width: 640px; }
