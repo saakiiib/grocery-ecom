@@ -83,7 +83,7 @@
                 </div>
             </div>
             <div class="footer-col">
-                <h4>Shop</h4>
+                <h2>Shop</h2>
                 <a @spa href="{{ route('shop') }}">Shop all</a>
                 @foreach ($footCats as $c)
                     <a @spa href="{{ route('shop.category', ['category' => $c->slug]) }}">{{ $c->name }}</a>
@@ -91,7 +91,7 @@
                 <a @spa href="{{ route('shop.offers') }}">Offers</a>
             </div>
             <div class="footer-col">
-                <h4>Company</h4>
+                <h2>Company</h2>
                 <a @spa href="{{ route('about') }}">About Us</a>
                 <a @spa href="{{ route('contact') }}">Contact Us</a>
                 <a @spa href="{{ route('faq') }}">FAQ</a>
@@ -101,7 +101,7 @@
                 <button type="button" data-cookie-settings style="background:none;border:0;padding:0;color:inherit;font:inherit;cursor:pointer;text-align:left;">Cookie settings</button>
             </div>
             <div class="footer-col">
-                <h4>Orders</h4>
+                <h2>Orders</h2>
                 <a @spa href="{{ route('track') }}">Track order</a>
                 <a @spa href="{{ route('loyalty') }}">Loyalty points</a>
                 <a @spa href="{{ route('delivery') }}">Delivery info</a>

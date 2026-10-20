@@ -90,7 +90,7 @@ h1, h2, h3, .display {
   letter-spacing: 0.02em;
 }
 .topbar span { margin: 0 0.35rem; }
-.topbar .sep { opacity: 0.4; }
+.topbar .sep { opacity: 0.6; }
 
 /* Header */
 .site-header {
@@ -543,7 +543,7 @@ h1, h2, h3, .display {
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--primary);
+  color: var(--primary-hover);
   margin-bottom: 0.75rem;
 }
 .section-title {
@@ -1250,7 +1250,7 @@ h1, h2, h3, .display {
   .footer-grid { grid-template-columns: 1.8fr 1fr 1fr 1fr; gap: 2rem; }
 }
 .footer-brand .logo-text strong { color: #fff; }
-.footer-brand .logo-text small { color: rgba(255,255,255,0.5); }
+.footer-brand .logo-text small { color: rgba(255,255,255,0.7); }
 .footer-brand p {
   margin-top: 1rem;
   font-size: 14px;
@@ -1258,12 +1258,12 @@ h1, h2, h3, .display {
   opacity: 0.75;
   max-width: 280px;
 }
-.footer-col h4 {
+.footer-col h2 {
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  margin-bottom: 1.25rem;
+  margin: 0 0 1.25rem;
   color: #fff;
 }
 .footer-col a {
@@ -1282,7 +1282,7 @@ h1, h2, h3, .display {
   align-items: center;
   gap: 1rem;
   font-size: 13px;
-  opacity: 0.6;
+  color: rgba(255,255,255,0.78);
 }
 .footer-bottom .footer-halal { text-align: right; }
 @media (max-width: 640px) {
@@ -2349,6 +2349,7 @@ body.search-open { overflow: hidden; }
 .float-link.is-call svg { color: var(--primary); }
 /* Halal badge in topbar */
 .halal-badge { display: inline-flex; align-items: center; gap: 0.3rem; font-weight: 700; color: #15803d; }
+.topbar .halal-badge { color: #bbf7d0; }
 .halal-badge svg { width: 15px; height: 15px; }
 /* Find-the-store section */
 .store-grid { display: grid; grid-template-columns: 1fr; gap: 1.25rem; align-items: stretch; }
@@ -2507,7 +2508,7 @@ label.pick-row.promo-quiet:has(input:checked) { background: none; box-shadow: no
 
 /* Deal of the day */
 .deal-day { background: var(--deep); color: #fff; }
-.deal-day .section-label { color: var(--promo); }
+.deal-day .section-label { color: var(--sun); }
 .deal-day .section-title { color: #fff; }
 .deal-day .section-desc { color: rgba(255, 255, 255, 0.75); }
 .deal-inner { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 2rem; align-items: center; }

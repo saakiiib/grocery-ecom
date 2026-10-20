@@ -4,12 +4,12 @@
 @if ($faqGrouped->count() > 1)
     <div class="faq-tabs" data-faq-tabs role="tablist" aria-label="Question categories">
         @foreach ($faqGrouped as $label => $items)
-            <button type="button" class="faq-tab {{ $loop->first ? 'active' : '' }}" data-faq-tab="{{ $loop->index }}" role="tab">{{ $label }}</button>
+            <button type="button" class="faq-tab {{ $loop->first ? 'active' : '' }}" data-faq-tab="{{ $loop->index }}" role="tab" id="faq-tab-{{ $loop->index }}" aria-selected="{{ $loop->first ? 'true' : 'false' }}" aria-controls="faq-panel-{{ $loop->index }}">{{ $label }}</button>
         @endforeach
     </div>
 @endif
 @foreach ($faqGrouped as $label => $items)
-    <div class="faq-panel {{ ! $loop->first ? 'is-hidden' : '' }}" data-faq-panel="{{ $loop->index }}">
+    <div class="faq-panel {{ ! $loop->first ? 'is-hidden' : '' }}" data-faq-panel="{{ $loop->index }}" id="faq-panel-{{ $loop->index }}" role="tabpanel" aria-labelledby="faq-tab-{{ $loop->index }}">
         @if ($faqGrouped->count() === 1)
             <h2 class="faq-group">{{ $label }}</h2>
         @endif

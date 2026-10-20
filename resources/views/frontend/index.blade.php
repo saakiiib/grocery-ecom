@@ -41,9 +41,9 @@
             </div>
             <button type="button" class="hero-arrow prev" aria-label="Previous slide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
             <button type="button" class="hero-arrow next" aria-label="Next slide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
-            <div class="hero-dots" role="tablist">
+            <div class="hero-dots" role="group" aria-label="Hero slides">
                 @foreach ($slidersJson as $i => $s)
-                    <button type="button" class="hero-dot {{ $i === 0 ? 'active' : '' }}" aria-label="Go to slide {{ $i + 1 }}"></button>
+                    <button type="button" class="hero-dot {{ $i === 0 ? 'active' : '' }}" aria-label="Go to slide {{ $i + 1 }} of {{ $slidersJson->count() }}" aria-current="{{ $i === 0 ? 'true' : 'false' }}"></button>
                 @endforeach
             </div>
         </section>
@@ -262,9 +262,9 @@
                     @if ($testimonialsJson->count() > 1)
                         <button type="button" class="tmn-arrow prev" aria-label="Previous review"><x-icon name="chevron-left" /></button>
                         <button type="button" class="tmn-arrow next" aria-label="Next review"><x-icon name="chevron-right" /></button>
-                        <div class="tmn-dots" role="tablist">
+                        <div class="tmn-dots" role="group" aria-label="Customer reviews">
                             @foreach ($testimonialsJson as $i => $t)
-                                <button type="button" class="tmn-dot {{ $i === 0 ? 'active' : '' }}" aria-label="Go to review {{ $i + 1 }}"></button>
+                                <button type="button" class="tmn-dot {{ $i === 0 ? 'active' : '' }}" aria-label="Go to review {{ $i + 1 }} of {{ $testimonialsJson->count() }}" aria-current="{{ $i === 0 ? 'true' : 'false' }}"></button>
                             @endforeach
                         </div>
                     @endif
@@ -283,8 +283,8 @@
                 </div>
                 <div class="cat-grid">
                     @foreach ($galleryJson as $g)
-                        <div class="cat-card" data-gallery-item data-full="{{ $g['src'] }}" data-caption="{{ $g['caption'] ?? '' }}" role="button" tabindex="0" aria-label="View larger: {{ $g['caption'] ?? 'Gallery image' }}">
-                            <img src="{{ $g['src'] }}" alt="{{ $g['caption'] ?? 'Gallery image' }}" width="600" height="800" loading="lazy" decoding="async">
+                        <div class="cat-card" data-gallery-item data-full="{{ $g['src'] ?: asset('placeholder.webp') }}" data-caption="{{ $g['caption'] ?? '' }}" role="button" tabindex="0" aria-label="View larger: {{ $g['caption'] ?? 'Gallery image' }}">
+                            <img src="{{ $g['src'] ?: asset('placeholder.webp') }}" alt="" width="600" height="800" loading="lazy" decoding="async">
                             @if ($g['caption'])
                                 <div class="cat-card-overlay">
                                     <span class="cat-card-title" style="font-size:1rem;">{{ $g['caption'] }}</span>
@@ -365,7 +365,7 @@
                         </div>
                     </div>
                     @if ($company->google_map)
-                        <div class="map-embed">{!! $company->google_map !!}</div>
+                        <div class="map-embed">{!! $company->mapEmbed() !!}</div>
                     @endif
                 </div>
             </div>

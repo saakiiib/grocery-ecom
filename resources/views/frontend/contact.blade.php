@@ -85,7 +85,7 @@
             </form>
         </div>
         @if ($company->google_map)
-            <div class="map-embed" style="margin-top:1.5rem;">{!! $company->google_map !!}</div>
+            <div class="map-embed" style="margin-top:1.5rem;">{!! $company->mapEmbed() !!}</div>
         @endif
     </div>
 </main>

@@ -11,12 +11,12 @@
     <div class="container topbar-inner">
         <div class="topbar-info">
             <span class="halal-badge"><x-icon name="shield-check" /> 100% Halal</span>
-            <span class="sep">·</span>
+            <span class="sep" aria-hidden="true">·</span>
             <span>Fresh to your door</span>
-            <span class="sep">·</span>
+            <span class="sep" aria-hidden="true">·</span>
             <span>Free delivery on orders over £{{ number_format(\App\Models\Setting::money('delivery_free_over', 50.00), 2) }}</span>
             @if ($company->opening_time)
-                <span class="sep">·</span>
+                <span class="sep" aria-hidden="true">·</span>
                 <span>{{ $company->opening_time }}</span>
             @endif
         </div>
