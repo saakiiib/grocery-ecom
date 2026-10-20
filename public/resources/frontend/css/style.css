@@ -440,6 +440,28 @@ h1, h2, h3, .display {
   margin-bottom: 2rem;
   max-width: 420px;
 }
+@media (max-width: 768px) {
+  .hero { 
+    min-height: 440px; 
+    padding: 0 1rem; 
+  }
+  .hero-bg img { 
+    object-position: center center; 
+  }
+  .hero-overlay { 
+    background: linear-gradient(180deg, rgba(26,46,34,0.75) 0%, rgba(26,46,34,0.5) 60%, rgba(26,46,34,0.85) 100%); 
+  }
+  .hero-content { 
+    padding: 2.5rem 0; 
+    max-width: 100%; 
+  }
+  .hero h1, .hero h2.hero-title, .hero .hero-title { 
+    font-size: clamp(2rem, 8vw, 3rem); 
+  }
+  .hero p { 
+    max-width: 100%; 
+  }
+}
 .hero-ctas {
   display: flex;
   flex-wrap: wrap;
@@ -2276,7 +2298,6 @@ body.search-open { overflow: hidden; }
   .price-track input[type="range"]::-webkit-slider-thumb { width: 24px; height: 24px; }
   .price-track input[type="range"]::-moz-range-thumb { width: 22px; height: 22px; }
   .price-track { height: 28px; }
-  .hero-dot { padding: 10px 0; background-clip: content-box; }
   .search-chip { padding: 0.55rem 0.9rem; }
 }
 @media (max-width: 899px) {
